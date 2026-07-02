@@ -1,0 +1,23 @@
+{
+  "task_name": "adaptive-rejection-sampler",
+  "agent": "deepagent-harbor",
+  "model": "gpt-5.2-codex@openai",
+  "reward": 0,
+  "trial_id": "",
+  "trial_name": "adaptive-rejection-sampler__HhzfH65",
+  "duration_seconds": 904.5150146484375,
+  "steps": [
+    {
+      "src": "user",
+      "msg": "$31",
+      "tools": null,
+      "obs": null
+    },
+    {
+      "src": "agent",
+      "msg": "[agent error] CancelledError: CancelledError()",
+      "tools": null,
+      "obs": null
+    }
+  ]
+}

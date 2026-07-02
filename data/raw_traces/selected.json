@@ -1,0 +1,47 @@
+[
+  {
+    "task_name": "adaptive-rejection-sampler",
+    "agent": "claude-code",
+    "model": "claude-haiku-4-5-20251001@anthropic",
+    "reward": 0,
+    "trial_id": "",
+    "trial_name": "adaptive-rejection-sampler__8YuTzJm",
+    "duration_seconds": 522.0469970703125
+  },
+  {
+    "task_name": "adaptive-rejection-sampler",
+    "agent": "codex",
+    "model": "gpt-5-mini@openai",
+    "reward": 0,
+    "trial_id": "",
+    "trial_name": "adaptive-rejection-sampler__ULFaGu2",
+    "duration_seconds": 132.28500366210938
+  },
+  {
+    "task_name": "adaptive-rejection-sampler",
+    "agent": "deepagent-harbor",
+    "model": "gpt-5.2-codex@openai",
+    "reward": 0,
+    "trial_id": "",
+    "trial_name": "adaptive-rejection-sampler__HhzfH65",
+    "duration_seconds": 904.5150146484375
+  },
+  {
+    "task_name": "adaptive-rejection-sampler",
+    "agent": "gemini-cli",
+    "model": "gemini-2.5-flash@gemini",
+    "reward": 0,
+    "trial_id": "",
+    "trial_name": "adaptive-rejection-sampler__AfJmk7b",
+    "duration_seconds": 976.0809936523438
+  },
+  {
+    "task_name": "adaptive-rejection-sampler",
+    "agent": "judy",
+    "model": "claude-opus-4.6@anthropic",
+    "reward": 0,
+    "trial_id": "",
+    "trial_name": "adaptive-rejection-sampler__nJ7ycqL",
+    "duration_seconds": 484.3030090332031
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "task_id": "adaptive-rejection-sampler__HhzfH65",
+  "agent_name": "deepagent-harbor/gpt-5.2-codex@openai",
+  "outcome": "failed",
+  "steps": [
+    {
+      "step_id": 1,
+      "request_message": "[USER] $31",
+      "response_message": "[agent error] CancelledError: CancelledError()",
+      "role": "other",
+      "execution_status": "failure",
+      "artifact_state_effects": [],
+      "node_local_evidence": {
+        "input_provenance_evidence": [],
+        "control_flow_evidence": [],
+        "artifact_state_evidence": []
+      },
+      "harness_layer_facet": {
+        "implicated_layers": [],
+        "rationale": "The evidence provided does not indicate any specific activity or issue related to the responsibilities of the harness layers. There are no provenance, control flow, or artifact state details that suggest involvement of any particular layer."
+      },
+      "raw_metadata": {
+        "src": "agent",
+        "tools": [],
+        "has_obs": false
+      }
+    }
+  ],
+  "temporal_links": [],
+  "input_provenance_links": [],
+  "control_flow_links": [],
+  "harness_root": ""
+}
