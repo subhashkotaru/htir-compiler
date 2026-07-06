@@ -1,12 +1,15 @@
 """
 Harness-aware Trace Intermediate Representation (HTIR)
 
-Based on HarnessFix: From Failed Trajectories to Reliable LLM Agents
-(arxiv 2606.06324v1)
+Originally based on HarnessFix: From Failed Trajectories to Reliable LLM Agents
+(arxiv 2606.06324v1), and extended to serve as the trace-abstraction layer of
+Adaptive Verifier Graphs (AVG).
 
 HTIR normalises heterogeneous agent execution traces into a common,
-step-level representation that supports evidence tracing, failure
-attribution, and harness-layer diagnosis.
+step-level graph. In AVG terms it realises the first two pipeline stages —
+``raw trace -> typed events -> verification graph`` — over five node kinds
+(operations, artifacts, claims, evidence, obligations) and the temporal,
+provenance, causal, support, constraint, and validation edge families.
 """
 
 from __future__ import annotations
@@ -19,16 +22,11 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 # Enumerations
 # ---------------------------------------------------------------------------
-
-class StepRole(str, Enum):
-    """The function a TraceStep plays in the execution."""
-    INFORMATION_ACQUISITION = "information_acquisition"
-    TOOL_INVOCATION = "tool_invocation"
-    ARTIFACT_EDITING = "artifact_editing"
-    VALIDATION = "validation"
-    ORCHESTRATION_DECISION = "orchestration_decision"
-    FINAL_SUBMISSION = "final_submission"
-    OTHER = "other"
+#
+# NOTE: operation *type* is no longer a fixed enum. AVG requires operation
+# types to come from the active domain specification (S_d.P_d), so a step's
+# ``role`` is a plain string validated against the domain spec's operation
+# vocabulary. See harnessfix/models/domain.py.
 
 
 class ExecutionStatus(str, Enum):
@@ -70,7 +68,7 @@ class ControlFlowTrigger(str, Enum):
 
 
 class HarnessLayer(str, Enum):
-    """The seven ETCLOVG harness layers."""
+    """The seven ETCLOVG harness layers (HarnessFix diagnostic facet)."""
     EXECUTION = "Execution"
     TOOL_INTERFACE = "Tool Interface"
     CONTEXT_MEMORY = "Context/Memory"
@@ -78,6 +76,80 @@ class HarnessLayer(str, Enum):
     OBSERVABILITY = "Observability"
     VERIFICATION = "Verification"
     GOVERNANCE = "Governance"
+
+
+# ---- AVG verification enums -----------------------------------------------
+
+class Severity(str, Enum):
+    """Obligation severity (rho_i). Drives severity-aware aggregation."""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class EvidenceType(str, Enum):
+    """Required/available evidence type (r_i)."""
+    EXECUTABLE = "executable"      # exit codes, test runs, static analysis
+    SCHEMA = "schema"              # schema / structure validation
+    ARTIFACT = "artifact"         # produced/consumed object contents
+    LOG = "log"                    # observability records
+    POLICY = "policy"             # instructions, rules, SOPs
+    SEMANTIC = "semantic"         # requires model judgement
+    MANUAL = "manual"             # requires a human
+    NONE = "none"                  # no evidence available
+
+
+class CheckerType(str, Enum):
+    """The checker class assigned to an obligation (q_i)."""
+    MECHANICAL = "mechanical"      # deterministic / executable evidence
+    SEMANTIC = "semantic"          # narrow claim-evidence model judge
+    ABSTENTION = "abstention"      # insufficient evidence to decide
+    UNASSIGNED = "unassigned"      # not yet routed to a checker
+
+
+class EscalationRule(str, Enum):
+    """What the harness may do when an obligation fails or abstains (alpha_i)."""
+    ACCEPT = "accept"
+    REQUEST_EVIDENCE = "request-evidence"
+    RERANK = "rerank"
+    VETO = "veto"
+    REPAIR = "repair"
+    CLARIFY = "clarify"
+    ESCALATE = "escalate"
+
+
+class ObligationScope(str, Enum):
+    """Which template family produced an obligation (O_uni / O_dom / O_trig)."""
+    UNIVERSAL = "universal"
+    DOMAIN = "domain"
+    TRAJECTORY_TRIGGERED = "trajectory_triggered"
+
+
+class ClaimStatus(str, Enum):
+    UNVERIFIED = "unverified"
+    SUPPORTED = "supported"
+    REFUTED = "refuted"
+    UNRESOLVED = "unresolved"
+
+
+class ObligationStatus(str, Enum):
+    PENDING = "pending"
+    PASSED = "passed"
+    FAILED = "failed"
+    ABSTAINED = "abstained"
+
+
+class SupportPolarity(str, Enum):
+    SUPPORTS = "supports"
+    REFUTES = "refutes"
+
+
+class ValidationKind(str, Enum):
+    """Granularity of a validation, per AVG well-formedness rules."""
+    FULL = "full"
+    TARGETED = "targeted"
+    MANUAL = "manual"
 
 
 # ---------------------------------------------------------------------------
@@ -93,19 +165,19 @@ class HarnessCodeRef(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Link types
+# Edge types
 # ---------------------------------------------------------------------------
 
 class TemporalLink(BaseModel):
-    """Preserves the original execution order between two steps."""
+    """E_temp: preserves the original execution order between two steps."""
     source_id: int
     target_id: int
 
 
 class InputProvenanceLink(BaseModel):
     """
-    Shows how the target step's request was assembled from an earlier step's
-    content (or from harness logic that constructs the request).
+    E_prov (step->step): shows how the target step's request was assembled from
+    an earlier step's content (or from harness logic that constructs it).
     """
     source_id: int = Field(..., description="ID of the earlier TraceStep")
     target_id: int = Field(..., description="ID of the later TraceStep")
@@ -120,7 +192,7 @@ class InputProvenanceLink(BaseModel):
 
 class ControlFlowLink(BaseModel):
     """
-    Shows why the harness executed a particular step (i.e. the controller
+    E_causal: shows why the harness executed a particular step (the controller
     transition that produced it).
     """
     source_id: int
@@ -129,6 +201,34 @@ class ControlFlowLink(BaseModel):
     triggering_condition: str = Field("", description="Condition evaluated by the harness controller")
     execution_status: Optional[ExecutionStatus] = None
     harness_code_refs: list[HarnessCodeRef] = Field(default_factory=list)
+
+
+class SupportLink(BaseModel):
+    """E_sup: an evidence node supports or refutes a claim node."""
+    evidence_id: int
+    claim_id: int
+    polarity: SupportPolarity = SupportPolarity.SUPPORTS
+    weight: float = Field(1.0, description="Strength of support/refutation in [0, 1]")
+    rationale: str = ""
+
+
+class ConstraintLink(BaseModel):
+    """E_cons: links a domain constraint (S_d.K_d) to the step/artifact it governs."""
+    constraint_id: str = Field(..., description="Constraint id from the domain spec")
+    step_id: Optional[int] = None
+    artifact_id: Optional[int] = None
+    satisfied: Optional[bool] = Field(None, description="Known outcome, or None if unresolved")
+    note: str = ""
+
+
+class ValidationLink(BaseModel):
+    """E_val: connects a validation operation to the step/artifact it validates."""
+    source_id: int = Field(..., description="TraceStep id of the validation operation")
+    target_step_id: Optional[int] = None
+    target_artifact_id: Optional[int] = None
+    validation_kind: ValidationKind = ValidationKind.TARGETED
+    outcome: Optional[ExecutionStatus] = None
+    note: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -168,23 +268,27 @@ class NodeLocalEvidence(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Core node: TraceStep
+# Graph nodes
 # ---------------------------------------------------------------------------
 
 class TraceStep(BaseModel):
     """
-    A single recoverable execution step in an agent trajectory:
-    a model call, a tool-mediated action, a validation step, or a final
-    submission decision.
+    Operation node: a single recoverable execution step in an agent trajectory
+    (a model call, a tool-mediated action, a validation step, or a final
+    submission decision).
     """
     step_id: int = Field(..., description="Sequential position in execution order (1-indexed)")
     request_message: str = Field(..., description="Full message sent to the model, tool, or environment")
     response_message: str = Field(..., description="Full message returned by the model, tool, or environment")
 
-    # Derived annotations (filled by the trace abstraction agent)
-    role: StepRole = StepRole.OTHER
+    # Operation type drawn from the active domain spec's vocabulary (S_d.P_d).
+    role: str = Field("other", description="Domain operation type name; 'other' if unmatched")
     execution_status: ExecutionStatus = ExecutionStatus.UNKNOWN
     artifact_state_effects: list[ArtifactStateEvidence] = Field(default_factory=list)
+
+    # First-class artifact-node references (provenance edges to ArtifactNode ids)
+    consumed_artifact_ids: list[int] = Field(default_factory=list)
+    produced_artifact_ids: list[int] = Field(default_factory=list)
 
     # Node-local diagnostic evidence (assembled after link creation)
     node_local_evidence: Optional[NodeLocalEvidence] = None
@@ -196,31 +300,137 @@ class TraceStep(BaseModel):
     raw_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class ArtifactNode(BaseModel):
+    """
+    Artifact node: a produced or consumed object (file, patch, table, command
+    output, log, test report, policy, database state, ...). First-class so the
+    same object can be tracked across the operations that read and mutate it.
+    """
+    artifact_id: int = Field(..., description="Unique artifact identifier within the graph")
+    artifact_type: str = Field("state", description="Artifact type name from S_d.R_d")
+    identifier: str = Field(..., description="Human/tool identifier, e.g. a file path or table name")
+    description: str = ""
+    content_summary: str = ""
+    produced_by_step_id: Optional[int] = Field(None, description="Step that first produced this artifact")
+    version: int = Field(0, description="Bumped each time the artifact is mutated")
+    raw_metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ClaimNode(BaseModel):
+    """
+    Claim node: a checkable statement induced by the trajectory (e.g. 'the
+    command exited with code 0' or 'the final report follows the policy').
+    Claims are untrusted until discharged by an obligation.
+    """
+    claim_id: int
+    statement: str
+    claim_type: str = Field("", description="e.g. execution_status, artifact_provenance, final_answer_support")
+    source_step_id: Optional[int] = None
+    artifact_ids: list[int] = Field(default_factory=list)
+    status: ClaimStatus = ClaimStatus.UNVERIFIED
+
+
+class EvidenceNode(BaseModel):
+    """
+    Evidence node: points to artifacts or graph neighbourhoods that may support
+    or refute claims.
+    """
+    evidence_id: int
+    evidence_type: EvidenceType = EvidenceType.NONE
+    description: str = ""
+    content: str = ""
+    artifact_ids: list[int] = Field(default_factory=list)
+    step_ids: list[int] = Field(default_factory=list)
+
+
+class CheckerResult(BaseModel):
+    """
+    Output of a checker q_i(o_i, G_tau) = (p+, p-, p_abstain, s, eta).
+    Left unset until the (future) checking stage runs.
+    """
+    p_pass: float = 0.0
+    p_fail: float = 0.0
+    p_abstain: float = 1.0
+    score: float = 0.0
+    evidence_used: list[int] = Field(default_factory=list, description="Evidence node ids used (eta_i)")
+
+
+class Obligation(BaseModel):
+    """
+    Verification obligation o_i = (c_i, r_i, E_i, q_i, rho_i, alpha_i): the
+    central unit of AVG verification. Localises verification to a specific
+    claim discharged by specific evidence.
+    """
+    obligation_id: int
+    claim_id: int = Field(..., description="Claim to verify (c_i)")
+    required_evidence: EvidenceType = Field(EvidenceType.NONE, description="Required evidence type (r_i)")
+    candidate_evidence_ids: list[int] = Field(default_factory=list, description="Candidate evidence nodes (E_i)")
+    checker: CheckerType = Field(CheckerType.UNASSIGNED, description="Assigned checker class (q_i)")
+    severity: Severity = Field(Severity.MEDIUM, description="Severity (rho_i)")
+    escalation: EscalationRule = Field(EscalationRule.REQUEST_EVIDENCE, description="Escalation rule (alpha_i)")
+    scope: ObligationScope = ObligationScope.UNIVERSAL
+    template_id: Optional[str] = None
+    description: str = ""
+    result: Optional[CheckerResult] = None
+    status: ObligationStatus = ObligationStatus.PENDING
+
+
 # ---------------------------------------------------------------------------
 # HTIR graph
 # ---------------------------------------------------------------------------
 
 class HTIR(BaseModel):
     """
-    The complete Harness-aware Trace Intermediate Representation for one
-    agent execution run.
+    The complete Harness-aware Trace Intermediate Representation / AVG
+    verification graph for one agent execution run.
     """
     task_id: str = Field(..., description="Identifier for the task this trace belongs to")
     agent_name: str = Field("", description="Name of the agent harness that produced this trace")
     outcome: str = Field("", description="Externally evaluated result (e.g. 'failed', 'resolved')")
+    domain_id: str = Field("default", description="Domain specification (S_d) used to compile this graph")
 
+    # Nodes
     steps: list[TraceStep] = Field(default_factory=list)
+    artifacts: list[ArtifactNode] = Field(default_factory=list)
+    claims: list[ClaimNode] = Field(default_factory=list)
+    evidence: list[EvidenceNode] = Field(default_factory=list)
+    obligations: list[Obligation] = Field(default_factory=list)
+
+    # Edges
     temporal_links: list[TemporalLink] = Field(default_factory=list)
     input_provenance_links: list[InputProvenanceLink] = Field(default_factory=list)
     control_flow_links: list[ControlFlowLink] = Field(default_factory=list)
+    support_links: list[SupportLink] = Field(default_factory=list)
+    constraint_links: list[ConstraintLink] = Field(default_factory=list)
+    validation_links: list[ValidationLink] = Field(default_factory=list)
 
     # Path to the harness code under analysis
     harness_root: str = Field("", description="Root directory of the harness codebase")
+
+    # -- accessors ----------------------------------------------------------
 
     def get_step(self, step_id: int) -> Optional[TraceStep]:
         for s in self.steps:
             if s.step_id == step_id:
                 return s
+        return None
+
+    def get_artifact(self, artifact_id: int) -> Optional[ArtifactNode]:
+        for a in self.artifacts:
+            if a.artifact_id == artifact_id:
+                return a
+        return None
+
+    def get_claim(self, claim_id: int) -> Optional[ClaimNode]:
+        for c in self.claims:
+            if c.claim_id == claim_id:
+                return c
+        return None
+
+    def get_obligation(self, obligation_id: int) -> Optional[Obligation]:
+        for o in self.obligations:
+            if o.obligation_id == obligation_id:
+                return o
         return None
 
     def steps_in_order(self) -> list[TraceStep]:

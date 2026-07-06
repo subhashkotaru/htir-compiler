@@ -1,0 +1,89 @@
+# Default (cross-domain) specification  —  AVG  S_d = (P_d, R_d, K_d, B_d)
+#
+# This is the source of truth for the built-in "default" domain. Copy this
+# file to create your own domain spec, edit the four sections below, and drop
+# it in this directory (harnessfix/domains/) — it is auto-discovered by
+# domain_id at import time. No Python changes required.
+#
+#   operation_types      (P_d)  the operation vocabulary a step's `role` maps to
+#   artifact_types       (R_d)  the kinds of objects produced/consumed
+#   constraints          (K_d)  domain rules that must hold
+#   obligation_templates (B_d)  checks instantiated when their trigger fires
+#
+# Enum value references:
+#   severity:          low | medium | high | critical
+#   required_evidence: executable | schema | artifact | log | policy | semantic | manual | none
+#   scope:             universal | domain | trajectory_triggered
+#   escalation:        accept | request-evidence | rerank | veto | repair | clarify | escalate
+#   trigger:           an operation-type name, or a special event:
+#                      artifact_edit | failed_step | "" (always)
+
+domain_id: default
+description: Cross-domain default specification for heterogeneous agent traces.
+
+operation_types:
+  - {name: information_acquisition, description: Reading, searching, or gathering context}
+  - {name: tool_invocation,         description: Calling a tool or executing a command}
+  - {name: artifact_editing,        description: Creating or modifying a file/artifact}
+  - {name: validation,              description: Running tests, checks, or other validation}
+  - {name: orchestration_decision,  description: Planning or control-flow decisions}
+  - {name: final_submission,        description: Producing the final answer/response}
+  - {name: other,                   description: Anything not covered above}
+
+artifact_types:
+  - {name: file,           description: A source or data file}
+  - {name: patch,          description: A diff / edit applied to a file}
+  - {name: command_output, description: stdout/stderr of a command}
+  - {name: test_report,    description: Result of a test/validation run}
+  - {name: tool_result,    description: Structured result returned by a tool}
+  - {name: task_plan,      description: A plan / todo list}
+  - {name: log,            description: Observability / execution log}
+  - {name: state,          description: Opaque environment state change}
+
+constraints:
+  - constraint_id: provenance-required
+    description: Every produced artifact must have producer provenance.
+    severity: medium
+
+obligation_templates:
+  # -- universal --
+  - template_id: uni-tool-schema
+    claim_template: Tool call conforms to its declared schema.
+    scope: universal
+    trigger: tool_invocation
+    required_evidence: schema
+    severity: medium
+    escalation: request-evidence
+
+  - template_id: uni-final-answer-supported
+    claim_template: Final answer is connected to supporting evidence.
+    scope: universal
+    trigger: final_submission
+    required_evidence: semantic
+    severity: high
+    escalation: escalate
+
+  - template_id: uni-validation-backed
+    claim_template: Validation claim is backed by a validation artifact.
+    scope: universal
+    trigger: validation
+    required_evidence: executable
+    severity: medium
+    escalation: request-evidence
+
+  # -- trajectory-triggered --
+  - template_id: trig-post-edit-validation
+    claim_template: A source/artifact edit is followed by relevant validation.
+    scope: trajectory_triggered
+    trigger: artifact_edit
+    required_evidence: executable
+    severity: high
+    escalation: repair
+
+  - template_id: trig-explain-failure
+    claim_template: A failed step is explained or addressed by a later step.
+    scope: trajectory_triggered
+    trigger: failed_step
+    required_evidence: log
+    severity: medium
+    escalation: repair

@@ -1,25 +1,68 @@
-"""HTIR data models."""
+"""HTIR data models and domain specifications."""
 from harnessfix.models.htir import (
     HTIR,
     TraceStep,
+    ArtifactNode,
+    ClaimNode,
+    EvidenceNode,
+    Obligation,
+    CheckerResult,
     HarnessLayer,
-    StepRole,
     ExecutionStatus,
     ArtifactEffect,
     ReuseRelation,
     ControlFlowTrigger,
+    Severity,
+    EvidenceType,
+    CheckerType,
+    EscalationRule,
+    ObligationScope,
+    ClaimStatus,
+    ObligationStatus,
+    SupportPolarity,
+    ValidationKind,
     HarnessCodeRef,
     TemporalLink,
     InputProvenanceLink,
     ControlFlowLink,
+    SupportLink,
+    ConstraintLink,
+    ValidationLink,
     ArtifactStateEvidence,
     HarnessLayerFacet,
     NodeLocalEvidence,
 )
+from harnessfix.models.domain import (
+    DomainSpec,
+    OperationType,
+    ArtifactTypeSpec,
+    Constraint,
+    ObligationTemplate,
+    DEFAULT_DOMAIN_SPEC,
+    TERMINAL_DOMAIN_SPEC,
+    DOMAIN_SPECS,
+    DOMAINS_DIR,
+    get_domain_spec,
+    load_domain_spec,
+    load_domain_specs,
+)
 
 __all__ = [
-    "HTIR", "TraceStep", "HarnessLayer", "StepRole", "ExecutionStatus",
-    "ArtifactEffect", "ReuseRelation", "ControlFlowTrigger", "HarnessCodeRef",
-    "TemporalLink", "InputProvenanceLink", "ControlFlowLink",
+    # graph
+    "HTIR", "TraceStep", "ArtifactNode", "ClaimNode", "EvidenceNode",
+    "Obligation", "CheckerResult",
+    # enums
+    "HarnessLayer", "ExecutionStatus", "ArtifactEffect", "ReuseRelation",
+    "ControlFlowTrigger", "Severity", "EvidenceType", "CheckerType",
+    "EscalationRule", "ObligationScope", "ClaimStatus", "ObligationStatus",
+    "SupportPolarity", "ValidationKind",
+    # edges + evidence
+    "HarnessCodeRef", "TemporalLink", "InputProvenanceLink", "ControlFlowLink",
+    "SupportLink", "ConstraintLink", "ValidationLink",
     "ArtifactStateEvidence", "HarnessLayerFacet", "NodeLocalEvidence",
+    # domain spec
+    "DomainSpec", "OperationType", "ArtifactTypeSpec", "Constraint",
+    "ObligationTemplate", "DEFAULT_DOMAIN_SPEC", "TERMINAL_DOMAIN_SPEC",
+    "DOMAIN_SPECS", "DOMAINS_DIR", "get_domain_spec",
+    "load_domain_spec", "load_domain_specs",
 ]

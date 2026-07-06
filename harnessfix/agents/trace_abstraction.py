@@ -17,9 +17,11 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from harnessfix.models.domain import DEFAULT_DOMAIN_SPEC, DomainSpec
 from harnessfix.models.htir import (
     HTIR,
     ArtifactEffect,
+    ArtifactNode,
     ArtifactStateEvidence,
     ControlFlowLink,
     ControlFlowTrigger,
@@ -30,10 +32,10 @@ from harnessfix.models.htir import (
     InputProvenanceLink,
     NodeLocalEvidence,
     ReuseRelation,
-    StepRole,
     TemporalLink,
     TraceStep,
 )
+from harnessfix.agents.obligations import build_claims_and_obligations
 from harnessfix.utils.llm import chat_json, system, user, DEFAULT_MODEL
 from harnessfix.utils.io import truncate
 
@@ -43,7 +45,7 @@ from harnessfix.utils.io import truncate
 # ---------------------------------------------------------------------------
 
 class _StepAnnotation(BaseModel):
-    role: StepRole = StepRole.OTHER
+    role: str = "other"
     execution_status: ExecutionStatus = ExecutionStatus.UNKNOWN
     artifact_effects: list[dict] = Field(default_factory=list)
 
@@ -111,8 +113,9 @@ class TraceAbstractionAgent:
         )
     """
 
-    def __init__(self, model: str = DEFAULT_MODEL):
+    def __init__(self, model: str = DEFAULT_MODEL, domain_spec: DomainSpec = DEFAULT_DOMAIN_SPEC):
         self.model = model
+        self.domain_spec = domain_spec
 
     # ------------------------------------------------------------------
     # Public interface
@@ -126,6 +129,7 @@ class TraceAbstractionAgent:
         outcome: str = "failed",
         agent_name: str = "",
         harness_root: str = "",
+        generate_obligations: bool = True,
     ) -> HTIR:
         """Compile a raw trace into HTIR."""
         steps = self._build_steps(raw_steps)
@@ -133,9 +137,13 @@ class TraceAbstractionAgent:
             task_id=task_id,
             agent_name=agent_name,
             outcome=outcome,
+            domain_id=self.domain_spec.domain_id,
             steps=steps,
             harness_root=harness_root,
         )
+
+        # First-class artifact nodes + provenance references on steps
+        self._extract_artifacts(htir)
 
         # Temporal links (trivially sequential)
         for i in range(len(steps) - 1):
@@ -157,6 +165,10 @@ class TraceAbstractionAgent:
         self._attach_node_local_evidence(htir)
         self._attach_layer_facets(htir, harness_context)
 
+        # Claims, obligations, and support/constraint/validation edges
+        if generate_obligations:
+            build_claims_and_obligations(htir, self.domain_spec)
+
         return htir
 
     # ------------------------------------------------------------------
@@ -170,6 +182,9 @@ class TraceAbstractionAgent:
             resp = str(raw.get("response", raw.get("output", raw.get("result", ""))))
 
             annotation = self._annotate_step(i, req, resp)
+
+            valid_roles = set(self.domain_spec.operation_type_names())
+            role = annotation.role if annotation.role in valid_roles else "other"
 
             effects = [
                 ArtifactStateEvidence(
@@ -186,7 +201,7 @@ class TraceAbstractionAgent:
                     step_id=i,
                     request_message=req,
                     response_message=resp,
-                    role=annotation.role,
+                    role=role,
                     execution_status=annotation.execution_status,
                     artifact_state_effects=effects,
                     raw_metadata={k: v for k, v in raw.items() if k not in ("request", "response", "prompt", "output")},
@@ -195,19 +210,24 @@ class TraceAbstractionAgent:
         return steps
 
     def _annotate_step(self, step_id: int, req: str, resp: str) -> _StepAnnotation:
+        op_lines = "\n".join(
+            f"  - {op.name}: {op.description}" for op in self.domain_spec.operation_types
+        )
+        valid_roles = ", ".join(self.domain_spec.operation_type_names())
         msgs = [
             system(
                 "You are an expert agent-trace analyst. "
-                "Given a single agent step (request + response), infer its role, "
-                "execution status, and artifact/state effects. "
-                "Use ONLY the provided enum values."
+                "Given a single agent step (request + response), infer its role "
+                "(operation type), execution status, and artifact/state effects. "
+                "Use ONLY the provided operation-type and enum values."
             ),
             user(
                 f"Step {step_id}:\n"
                 f"REQUEST:\n{truncate(req, 1500)}\n\n"
                 f"RESPONSE:\n{truncate(resp, 1500)}\n\n"
-                "Valid roles: information_acquisition, tool_invocation, artifact_editing, "
-                "validation, orchestration_decision, final_submission, other\n"
+                f"Valid roles (operation types) for domain "
+                f"'{self.domain_spec.domain_id}':\n{op_lines}\n"
+                f"Return role as exactly one of: {valid_roles}\n"
                 "Valid execution_status: success, failure, timeout, blocked, unknown\n"
                 "artifact_effects is a list of objects with keys: "
                 "effect_category (none/read_only/artifact_change/state_change/mixed/unknown), "
@@ -215,6 +235,78 @@ class TraceAbstractionAgent:
             ),
         ]
         return chat_json(msgs, _StepAnnotation, model=self.model)
+
+    # ------------------------------------------------------------------
+    # Artifact node extraction
+    # ------------------------------------------------------------------
+
+    def _extract_artifacts(self, htir: HTIR) -> None:
+        """
+        Lift the per-step artifact_state_effects into first-class ArtifactNodes,
+        deduplicating by identifier and versioning on repeated mutation. Wires
+        each step's consumed/produced artifact references (provenance edges).
+        """
+        artifact_type_names = set(self.domain_spec.artifact_type_names())
+        index: dict[str, ArtifactNode] = {}
+        next_id = 1
+
+        for step in htir.steps_in_order():
+            for eff in step.artifact_state_effects:
+                ident = (eff.affected_resource or "").strip()
+                if not ident:
+                    continue
+
+                is_change = eff.effect_category in (
+                    ArtifactEffect.ARTIFACT_CHANGE,
+                    ArtifactEffect.STATE_CHANGE,
+                    ArtifactEffect.MIXED,
+                )
+                is_read = eff.effect_category == ArtifactEffect.READ_ONLY
+
+                artifact = index.get(ident)
+                if artifact is None:
+                    artifact = ArtifactNode(
+                        artifact_id=next_id,
+                        artifact_type=self._infer_artifact_type(ident, artifact_type_names),
+                        identifier=ident,
+                        description=eff.observed_change,
+                        produced_by_step_id=step.step_id if is_change else None,
+                        version=0,
+                    )
+                    next_id += 1
+                    index[ident] = artifact
+                    htir.artifacts.append(artifact)
+                elif is_change:
+                    artifact.version += 1
+                    if artifact.produced_by_step_id is None:
+                        artifact.produced_by_step_id = step.step_id
+
+                if is_change and artifact.artifact_id not in step.produced_artifact_ids:
+                    step.produced_artifact_ids.append(artifact.artifact_id)
+                elif is_read and artifact.artifact_id not in step.consumed_artifact_ids:
+                    step.consumed_artifact_ids.append(artifact.artifact_id)
+
+    @staticmethod
+    def _infer_artifact_type(identifier: str, known_types: set[str]) -> str:
+        """Best-effort mapping of an identifier to a domain artifact type."""
+        ident = identifier.lower()
+        if "." in ident and "/" in ident or ident.endswith(
+            (".py", ".r", ".js", ".ts", ".json", ".yaml", ".csv", ".txt", ".md")
+        ):
+            candidate = "source_file" if "source_file" in known_types else "file"
+        elif "tool" in ident:
+            candidate = "tool_result"
+        elif "test" in ident or "report" in ident:
+            candidate = "test_report"
+        elif "log" in ident:
+            candidate = "log"
+        elif "plan" in ident or "todo" in ident:
+            candidate = "task_plan"
+        else:
+            candidate = "state"
+        return candidate if candidate in known_types else (
+            "state" if "state" in known_types else candidate
+        )
 
     # ------------------------------------------------------------------
     # Input provenance links
