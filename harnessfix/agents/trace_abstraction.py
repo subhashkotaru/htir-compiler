@@ -4,10 +4,17 @@ Trace Abstraction Agent  (Section III-A of the paper)
 Compiles raw agent execution traces and harness code into HTIR by:
   1. Normalising each step into a TraceStep with role, execution status,
      and artifact/state effect annotations.
-  2. Inferring input provenance links between steps.
-  3. Inferring control flow links between steps.
-  4. Assembling node-local diagnostic evidence per step.
-  5. Attaching the harness layer responsibility facet per step.
+  2. Extracting first-class artifact nodes and the AVG artifact-provenance
+     edges (E_prov) between artifacts and the operations that created, read,
+     or modified them.
+  3. Inferring input-reuse links between steps (HarnessFix extension, NOT
+     AVG provenance).
+  4. Inferring control-flow links between steps (HarnessFix extension, NOT
+     AVG E_causal).
+  5. Assembling node-local diagnostic evidence per step.
+  6. Optionally attaching the ETCLOVG harness layer responsibility facet per
+     step (HarnessFix extension, off by default on the AVG path -- see
+     ``attach_harness_layers``).
 """
 
 from __future__ import annotations
@@ -22,6 +29,7 @@ from harnessfix.models.htir import (
     HTIR,
     ArtifactEffect,
     ArtifactNode,
+    ArtifactProvenanceLink,
     ArtifactStateEvidence,
     ControlFlowLink,
     ControlFlowTrigger,
@@ -29,8 +37,9 @@ from harnessfix.models.htir import (
     HarnessCodeRef,
     HarnessLayer,
     HarnessLayerFacet,
-    InputProvenanceLink,
+    InputReuseLink,
     NodeLocalEvidence,
+    ProvenanceRelation,
     ReuseRelation,
     TemporalLink,
     TraceStep,
@@ -51,6 +60,7 @@ class _StepAnnotation(BaseModel):
 
 
 class _ProvenanceLink(BaseModel):
+    """LLM schema for a HarnessFix input-reuse link (NOT AVG E_prov)."""
     source_id: int
     target_id: int
     source_span: str = ""
@@ -60,6 +70,7 @@ class _ProvenanceLink(BaseModel):
 
 
 class _ProvenanceLinkList(BaseModel):
+    """LLM schema wrapper for a batch of ``_ProvenanceLink`` (input-reuse) results."""
     links: list[_ProvenanceLink] = Field(default_factory=list)
 
 
@@ -130,8 +141,16 @@ class TraceAbstractionAgent:
         agent_name: str = "",
         harness_root: str = "",
         generate_obligations: bool = True,
+        attach_harness_layers: bool = False,
     ) -> HTIR:
-        """Compile a raw trace into HTIR."""
+        """
+        Compile a raw trace into HTIR.
+
+        ``attach_harness_layers`` controls the HarnessFix ETCLOVG layer facet
+        (see ``_attach_layer_facets``), which is a per-step LLM call outside
+        the AVG proposal. It defaults to off on the AVG path; pass ``True`` to
+        opt into the HarnessFix harness-code-attribution extension.
+        """
         steps = self._build_steps(raw_steps)
         htir = HTIR(
             task_id=task_id,
@@ -142,7 +161,7 @@ class TraceAbstractionAgent:
             harness_root=harness_root,
         )
 
-        # First-class artifact nodes + provenance references on steps
+        # First-class artifact nodes + AVG artifact-provenance edges (E_prov)
         self._extract_artifacts(htir)
 
         # Temporal links (trivially sequential)
@@ -153,17 +172,18 @@ class TraceAbstractionAgent:
 
         harness_context = self._summarise_harness(harness_snippets)
 
-        # Input provenance links
-        prov_links = self._infer_provenance(steps, harness_context)
-        htir.input_provenance_links = prov_links
+        # Input-reuse links (HarnessFix extension, NOT AVG provenance)
+        reuse_links = self._infer_input_reuse(steps, harness_context)
+        htir.input_reuse_links = reuse_links
 
-        # Control flow links
+        # Control flow links (HarnessFix extension, NOT AVG E_causal)
         cf_links = self._infer_control_flow(steps, harness_context)
         htir.control_flow_links = cf_links
 
-        # Node-local evidence + layer facets
+        # Node-local evidence + (optional) layer facets
         self._attach_node_local_evidence(htir)
-        self._attach_layer_facets(htir, harness_context)
+        if attach_harness_layers:
+            self._attach_layer_facets(htir, harness_context)
 
         # Claims, obligations, and support/constraint/validation edges
         if generate_obligations:
@@ -244,7 +264,10 @@ class TraceAbstractionAgent:
         """
         Lift the per-step artifact_state_effects into first-class ArtifactNodes,
         deduplicating by identifier and versioning on repeated mutation. Wires
-        each step's consumed/produced artifact references (provenance edges).
+        each step's consumed/produced artifact references and the AVG
+        artifact-provenance edges (E_prov): an ``ArtifactProvenanceLink`` per
+        (step, artifact) recording whether the step created, modified, or
+        read the artifact.
         """
         artifact_type_names = set(self.domain_spec.artifact_type_names())
         index: dict[str, ArtifactNode] = {}
@@ -264,6 +287,7 @@ class TraceAbstractionAgent:
                 is_read = eff.effect_category == ArtifactEffect.READ_ONLY
 
                 artifact = index.get(ident)
+                is_new_artifact = artifact is None
                 if artifact is None:
                     artifact = ArtifactNode(
                         artifact_id=next_id,
@@ -285,6 +309,22 @@ class TraceAbstractionAgent:
                     step.produced_artifact_ids.append(artifact.artifact_id)
                 elif is_read and artifact.artifact_id not in step.consumed_artifact_ids:
                     step.consumed_artifact_ids.append(artifact.artifact_id)
+
+                # AVG artifact-provenance edge (E_prov).
+                if is_change:
+                    relation = ProvenanceRelation.CREATED if is_new_artifact else ProvenanceRelation.MODIFIED
+                    htir.provenance_links.append(
+                        ArtifactProvenanceLink(
+                            step_id=step.step_id, artifact_id=artifact.artifact_id, relation=relation,
+                        )
+                    )
+                elif is_read:
+                    htir.provenance_links.append(
+                        ArtifactProvenanceLink(
+                            step_id=step.step_id, artifact_id=artifact.artifact_id,
+                            relation=ProvenanceRelation.READ,
+                        )
+                    )
 
     @staticmethod
     def _infer_artifact_type(identifier: str, known_types: set[str]) -> str:
@@ -309,25 +349,25 @@ class TraceAbstractionAgent:
         )
 
     # ------------------------------------------------------------------
-    # Input provenance links
+    # Input-reuse links (HarnessFix extension, NOT AVG provenance)
     # ------------------------------------------------------------------
 
-    def _infer_provenance(
+    def _infer_input_reuse(
         self, steps: list[TraceStep], harness_context: str
-    ) -> list[InputProvenanceLink]:
+    ) -> list[InputReuseLink]:
         if len(steps) < 2:
             return []
 
-        all_links: list[InputProvenanceLink] = []
+        all_links: list[InputReuseLink] = []
         # Process in overlapping windows so each batch has context from prev steps
         for start in range(0, len(steps), LINK_BATCH_SIZE):
             batch = steps[max(0, start - 3): start + LINK_BATCH_SIZE]  # 3-step lookback overlap
-            all_links.extend(self._infer_provenance_batch(batch, harness_context))
+            all_links.extend(self._infer_input_reuse_batch(batch, harness_context))
         return all_links
 
-    def _infer_provenance_batch(
+    def _infer_input_reuse_batch(
         self, steps: list[TraceStep], harness_context: str
-    ) -> list[InputProvenanceLink]:
+    ) -> list[InputReuseLink]:
         if len(steps) < 2:
             return []
 
@@ -339,14 +379,14 @@ class TraceAbstractionAgent:
 
         msgs = [
             system(
-                "You are an expert agent-trace analyst specialising in input provenance. "
+                "You are an expert agent-trace analyst specialising in input reuse. "
                 "For each step, identify which earlier steps' content was reused in its request "
                 "(explicitly copied, summarised, transformed, or semantically reused)."
             ),
             user(
                 f"Steps summary:\n{steps_summary}\n\n"
                 f"Harness context:\n{truncate(harness_context, 800)}\n\n"
-                "Produce a list of provenance links. "
+                "Produce a list of input-reuse links. "
                 "Each link: source_id, target_id, source_span, target_span, reuse_relation "
                 "(copied/summarized/transformed/semantically_reused), harness_code_refs (list of "
                 "{file_path, start_line, end_line, description})."
@@ -354,7 +394,7 @@ class TraceAbstractionAgent:
         ]
         result = chat_json(msgs, _ProvenanceLinkList, model=self.model, max_tokens=2048)
 
-        links: list[InputProvenanceLink] = []
+        links: list[InputReuseLink] = []
         for lk in result.links:
             try:
                 rr = ReuseRelation(lk.reuse_relation)
@@ -362,7 +402,7 @@ class TraceAbstractionAgent:
                 rr = ReuseRelation.SEMANTICALLY_REUSED
             code_refs = [HarnessCodeRef(**r) for r in lk.harness_code_refs if isinstance(r, dict) and "file_path" in r]
             links.append(
-                InputProvenanceLink(
+                InputReuseLink(
                     source_id=lk.source_id,
                     target_id=lk.target_id,
                     source_span=lk.source_span,
@@ -374,7 +414,7 @@ class TraceAbstractionAgent:
         return links
 
     # ------------------------------------------------------------------
-    # Control flow links
+    # Control flow links (HarnessFix extension, NOT AVG E_causal)
     # ------------------------------------------------------------------
 
     def _infer_control_flow(
@@ -382,6 +422,7 @@ class TraceAbstractionAgent:
     ) -> list[ControlFlowLink]:
         if len(steps) < 2:
             return []
+
 
         all_links: list[ControlFlowLink] = []
         for start in range(0, len(steps), LINK_BATCH_SIZE):
@@ -447,9 +488,9 @@ class TraceAbstractionAgent:
     # ------------------------------------------------------------------
 
     def _attach_node_local_evidence(self, htir: HTIR) -> None:
-        prov_by_target: dict[int, list[InputProvenanceLink]] = {}
-        for lk in htir.input_provenance_links:
-            prov_by_target.setdefault(lk.target_id, []).append(lk)
+        reuse_by_target: dict[int, list[InputReuseLink]] = {}
+        for lk in htir.input_reuse_links:
+            reuse_by_target.setdefault(lk.target_id, []).append(lk)
 
         cf_by_target: dict[int, list[ControlFlowLink]] = {}
         for lk in htir.control_flow_links:
@@ -457,13 +498,14 @@ class TraceAbstractionAgent:
 
         for step in htir.steps:
             step.node_local_evidence = NodeLocalEvidence(
-                input_provenance_evidence=prov_by_target.get(step.step_id, []),
+                input_reuse_evidence=reuse_by_target.get(step.step_id, []),
                 control_flow_evidence=cf_by_target.get(step.step_id, []),
                 artifact_state_evidence=step.artifact_state_effects,
             )
 
     # ------------------------------------------------------------------
-    # Harness layer facets
+    # Harness layer facets (HarnessFix extension, not part of AVG G_tau;
+    # only invoked when ``compile(attach_harness_layers=True)``)
     # ------------------------------------------------------------------
 
     def _attach_layer_facets(self, htir: HTIR, harness_context: str) -> None:
@@ -477,7 +519,7 @@ class TraceAbstractionAgent:
                 continue
             evidence_text = json.dumps(
                 {
-                    "provenance": [lk.model_dump() for lk in step.node_local_evidence.input_provenance_evidence],
+                    "input_reuse": [lk.model_dump() for lk in step.node_local_evidence.input_reuse_evidence],
                     "control_flow": [lk.model_dump() for lk in step.node_local_evidence.control_flow_evidence],
                     "artifact_state": [e.model_dump() for e in step.node_local_evidence.artifact_state_evidence],
                 },

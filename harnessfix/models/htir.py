@@ -68,7 +68,14 @@ class ControlFlowTrigger(str, Enum):
 
 
 class HarnessLayer(str, Enum):
-    """The seven ETCLOVG harness layers (HarnessFix diagnostic facet)."""
+    """
+    The seven ETCLOVG harness layers (HarnessFix diagnostic facet).
+
+    HarnessFix extension, not part of AVG G_tau: this taxonomy and everything
+    that attaches to it (``HarnessLayerFacet``, ``HarnessCodeRef``) are
+    optional harness-attribution metadata layered on top of the AVG graph,
+    not concepts defined by the AVG proposal.
+    """
     EXECUTION = "Execution"
     TOOL_INTERFACE = "Tool Interface"
     CONTEXT_MEMORY = "Context/Memory"
@@ -109,7 +116,35 @@ class CheckerType(str, Enum):
 
 
 class EscalationRule(str, Enum):
-    """What the harness may do when an obligation fails or abstains (alpha_i)."""
+    """
+    What the harness may do when an obligation fails or abstains (alpha_i),
+    part of the obligation tuple o_i = (c_i, r_i, E_i, q_i, rho_i, alpha_i).
+
+    Intentionally shares its vocabulary with ``InterventionAction`` (the
+    online intervention iota_t, avg.tex Sec. 3.11), but the two are distinct
+    mechanisms: alpha_i is a static per-obligation escalation rule fixed at
+    obligation-generation time, while iota_t is chosen online per step by
+    monitoring active obligations. Do not conflate them when the online
+    intervention loop is built.
+    """
+    ACCEPT = "accept"
+    REQUEST_EVIDENCE = "request-evidence"
+    RERANK = "rerank"
+    VETO = "veto"
+    REPAIR = "repair"
+    CLARIFY = "clarify"
+    ESCALATE = "escalate"
+
+
+class InterventionAction(str, Enum):
+    """
+    Online intervention iota_t (avg.tex Sec. 3.11): the action the harness
+    takes at step t in response to a failing/abstaining high-severity
+    obligation in the partial graph G_{tau<=t}. Distinct from the per-
+    obligation ``EscalationRule`` (alpha_i), which is fixed when the
+    obligation is generated rather than chosen online. Not yet wired to any
+    online loop; added for forward compatibility with Step-5 work.
+    """
     ACCEPT = "accept"
     REQUEST_EVIDENCE = "request-evidence"
     RERANK = "rerank"
@@ -157,7 +192,11 @@ class ValidationKind(str, Enum):
 # ---------------------------------------------------------------------------
 
 class HarnessCodeRef(BaseModel):
-    """Points to the harness source/prompt artifact responsible for a behaviour."""
+    """
+    Points to the harness source/prompt artifact responsible for a behaviour.
+
+    HarnessFix extension, not part of AVG G_tau.
+    """
     file_path: str = Field(..., description="Repository-relative path to the file")
     start_line: Optional[int] = Field(None, description="Start line (1-indexed)")
     end_line: Optional[int] = Field(None, description="End line (inclusive)")
@@ -174,10 +213,13 @@ class TemporalLink(BaseModel):
     target_id: int
 
 
-class InputProvenanceLink(BaseModel):
+class InputReuseLink(BaseModel):
     """
-    E_prov (step->step): shows how the target step's request was assembled from
-    an earlier step's content (or from harness logic that constructs it).
+    HarnessFix input-reuse relation (NOT AVG provenance): shows how the target
+    step's request was assembled from an earlier step's content (or from
+    harness logic that constructs it). Kept as a HarnessFix diagnostic
+    extension; AVG's artifact-centric provenance edge is
+    ``ArtifactProvenanceLink`` (E_prov) below.
     """
     source_id: int = Field(..., description="ID of the earlier TraceStep")
     target_id: int = Field(..., description="ID of the later TraceStep")
@@ -190,10 +232,30 @@ class InputProvenanceLink(BaseModel):
     )
 
 
+class ProvenanceRelation(str, Enum):
+    """How an operation relates to an artifact for E_prov purposes."""
+    CREATED = "created"
+    READ = "read"
+    MODIFIED = "modified"
+
+
+class ArtifactProvenanceLink(BaseModel):
+    """
+    E_prov: links an artifact to the operation that created, read, or modified
+    it (avg.tex Sec. 3, Provenance analysis). This is the AVG provenance edge;
+    it is artifact-centric, unlike the HarnessFix step->step ``InputReuseLink``.
+    """
+    step_id: int = Field(..., description="Operation (TraceStep) id")
+    artifact_id: int = Field(..., description="Artifact node id")
+    relation: ProvenanceRelation
+
+
 class ControlFlowLink(BaseModel):
     """
-    E_causal: shows why the harness executed a particular step (the controller
-    transition that produced it).
+    HarnessFix control-flow transition (harness extension, not AVG E_causal):
+    shows why the harness executed a particular step (the controller
+    transition that produced it, e.g. retry/delegate/finalize). AVG's actual
+    causal/dependency edge is ``DependencyLink`` (E_causal) below.
     """
     source_id: int
     target_id: int
@@ -201,6 +263,18 @@ class ControlFlowLink(BaseModel):
     triggering_condition: str = Field("", description="Condition evaluated by the harness controller")
     execution_status: Optional[ExecutionStatus] = None
     harness_code_refs: list[HarnessCodeRef] = Field(default_factory=list)
+
+
+class DependencyLink(BaseModel):
+    """
+    E_causal: an operation depends on an earlier artifact or step (avg.tex
+    Sec. 3, Dependency analysis), e.g. an edit that depends on a failing test.
+    Distinct from the HarnessFix ``ControlFlowLink`` controller transition.
+    """
+    source_step_id: int = Field(..., description="The dependent operation")
+    target_step_id: Optional[int] = Field(None, description="Step this operation depends on, if any")
+    target_artifact_id: Optional[int] = Field(None, description="Artifact this operation depends on, if any")
+    reason: str = Field("", description="Why the dependency holds, e.g. 'edit follows failing test'")
 
 
 class SupportLink(BaseModel):
@@ -248,7 +322,11 @@ class ArtifactStateEvidence(BaseModel):
 # ---------------------------------------------------------------------------
 
 class HarnessLayerFacet(BaseModel):
-    """Maps a TraceStep to the ETCLOVG layers implicated by its local evidence."""
+    """
+    Maps a TraceStep to the ETCLOVG layers implicated by its local evidence.
+
+    HarnessFix extension, not part of AVG G_tau.
+    """
     implicated_layers: list[HarnessLayer] = Field(default_factory=list)
     rationale: str = Field("", description="Why these layers are implicated")
 
@@ -262,7 +340,7 @@ class NodeLocalEvidence(BaseModel):
     Organises the evidence attached to a single TraceStep for failure
     attribution.  Three evidence types mirror the three link categories.
     """
-    input_provenance_evidence: list[InputProvenanceLink] = Field(default_factory=list)
+    input_reuse_evidence: list[InputReuseLink] = Field(default_factory=list)
     control_flow_evidence: list[ControlFlowLink] = Field(default_factory=list)
     artifact_state_evidence: list[ArtifactStateEvidence] = Field(default_factory=list)
 
@@ -398,11 +476,13 @@ class HTIR(BaseModel):
 
     # Edges
     temporal_links: list[TemporalLink] = Field(default_factory=list)
-    input_provenance_links: list[InputProvenanceLink] = Field(default_factory=list)
+    input_reuse_links: list[InputReuseLink] = Field(default_factory=list)
     control_flow_links: list[ControlFlowLink] = Field(default_factory=list)
     support_links: list[SupportLink] = Field(default_factory=list)
     constraint_links: list[ConstraintLink] = Field(default_factory=list)
     validation_links: list[ValidationLink] = Field(default_factory=list)
+    provenance_links: list[ArtifactProvenanceLink] = Field(default_factory=list)
+    dependency_links: list[DependencyLink] = Field(default_factory=list)
 
     # Path to the harness code under analysis
     harness_root: str = Field("", description="Root directory of the harness codebase")

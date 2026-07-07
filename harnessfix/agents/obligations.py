@@ -9,12 +9,19 @@ compiled HTIR graph:
     final answers;
   * generate ``Obligation`` objects from the domain spec's templates
     (universal / domain / trajectory-triggered) plus trajectory triggers;
-  * wire the support (E_sup), constraint (E_cons), and validation (E_val) edges.
+  * wire the support (E_sup), constraint (E_cons), validation (E_val), and a
+    first-cut dependency (E_causal) edge set.
 
 Checking (running mechanical/semantic checkers to fill ``Obligation.result``)
 is intentionally *not* done here — obligations are emitted with
 ``checker`` routed to a class and ``status = PENDING`` so the checking stage
 can be added on top without reshaping the graph.
+
+The dependency edges (E_causal) wired here are a deterministic first cut
+(consumer step -> producer step of a consumed artifact). Full dependency
+recovery (avg.tex Sec. 3, Dependency analysis -- e.g. an edit depending on a
+failing test even without an explicit artifact-consumption link) is a Step-3
+analysis module; see the TODO in ``_link_dependencies`` below.
 """
 
 from __future__ import annotations
@@ -27,6 +34,7 @@ from harnessfix.models.htir import (
     ClaimNode,
     ClaimStatus,
     ConstraintLink,
+    DependencyLink,
     EvidenceNode,
     EvidenceType,
     ExecutionStatus,
@@ -206,6 +214,11 @@ def build_claims_and_obligations(htir: HTIR, spec: DomainSpec) -> HTIR:
         _link_constraint(htir, constraint)
 
     # ------------------------------------------------------------------
+    # 5b. Dependency edges (E_causal): first-cut deterministic recovery.
+    # ------------------------------------------------------------------
+    _link_dependencies(htir)
+
+    # ------------------------------------------------------------------
     # 6. Obligations from templates + trajectory triggers.
     # ------------------------------------------------------------------
     def _emit(template, claim_id: int, step_id: int, scope: ObligationScope) -> None:
@@ -291,3 +304,33 @@ def _link_constraint(htir: HTIR, constraint: Constraint) -> None:
                 note=constraint.description,
             )
         )
+
+
+def _link_dependencies(htir: HTIR) -> None:
+    """
+    Deterministic first cut of E_causal: link each step that consumes an
+    artifact to the step that produced it.
+
+    TODO(Step-3 dependency-analysis module): this only captures dependencies
+    that are already visible through artifact consumption. avg.tex's
+    dependency analysis (Sec. 3) also expects dependencies with no explicit
+    artifact link, e.g. an edit that depends on an earlier failing test, or a
+    final answer depending on a retrieved policy. Recovering those requires
+    trace/semantic analysis beyond this deterministic pass.
+    """
+    for step in htir.steps_in_order():
+        for artifact_id in step.consumed_artifact_ids:
+            artifact = htir.get_artifact(artifact_id)
+            if artifact is None or artifact.produced_by_step_id is None:
+                continue
+            if artifact.produced_by_step_id == step.step_id:
+                continue
+            htir.dependency_links.append(
+                DependencyLink(
+                    source_step_id=step.step_id,
+                    target_step_id=artifact.produced_by_step_id,
+                    target_artifact_id=artifact_id,
+                    reason=f"consumes artifact '{artifact.identifier}' produced by step {artifact.produced_by_step_id}",
+                )
+            )
+
