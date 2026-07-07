@@ -1,0 +1,560 @@
+
+\documentclass{article} % For LaTeX2e
+\usepackage{iclr2026_conference,times}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+\usepackage{hyperref}
+\usepackage{url}
+
+\usepackage{graphicx} 
+
+% Optional shared macros / notation snippet
+% Put this in your preamble if useful.
+\usepackage{amsmath,amssymb,amsthm,amsfonts,bm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{xspace}
+
+\newcommand{\AVG}{\textsc{AVG}\xspace}
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\cD}{\mathcal{D}}
+\newcommand{\cE}{\mathcal{E}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cV}{\mathcal{V}}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cY}{\mathcal{Y}}
+\newcommand{\ind}{\mathbb{I}}
+
+
+\title{Adaptive Verifier Graphs for Harnessed Agents}
+
+% Authors must not appear in the submitted version. They should be hidden
+% as long as the \iclrfinalcopy macro remains commented out below.
+% Non-anonymous submissions will be rejected without review.
+
+\author{Antiquus S.~Hippocampus, Natalia Cerebro \& Amelie P. Amygdale \thanks{ Use footnote for providing further information
+about author (webpage, alternative address)---\emph{not} for acknowledging
+funding agencies.  Funding acknowledgements go at the end of the paper.} \\
+Department of Computer Science\\
+Cranberry-Lemon University\\
+Pittsburgh, PA 15213, USA \\
+\texttt{\{hippo,brain,jen\}@cs.cranberry-lemon.edu} \\
+\And
+Ji Q. Ren \& Yevgeny LeNet \\
+Department of Computational Neuroscience \\
+University of the Witwatersrand \\
+Joburg, South Africa \\
+\texttt{\{robot,net\}@wits.ac.za} \\
+\AND
+Coauthor \\
+Affiliation \\
+Address \\
+\texttt{email}
+}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak at that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+%\iclrfinalcopy % Uncomment for camera-ready version, but NOT for submission.
+\begin{document}
+
+
+\maketitle
+
+% \begin{abstract}
+% The abstract paragraph should be indented 1/2~inch (3~picas) on both left and
+% right-hand margins. Use 10~point type, with a vertical spacing of 11~points.
+% The word \textsc{Abstract} must be centered, in small caps, and in point size 12. Two
+% line spaces precede the abstract. The abstract must be limited to one
+% paragraph.
+% \end{abstract}
+\section{Introduction}
+\label{sec:introduction}
+
+Large language models are increasingly deployed as \emph{agents}: systems that call tools, edit files, query databases, browse environments, and produce artifacts over many steps. In these settings, correctness is not captured by the final answer alone. An agent may reach a plausible endpoint while skipping required validation, modifying the wrong artifact, violating a policy, or relying on unsupported intermediate claims. This makes supervision difficult for frozen black-box agents, where we only observe external traces such as tool calls, logs, diffs, tests, retrieved documents, and final responses.
+
+Recent benchmarks make this limitation concrete. Terminal-Bench studies long-horizon command-line tasks with executable environments \citep{merrill2026terminalbench}; MCP-Bench, MCPVerse, and WildToolBench expose failures in realistic tool-use settings \citep{wang2025mcpbench,lei2026mcpverse,yu2026wildtoolbench}; $\tau$-bench, JourneyBench, and TheAgentCompany evaluate agents in interactive, policy-sensitive, and workplace-style environments \citep{yao2025taubench,balaji2026journeybench,xu2024theagentcompany}; and DAComp shows that enterprise data workflows remain challenging even for strong agents \citep{lei2026dacomp}. Across these domains, failures are often process failures: the agent takes a locally plausible step that is unsupported, invalid, unsafe, or non-progressive.
+
+Existing process-supervision methods address part of this problem by assigning rewards or judgments to intermediate steps \citep{setlur2025rewardingprogress,fan2026agentprocessbench}. However, agent trajectories are heterogeneous. A terminal command, a database query, a file edit, a GUI action, and a policy-sensitive customer-support step require different evidence and different checks. A single scalar judge over the full trajectory is therefore brittle, while fully labeled step-level supervision is rarely available. What is missing is a reusable way to turn messy black-box traces into local, evidence-carrying verification problems.
+
+We propose \textbf{Adaptive Verifier Graphs} (\AVG), a framework for verifying black-box agent trajectories through structured local obligations. \AVG represents an execution as a graph of operations, artifacts, claims, evidence, and verification obligations. Analysis modules enrich this graph with provenance, dependency, policy, state-transition, and integrity information. Each obligation is then checked by the strongest available evidence source: a mechanical checker when possible, a narrow semantic judge when necessary, or an abstention when evidence is insufficient. The output is not only a pass/fail score, but a \emph{verification witness}: a compact report describing which claims are supported, which failed, which remain unresolved, and which artifacts support each decision.
+
+The key idea is that verification should be evidence-local and domain-extensible. The reusable object is not a universal judge of task success, but a common verification structure: typed operations, evidence links, obligation templates, checker contracts, abstention, and witness generation. New domains specialize this structure through small domain specifications that define relevant operations, artifact types, constraints, and obligation templates. This lets the same verification layer apply to software tasks, terminal workflows, enterprise data analysis, and policy-heavy tool use while keeping domain-specific correctness explicit and auditable.
+
+Our contributions are:
+\begin{itemize}[leftmargin=1.2em]
+\item We formulate black-box agent verification as the construction and checking of evidence-carrying local obligations.
+\item We introduce \AVG, a graph-based verification representation over operations, artifacts, claims, evidence, and obligations.
+\item We define domain specifications that adapt verification to new environments through typed operations, artifact schemas, constraints, and obligation templates.
+\item We introduce verification witnesses as a compact interface for human review, automatic intervention, and offline harness improvement.
+\item We propose an evaluation protocol focused on verification quality, evidence localization, abstention, transfer, and human-verification efficiency.
+\end{itemize}
+
+\section{Preliminaries}
+\label{sec:preliminaries}
+
+We study verification for frozen black-box agents that act through a runtime harness. A task instance $x \in \mathcal{X}$ is drawn from a domain $d \in \mathcal{D}$. The agent policy $\pi_\theta$ is fixed and inaccessible except through its observable behavior. The harness $h \in \mathcal{H}$ mediates context construction, tool access, memory, validation, and user-facing responses.
+
+At step $t$, the harness exposes an observation $o_t$, context state $m_t$, and admissible action set $\mathcal{A}_t$. The agent chooses an action
+\begin{equation}
+a_t \sim \pi_\theta(\cdot \mid o_t, m_t, h),
+\end{equation}
+and the environment returns an observable outcome $u_t$. Outcomes may include tool responses, shell outputs, file diffs, database rows, screenshots, logs, exceptions, test results, retrieved policies, or final messages. Since the agent is black-box, we assume no access to hidden model states, logits, activations, or internal reasoning traces.
+
+\paragraph{Observable trajectory.}
+We represent an execution as a sequence of observable events
+\begin{equation}
+\tau = (e_1,\ldots,e_T),
+\end{equation}
+where each event is a typed record
+\begin{equation}
+e_t = (\texttt{type}_t,\texttt{payload}_t,\texttt{artifact}_t,\texttt{meta}_t).
+\end{equation}
+The event type indicates whether the event is a user instruction, tool invocation, tool output, file operation, validation run, retrieved document, environment state change, or final response. The payload contains the structured content of the event, the artifact field points to produced or consumed objects, and the metadata field stores timestamps, tool names, paths, exit codes, or other execution details.
+
+\paragraph{Domain artifacts.}
+Each domain $d$ may provide weak artifacts
+\begin{equation}
+\Omega_d =
+{\text{schemas}, \text{manuals}, \text{logs}, \text{policies}, \text{tests}, \text{historical traces}, \text{counterexamples}}.
+\end{equation}
+These artifacts need not contain gold step-level labels. They provide partial evidence about what actions are valid, what artifacts should look like, which checks are available, and which constraints must hold.
+
+\paragraph{Domain specification.}
+A domain specification describes how to interpret observable events in a particular environment. We write
+
+\begin{equation}
+\mathcal{S}_d =
+(\mathcal{P}_d,\mathcal{R}_d,\mathcal{K}_d,\mathcal{B}_d),
+\end{equation}
+
+where $\mathcal{P}_d$ is the set of operation types, $\mathcal{R}_d$ is the set of artifact types, $\mathcal{K}_d$ is the set of domain constraints, and $\mathcal{B}_d$ is the set of obligation templates. For example, a terminal-based software task may define operations such as \texttt{read\_file}, \texttt{edit\_file}, and \texttt{run\_test}; artifacts such as source files, patches, logs, and test reports; constraints such as \texttt{do not modify tests}; and obligations such as \texttt{a source edit should be followed by relevant validation}.
+
+\paragraph{Adaptive Verifier Graph.}
+
+Given a trajectory $\tau$, \AVG constructs a typed graph
+\begin{equation}
+G_\tau = (V_\tau,E_\tau,\phi_V,\phi_E),
+\end{equation}
+where $V_\tau$ contains operation, artifact, claim, evidence, and obligation nodes. The functions $\phi_V$ and $\phi_E$ assign node and edge types.
+
+Operation nodes represent observed actions, such as tool calls, shell commands, file edits, SQL queries, browser actions, validation runs, and final responses. Artifact nodes represent produced or consumed objects, such as files, tables, patches, command outputs, logs, screenshots, policies, test results, and database states. Claim nodes represent checkable statements induced by the trajectory. Evidence nodes point to artifacts or graph neighborhoods that may support or refute claims. Obligation nodes represent claims that must be verified before the trajectory, or part of the trajectory, should be trusted.
+
+Edges encode temporal, causal, provenance, support, constraint, and validation relations:
+\begin{equation}
+E_\tau =
+E_{\mathrm{temp}}
+\cup E_{\mathrm{causal}}
+\cup E_{\mathrm{prov}}
+\cup E_{\mathrm{sup}}
+\cup E_{\mathrm{cons}}
+\cup E_{\mathrm{val}}.
+\end{equation}
+These edges make it possible to trace a final answer back to the operations, artifacts, validations, and policies that support it.
+
+\paragraph{Verification obligations.}
+The central unit of verification is an obligation. An obligation is a tuple
+
+\begin{equation}
+o_i =
+(c_i,r_i,\mathcal{E}_i,q_i,\rho_i,\alpha_i),
+\end{equation}
+
+where $c_i$ is the claim to verify, $r_i$ is the required evidence type, $\mathcal{E}_i$ is the set of candidate evidence nodes, $q_i$ is the checker assigned to the obligation, $\rho_i$ is the severity, and $\alpha_i$ is the escalation rule. Obligations localize verification: instead of asking whether the entire trajectory is correct, \AVG asks whether specific claims are supported by specific evidence.
+
+\paragraph{Checker outputs.}
+A checker consumes an obligation and its local graph context. It returns
+
+\begin{equation}
+q_i(o_i,G_\tau) = (p_i^{+},p_i^{-},p_i^{\varnothing},s_i,\eta_i),
+\end{equation}
+
+where $p_i^{+}$, $p_i^{-}$, and $p_i^{\varnothing}$ are probabilities of \texttt{pass}, \texttt{fail}, and \texttt{abstain}; $s_i \in \mathbb{R}$ is a scalar score; and $\eta_i$ is the evidence used by the checker. Abstention is essential because black-box traces often lack enough information to support a reliable pass or fail decision.
+
+\paragraph{Verification witness.}
+The output of \AVG is a verification witness
+
+\begin{equation}
+W_\tau =
+(\mathcal{O}^{+},\mathcal{O}^{-},\mathcal{O}^{\varnothing},\mathcal{E}_W,R_W),
+\end{equation}
+
+where $\mathcal{O}^{+}$, $\mathcal{O}^{-}$, and $\mathcal{O}^{\varnothing}$ are the passed, failed, and abstained obligations; $\mathcal{E}_W$ contains the supporting evidence; and $R_W$ is a concise review recommendation. The witness is intended to compress a long trajectory into the small set of evidence-linked claims that matter for trust, intervention, or human review.
+
+\section{Methodology}
+\label{sec:method}
+
+We present \textbf{Adaptive Verifier Graphs} (\AVG), a framework for verifying black-box agent trajectories through evidence-carrying local obligations. \AVG takes a raw execution trace, constructs a typed verification graph, enriches the graph with analysis modules, generates obligations, checks them with available evidence, and emits a verification witness. The framework is designed for heterogeneous agent settings where correctness is multi-faceted and final-answer evaluation is too sparse.
+
+\subsection{Method Overview}
+
+Given a trajectory $\tau$ and domain artifacts $\Omega_d$, \AVG performs six steps:
+\begin{equation}
+\text{raw trace}
+\rightarrow
+\text{typed events}
+\rightarrow
+\text{verification graph}
+\rightarrow
+\text{analysis modules}
+\rightarrow
+\text{obligations}
+\rightarrow
+\text{verification witness}.
+\end{equation}
+
+First, the raw trace is converted into typed operations and artifacts using the domain specification $\mathcal{S}_d$. Second, \AVG constructs a graph over operations, artifacts, claims, evidence, and obligations. Third, analysis modules add provenance, dependency, state-transition, policy, integrity, and coverage information. Fourth, obligation templates identify which claims must be checked. Fifth, checkers attempt to discharge each obligation using mechanical evidence when possible, semantic evidence when needed, and abstention when evidence is insufficient. Finally, the checked obligations are aggregated into a witness that supports automatic intervention or human review.
+
+This design separates what happened, what must be checked, and what evidence supports each check. The graph records the execution. The obligations define the verification problem. The witness summarizes the result.
+
+\subsection{Parsing Trajectories into Typed Events}
+
+Raw agent traces are often unstructured. A terminal trace may contain commands, stdout, stderr, exit codes, file edits, and test results. A data-analysis trace may contain SQL queries, schemas, table outputs, plots, and report text. A policy-heavy workflow may contain user messages, retrieved policies, tool calls, confirmations, and final actions.
+
+For each domain, $\mathcal{S}*d$ maps raw observations into typed records:
+\begin{equation}
+\mathrm{Parse}*{\mathcal{S}_d}(\tau) = (\tilde e_1,\ldots,\tilde e_T).
+\end{equation}
+Each typed event $\tilde e_t$ has an operation type, consumed artifacts, produced artifacts, and metadata. This step is intentionally shallow. It does not decide whether the agent solved the task. It only makes the observable trace structured enough for verification.
+
+For example, in a terminal task, the command \texttt{pytest -q} becomes a \texttt{TestRun} operation with stdout, stderr, and exit code artifacts. A source edit becomes an \texttt{ArtifactMutation} operation with before-file, after-file, and diff artifacts. A final response becomes a \texttt{FinalAnswer} operation whose claims must later be connected to evidence.
+
+\subsection{Graph Construction}
+
+After parsing, \AVG constructs $G_\tau$ by adding operation and artifact nodes, then linking them with temporal, causal, and provenance edges. Each operation node is connected to the artifacts it consumes and produces. If an operation modifies an artifact, the graph stores both the prior and updated artifact states when available. If an operation validates a previous change, \AVG adds a validation edge from the validation result to the relevant prior operation or artifact.
+
+The graph also creates initial claim nodes. Some claims are direct consequences of observed metadata, such as `the command exited with code $0$'' or `the file \texttt{parser.py} was modified.'' Other claims are induced by final responses or task-specific requirements, such as `the parser now produces the requested CSV schema'' or `the final report follows the retrieved policy.'' These claims are not trusted by default. They become candidates for obligation generation.
+
+\subsection{Well-Formedness Checks}
+
+Before checking task correctness, \AVG verifies that the graph is well formed. These checks are domain-independent and catch trajectories that cannot support reliable verification. We use rules such as:
+\begin{itemize}[leftmargin=1.2em]
+\item every tool output must be linked to a corresponding tool invocation;
+\item every file mutation must have producer provenance and, when available, before and after states;
+\item every final success claim must depend on at least one evidence or validation node;
+\item every validation claim must specify whether the evidence is full, targeted, or manual;
+\item every policy-sensitive action must be linked to a relevant policy artifact or marked unresolved;
+\item every failed validation that motivates a later edit must be connected to a later validation attempt or an unresolved obligation.
+\end{itemize}
+
+A well-formedness failure does not necessarily mean the task failed. It means the trace is missing evidence needed for confident verification. In such cases, \AVG emits unresolved obligations instead of assigning unsupported credit.
+
+\subsection{Analysis Modules}
+
+Once the graph is well formed, \AVG runs analysis modules that enrich the graph. These modules do not directly assign a final score. They add structure that makes local verification possible.
+
+\paragraph{Provenance analysis.}
+This module links each artifact to the operations that created, read, or modified it. It also connects final answers to the source artifacts that support them. For example, a statement in a final report may be linked to a table, a query, and a retrieved document.
+
+\paragraph{Dependency analysis.}
+This module recovers which operations depend on earlier artifacts. A file edit may depend on a failing test. A database query may depend on a schema. A final answer may depend on a retrieved policy or generated table. These links help determine which evidence is relevant to each claim.
+
+\paragraph{State-transition analysis.}
+This module checks whether actions produced expected observable changes. In a software task, a useful pattern is: failing test, relevant source edit, post-edit validation, passing test. In a data task, a useful pattern may be: source table, filtered query, aggregation, exported report. State-transition analysis makes these patterns explicit.
+
+\paragraph{Policy-linking analysis.}
+This module connects actions to applicable instructions, rules, or policies. If an action is policy-sensitive but no policy evidence is linked, \AVG creates an unresolved obligation. This prevents the verifier from treating ungrounded policy compliance as established.
+
+\paragraph{Integrity analysis.}
+This module detects shortcut behavior and artifact tampering. Examples include modifying tests to pass visible checks, deleting required files, changing evaluation inputs, skipping validation, using stale outputs, or producing final claims that cannot be traced to source evidence.
+
+\paragraph{Coverage analysis.}
+This module estimates how much of the trajectory is supported by evidence. Coverage is reported by obligation type and evidence type. A trajectory may have high mechanical coverage for tool execution but low semantic coverage for policy compliance or task relevance.
+
+\subsection{Generating Verification Obligations}
+
+Obligations are generated from universal templates, domain templates, and trajectory-triggered templates.
+
+\paragraph{Universal obligations.}
+These apply across most agent trajectories. Examples include:
+\begin{itemize}[leftmargin=1.2em]
+\item tool calls must match tool schemas;
+\item produced artifacts must have provenance;
+\item final answers must be connected to supporting evidence;
+\item validation claims must be backed by validation artifacts;
+\item high-risk or irreversible actions must satisfy their preconditions.
+\end{itemize}
+
+\paragraph{Domain obligations.}
+These come from $\mathcal{S}_d$. In a terminal software task, domain obligations may require that implementation files, not tests, are edited; that validation runs after the edit; and that generated files match expected schemas. In an enterprise data task, obligations may require that SQL filters match the user request, report cells trace to source rows, and sensitive columns are not exposed. In a policy-heavy workflow, obligations may require that the action sequence follows the retrieved procedure.
+
+\paragraph{Trajectory-triggered obligations.}
+These are created when certain events occur. A failed test creates an obligation to explain or address the failure. A file edit creates an obligation to validate the changed behavior. A retrieved policy creates an obligation to check later actions against it. A final answer creates obligations connecting its claims to evidence.
+
+Formally, the obligation set is
+\begin{equation}
+\mathcal{O}(G_\tau)
+=
+\mathcal{O}*{\mathrm{uni}}(G*\tau)
+\cup
+\mathcal{O}*{\mathrm{dom}}(G*\tau,\mathcal{S}*d)
+\cup
+\mathcal{O}*{\mathrm{trig}}(G_\tau).
+\end{equation}
+
+\subsection{Checking Obligations}
+
+Each obligation is assigned to a checker based on its claim type and required evidence. \AVG uses three checker classes.
+
+\paragraph{Mechanical checkers.}
+Mechanical checkers use deterministic or executable evidence. Examples include exit-code checks, parsers, schema validators, unit tests, static analyzers, SQL validators, file-existence checks, and diff checks. These checkers are preferred whenever available because their evidence is direct and reproducible.
+
+\paragraph{Semantic checkers.}
+Semantic checkers are used when the claim cannot be fully resolved mechanically. They operate on narrow claim-evidence pairs rather than full trajectories. For example, a semantic checker may judge whether a source diff plausibly addresses a specific failing assertion, whether a final sentence is supported by a retrieved passage, or whether a tool action follows a policy excerpt. Keeping the context local reduces the burden on the semantic checker and improves evidence attribution.
+
+\paragraph{Abstention and escalation.}
+If neither mechanical nor semantic evidence is sufficient, the checker abstains. Abstention is treated as a normal outcome:
+\begin{equation}
+q_i(o_i,G_\tau)
+=
+(p_i^{+},p_i^{-},p_i^{\varnothing},s_i,\eta_i).
+\end{equation}
+A high value of $p_i^{\varnothing}$ indicates that more evidence is needed. Depending on severity, the harness may ask the agent to gather evidence, rerun validation, repair the trajectory, or escalate to a human reviewer.
+
+\subsection{Aggregating Obligation Results}
+
+After all obligations are checked, \AVG aggregates local results into a trajectory-level status:
+\begin{equation}
+z_\tau
+=
+\mathrm{Agg}
+\left(
+{q_i(o_i,G_\tau): o_i \in \mathcal{O}(G_\tau)}
+\right)
+=
+(\hat y_\tau,\hat u_\tau,\hat c_\tau,\hat \eta_\tau).
+\end{equation}
+Here $\hat y_\tau$ is the predicted trajectory status, $\hat u_\tau$ is uncertainty, $\hat c_\tau$ is evidence coverage, and $\hat \eta_\tau$ is the aggregated evidence trace.
+
+Aggregation is severity-aware. A failed high-severity obligation can veto a final success claim even if many low-severity obligations pass. For example, if an agent modifies tests despite being instructed not to, the trajectory should be marked invalid even if the visible test suite passes. Conversely, a trajectory with no explicit failures but many abstained high-severity obligations should be treated as uncertain rather than successful.
+
+\subsection{Verification Witness}
+
+The final output is a verification witness:
+\begin{equation}
+W_\tau =
+(\mathcal{O}^{+},\mathcal{O}^{-},\mathcal{O}^{\varnothing},\mathcal{E}_W,R_W).
+\end{equation}
+The witness reports passed obligations, failed obligations, abstained obligations, supporting evidence, and a review recommendation.
+
+A witness is useful because it compresses verification. Instead of inspecting a long trace, a human or controller can inspect the small set of high-impact obligations. For example, in a command-line repair task, a witness may state that the agent inspected the relevant file, changed the implementation, did not modify tests, and passed the full test suite, but that generalization beyond visible tests remains unresolved. The reviewer can then inspect the single unresolved diff rather than the entire trajectory.
+
+\subsection{Online Intervention}
+
+During execution, \AVG can guide the harness by monitoring obligations as they arise. At step $t$, the current partial graph $G_{\tau_{\leq t}}$ induces a set of active obligations. If a high-severity obligation fails or abstains, the harness chooses an intervention
+$
+\iota_t \in
+{
+\texttt{accept},
+\texttt{request-evidence},
+\texttt{rerank},
+\texttt{veto},
+\texttt{repair},
+\texttt{clarify},
+\texttt{escalate}
+}.
+$
+The intervention is selected by
+\begin{equation}
+\iota_t^\star
+=
+\arg\max_{\iota}
+\mathbb{E}
+\left[
+\hat r_t^\iota
+-\beta \mathrm{Cost}(\iota) - 
+\gamma \mathrm{Risk}(\iota)
+\right],
+\end{equation}
+where $\hat r_t^\iota$ is the predicted benefit of the intervention, and the cost and risk terms prevent unnecessary control.
+
+For example, if an agent edits a file and immediately claims completion, \AVG creates an unresolved post-edit validation obligation. The harness may then request a test run before allowing the final answer. If validation passes, the final claim becomes supported. If validation fails, the failure becomes evidence for repair.
+
+\subsection{Offline Harness Improvement}
+
+Verification witnesses also provide offline feedback for improving the harness. Let
+\begin{equation}
+h=(p,s,m,r),
+\end{equation}
+where $p$ denotes prompts or instructions, $s$ denotes skills, $m$ denotes memory policies, and $r$ denotes runtime rules. Given a proposed edit $\Delta h$, we accept it only if it improves verifier-conditioned performance on held-out traces:
+\begin{equation}
+\mathrm{Accept}(\Delta h)
+=
+\mathbb{I}
+\left[
+\hat J(h+\Delta h) > \hat J(h)+\epsilon
+\wedge
+\mathrm{Safe}(\Delta h)=1
+\right].
+\end{equation}
+The score $\hat J$ combines task success, failed obligations, unresolved high-severity obligations, evidence coverage, cost, and policy violations.
+
+Repeated witness patterns also identify missing domain obligations. For example, if agents frequently pass a narrow test but fail hidden tests, the domain specification can add a stronger validation obligation. If agents often produce CSV files without checking headers, the domain specification can add a CSV-schema obligation. This allows the verifier to improve over time while keeping the base model fixed.
+
+\subsection{Design Rationale}
+
+\AVG is built around the idea that black-box agent verification should be local, evidence-carrying, and abstention-aware. A final answer alone rarely reveals whether the trajectory was valid. A full raw trace is often too long for efficient human review. A single model judge may miss unsupported claims or hidden process violations. By representing trajectories as graphs of operations, artifacts, claims, evidence, and obligations, \AVG exposes the structure needed for reliable verification. The result is a reusable supervision layer that can support runtime intervention, human review, and offline harness improvement across heterogeneous agent domains.
+
+
+\section{Proposed Experiments}
+\label{sec:experiments}
+
+We design our experiments to answer four questions:
+\begin{enumerate}[leftmargin=1.3em]
+    \item Does a verifier graph outperform monolithic verification for black-box agents?
+    \item Do domain adapters improve transfer and sample efficiency over universal-only verifiers?
+    \item Does calibrated abstention improve robustness and intervention precision?
+    \item Can the same verifier infrastructure support both online control and offline harness optimization across heterogeneous domains?
+\end{enumerate}
+
+\subsection{Benchmarks and Domains}
+\label{subsec:benchmarks}
+
+We evaluate across a deliberately heterogeneous benchmark suite:
+\begin{itemize}[leftmargin=1.2em]
+    \item \textbf{Terminal workflows:} Terminal-Bench for long-horizon CLI tasks.
+    \item \textbf{Broad tool use:} MCPVerse for large-scale real-world tool ecosystems.
+    \item \textbf{Enterprise data workflows:} DAComp, including both data engineering and data analysis tasks.
+    \item \textbf{Policy-heavy interaction:} JourneyBench for customer-support workflows with branching SOPs.
+    \item \textbf{Software engineering:} R2E-Gym / SWE-style tasks for executable coding and patch validation.
+    \item \textbf{Enterprise case study:} one proprietary or semi-synthetic black-box domain (e.g., EDA, enterprise workflow automation, or internal analytics operations), if available.
+\end{itemize}
+
+The purpose of this suite is not breadth for its own sake. Each domain stresses a distinct aspect of verifier design: tool validity, stateful execution, policy adherence, large action spaces, open-ended artifact production, or executable validation.
+
+\subsection{Evaluation Protocols}
+\label{subsec:protocols}
+
+We propose three transfer settings.
+
+\paragraph{Zero-shot transfer.}
+Train universal verifier families on a subset of domains and test on unseen domains using only shared verifier templates.
+
+\paragraph{Few-artifact adaptation.}
+Provide a small artifact budget per new domain (e.g., schemas, policies, logs, a handful of traces) and evaluate the gain from synthesized domain adapters.
+
+\paragraph{Online trace adaptation.}
+Allow the verifier graph to update adapters incrementally from newly observed failures, while keeping the base agent fixed.
+
+Within each setting, we evaluate three operating modes:
+\begin{equation}
+    \texttt{Base Agent}, \qquad
+    \texttt{Base + Online AVG}, \qquad
+    \texttt{Base + Online AVG + Offline Harness Updates}.
+\end{equation}
+
+\subsection{Baselines}
+\label{subsec:baselines}
+
+We compare against the following baselines:
+\begin{itemize}[leftmargin=1.2em]
+     \item \textbf{No verifier:} the underlying harnessed agent without additional supervision.
+    \item \textbf{Monolithic verifier:} a single scalar judge over full trajectories or local steps.
+    \item \textbf{Execution-only verifier:} executable checks where available, without execution-free or policy-aware components.
+    \item \textbf{Execution-free verifier:} model-based or artifact-based local verifier without executable checks.
+    \item \textbf{Prompt/skill optimization baselines:} methods such as SkillOpt or harness-editing baselines without verifier graphs.
+    \item \textbf{Harness optimization baselines:} outer-loop search methods such as Meta-Harness or runtime-adaptation baselines such as Life-Harness, where comparable.
+\end{itemize}
+
+\subsection{Metrics}
+\label{subsec:metrics}
+
+We report both task outcomes and verifier quality.
+
+\paragraph{Task metrics.}
+Success rate, partial completion, policy-violation rate, rollback rate, cost, wall-clock latency, and tool-call budget.
+
+\paragraph{Verifier metrics.}
+Local classification accuracy, abstention-calibrated AUROC, expected calibration error, intervention precision/recall, and evidence localization quality.
+
+\paragraph{Harness-improvement metrics.}
+Acceptance rate of proposed edits, edit utility, post-update generalization to held-out tasks, and negative-transfer rate on unrelated tasks.
+
+\paragraph{Robustness metrics.}
+Sensitivity to distribution shift in tool schemas, hidden policy changes, injected noisy logs, and adversarial shortcut opportunities.
+
+\subsection{Core Ablations}
+\label{subsec:ablations}
+
+We propose the following ablations:
+\begin{enumerate}[leftmargin=1.3em]
+    \item \textbf{Graph vs. monolith:} replace the verifier graph with a single scalar verifier.
+    \item \textbf{Universal-only vs. universal + adapters:} remove domain adapters.
+    \item \textbf{No abstention:} force every verifier to emit pass/fail.
+    \item \textbf{No integrity verifier:} remove shortcut and reward-hacking checks.
+    \item \textbf{No offline loop:} disable harness edits and keep only online intervention.
+    \item \textbf{No online loop:} use the verifier only as an outer-loop scoring function.
+    \item \textbf{Template-free adaptation:} replace artifact-grounded templates with direct end-to-end adaptation.
+\end{enumerate}
+
+These ablations test the central claims of the paper: that factorization matters, adaptation matters, abstention matters, and online/offline loops play different roles.
+
+\subsection{Stress Tests for Black-Box Enterprise Tasks}
+\label{subsec:stress}
+
+Because our motivating setting is enterprise black-box work, we include targeted stress tests:
+\begin{itemize}[leftmargin=1.2em]
+    \item \textbf{Hidden-state mismatch:} visible outputs appear correct while latent required state changes are missing.
+    \item \textbf{Policy drift:} the SOP or compliance policy changes mid-evaluation.
+    \item \textbf{Artifact inconsistency:} logs, tables, or reports contradict one another.
+    \item \textbf{Large tool menus:} action spaces expand substantially at test time.
+    \item \textbf{Shortcut opportunities:} the agent can appear successful by bypassing required validation.
+\end{itemize}
+These settings probe whether verifier graphs merely improve average benchmark score or genuinely improve reliability under enterprise-relevant failure modes.
+
+\subsection{Statistical Reporting}
+\label{subsec:stats}
+
+For each benchmark, we report mean and standard error over multiple seeds or task subsamples where appropriate. We compare methods under matched model, tool, and budget conditions, and we report cost-normalized performance curves in addition to best-score snapshots. Because harness details can materially change outcomes, all experiments disclose runtime configuration, intervention budgets, and any domain artifacts used for adaptation.
+
+\subsection{Expected Outcomes}
+\label{subsec:expected}
+
+Our main hypothesis is that \AVG will yield the largest gains in domains where correctness is multi-faceted and weakly supervised, rather than in settings already well covered by executable endpoint checks alone. We further expect:
+\begin{enumerate}[leftmargin=1.3em]
+    \item verifier graphs to outperform monolithic verifiers, especially on long-horizon and policy-constrained tasks;
+    \item domain adapters to improve few-artifact adaptation while preserving cross-domain transfer;
+    \item abstention to reduce harmful false positives and improve intervention precision;
+    \item combining online intervention with offline harness editing to outperform either mode alone.
+\end{enumerate}
+
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Process supervision and step-level verification.}
+Outcome-only supervision is often too sparse for long-horizon reasoning and agentic tasks. Process reward models assign value to intermediate reasoning or action steps and can improve over endpoint-only rewards \citep{setlur2025rewardingprogress,yuan2026vpr,wang2025sparl,choudhury2025agentprm,xi2025agentprm}. In tool-use settings, ToolPRMBench shows that specialized process reward models can outperform generic verifiers \citep{li2026toolprmbench}, while AgentProcessBench shows that evaluating step-level quality in realistic agent trajectories is itself difficult \citep{fan2026agentprocessbench}. SWE-Gym further demonstrates that executable software-engineering trajectories can support both agent and verifier training \citep{pan2024swegym}. Our work shares the goal of process-level supervision, but differs in the unit of verification: \AVG does not ask a model to score a whole step in isolation. It converts steps into explicit claims and obligations, attaches evidence, and allows each obligation to pass, fail, or abstain.
+
+\paragraph{LLM judges, agent judges, and structured evaluation.}
+LLM-as-a-judge methods provide scalable evaluation but can be unreliable when judging long, tool-rich trajectories. Agent-as-a-Judge and AJ-Bench study evaluators that actively gather evidence from environments, showing that environment-aware judging can improve over passive judging while remaining far from solved \citep{zhuge2025agentasjudge,shi2026ajbench}. JETTS studies judge models for test-time scaling and finds that judges can be useful for reranking but do not fully replace process reward models \citep{zhou2025jetts}. Prior work on self-verification also shows that models are often unreliable judges of their own reasoning and plans \citep{stechly2025selfverification}. Graph of Verification proposes decomposed verification for multi-step reasoning \citep{fang2025graphofverification}. \AVG follows the broader lesson that verification should be decomposed, but targets black-box agent traces with heterogeneous artifacts, mechanical checks, evidence links, and calibrated abstention.
+
+\paragraph{Executable, hybrid, and artifact-grounded verification.}
+Many agent domains provide partial executable feedback, such as tests, parsers, schemas, simulators, database constraints, or static checks. Software-engineering benchmarks and systems such as R2E-Gym highlight the value of combining execution-based and execution-free verification \citep{jain2025r2egym}. However, executable feedback is rarely complete. Tests may be hidden or incomplete, logs may be ambiguous, and some requirements are semantic or policy-based. \AVG treats executable checks as high-confidence evidence but not as the only verification source. Each obligation declares the evidence it requires and the checker that can discharge it. When hard evidence is missing, \AVG can invoke narrow semantic checks over claim-evidence pairs or abstain rather than force a potentially misleading judgment.
+
+\paragraph{Harness adaptation and runtime control.}
+Recent work increasingly treats the agent harness as a first-class object of optimization. Methods such as ADAS, SkillOpt, Meta-Harness, Continual Harness, Natural-Language Agent Harnesses, Life-Harness, and AutoHarness optimize prompts, skills, workflows, runtime rules, or harness code around frozen or partially fixed models \citep{hu2025adas,yang2026skillopt,lee2026metaharness,karten2026continual,pan2026nlah,xu2026lifeharness,lou2026autoharness}. Related runtime-enforcement work, including AgentSpec and AgentArmor, uses explicit rules or trace analysis to constrain agent behavior during execution \citep{wang2025agentspec,wang2025agentarmor}. These systems show that agent performance depends strongly on scaffolding and control. \AVG is complementary: it provides the supervision layer that tells a harness which parts of a trajectory are supported, which obligations failed, and where intervention or human review is needed.
+
+\paragraph{Benchmarks for realistic agent behavior.}
+Modern agent benchmarks increasingly emphasize interaction, long horizons, tool use, and realistic artifacts. Terminal-Bench evaluates command-line tasks with real environments \citep{merrill2026terminalbench}; MCP-Bench and MCPVerse study large tool ecosystems \citep{wang2025mcpbench,lei2026mcpverse}; WildToolBench emphasizes messy real-user tool-use behavior \citep{yu2026wildtoolbench}; $\tau$-bench and JourneyBench study rule-following and policy-heavy interactions \citep{yao2025taubench,balaji2026journeybench}; TheAgentCompany evaluates workplace-style tasks \citep{xu2024theagentcompany}; and DAComp focuses on enterprise data workflows \citep{lei2026dacomp}. These benchmarks motivate verification methods that go beyond final success. \AVG is designed for this setting: it produces localized evidence, identifies unresolved risks, and gives humans or automated controllers a concise view of why a trajectory should or should not be trusted.
+
+\bibliography{iclr2026_conference}
+\bibliographystyle{iclr2026_conference}
+
+% \appendix
+
+\end{document}

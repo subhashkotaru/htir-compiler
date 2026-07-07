@@ -15,7 +15,6 @@ import json
 import os
 from typing import Any, Optional, Type, TypeVar
 
-from openai import OpenAI
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
@@ -23,12 +22,22 @@ T = TypeVar("T", bound=BaseModel)
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "openai/gpt-4o"   # OpenRouter model slug; change freely
 
-_client: Optional[OpenAI] = None
+_client: Optional[Any] = None
 
 
-def get_client() -> OpenAI:
+def get_client() -> Any:
     global _client
     if _client is None:
+        # Imported lazily so the deterministic pipeline (and ``import htir``)
+        # works without the optional ``llm`` extra installed. Install it with
+        # ``pip install htir[llm]`` to enable semantic checks/analysis.
+        try:
+            from openai import OpenAI
+        except ImportError as exc:  # pragma: no cover - only without the extra
+            raise ImportError(
+                "The 'openai' package is required for LLM-backed passes. "
+                "Install it with: pip install 'htir[llm]'"
+            ) from exc
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
             raise EnvironmentError(
@@ -40,8 +49,8 @@ def get_client() -> OpenAI:
             base_url=OPENROUTER_BASE_URL,
             default_headers={
                 # Optional but recommended by OpenRouter docs
-                "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "https://github.com/harnessfix"),
-                "X-Title": os.getenv("OPENROUTER_APP_NAME", "HarnessFix"),
+                "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "https://github.com/htir/htir"),
+                "X-Title": os.getenv("OPENROUTER_APP_NAME", "HTIR"),
             },
         )
     return _client
@@ -80,14 +89,25 @@ def chat_json(
     the given Pydantic schema.  Returns a parsed instance of that schema.
     """
     schema_str = json.dumps(schema.model_json_schema(), indent=2)
-    system_instruction = (
-        "You are a precise analytical assistant. "
+    schema_instruction = (
         "Respond ONLY with a valid JSON object that matches the following schema "
         "(no markdown fences, no extra keys):\n\n"
         f"{schema_str}"
     )
 
-    augmented = [{"role": "system", "content": system_instruction}] + messages
+    # Merge into the caller's existing system message (if any) instead of
+    # prepending a second one -- avoids sending two competing "system" role
+    # messages per request.
+    augmented = list(messages)
+    existing_idx = next((i for i, m in enumerate(augmented) if m.get("role") == "system"), None)
+    if existing_idx is not None:
+        merged = augmented[existing_idx]["content"] + "\n\n" + schema_instruction
+        augmented[existing_idx] = {**augmented[existing_idx], "content": merged}
+    else:
+        augmented.insert(0, {
+            "role": "system",
+            "content": "You are a precise analytical assistant. " + schema_instruction,
+        })
 
     raw = chat(
         augmented,

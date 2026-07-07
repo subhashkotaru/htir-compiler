@@ -1,0 +1,50 @@
+# Terminal / software-engineering domain  —  example of specialising S_d.
+#
+# Demonstrates domain extensibility: executable operations, a critical
+# "do not modify tests" constraint, and schema/validation obligations.
+# See default.yaml for the enum value reference.
+
+domain_id: terminal_swe
+description: Terminal / software-engineering tasks with executable validation.
+
+operation_types:
+  - {name: read_file,              description: Read a source or data file}
+  - {name: edit_file,              description: Create or modify an implementation file}
+  - {name: run_command,            description: Run a shell command}
+  - {name: run_test,               description: Run a test suite or targeted test}
+  - {name: orchestration_decision, description: Planning or control-flow decisions}
+  - {name: final_submission,       description: Submit the final solution}
+  - {name: other,                  description: Anything not covered above}
+
+artifact_types:
+  - {name: source_file,    description: An implementation source file}
+  - {name: test_file,      description: A test file}
+  - {name: patch,          description: A diff applied to a file}
+  - {name: command_output, description: stdout/stderr of a command}
+  - name: test_report
+    description: Result of a test run
+    schema_hint: Contains pass/fail counts and exit code
+
+constraints:
+  - constraint_id: no-test-mutation
+    description: Implementation files, not tests, should be edited.
+    severity: critical
+    applies_to_operations: [edit_file]
+
+obligation_templates:
+  - template_id: swe-edit-then-validate
+    claim_template: An implementation edit is validated by a post-edit test run.
+    scope: domain
+    trigger: edit_file
+    required_evidence: executable
+    severity: high
+    escalation: repair
+    target_claim_type: artifact_provenance
+
+  - template_id: swe-generated-schema
+    claim_template: Generated files match the expected schema.
+    scope: domain
+    trigger: edit_file
+    required_evidence: schema
+    severity: medium
+    escalation: request-evidence
