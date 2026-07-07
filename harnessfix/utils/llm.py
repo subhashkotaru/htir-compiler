@@ -80,14 +80,25 @@ def chat_json(
     the given Pydantic schema.  Returns a parsed instance of that schema.
     """
     schema_str = json.dumps(schema.model_json_schema(), indent=2)
-    system_instruction = (
-        "You are a precise analytical assistant. "
+    schema_instruction = (
         "Respond ONLY with a valid JSON object that matches the following schema "
         "(no markdown fences, no extra keys):\n\n"
         f"{schema_str}"
     )
 
-    augmented = [{"role": "system", "content": system_instruction}] + messages
+    # Merge into the caller's existing system message (if any) instead of
+    # prepending a second one -- avoids sending two competing "system" role
+    # messages per request.
+    augmented = list(messages)
+    existing_idx = next((i for i, m in enumerate(augmented) if m.get("role") == "system"), None)
+    if existing_idx is not None:
+        merged = augmented[existing_idx]["content"] + "\n\n" + schema_instruction
+        augmented[existing_idx] = {**augmented[existing_idx], "content": merged}
+    else:
+        augmented.insert(0, {
+            "role": "system",
+            "content": "You are a precise analytical assistant. " + schema_instruction,
+        })
 
     raw = chat(
         augmented,

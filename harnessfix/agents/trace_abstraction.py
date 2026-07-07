@@ -15,6 +15,13 @@ Compiles raw agent execution traces and harness code into HTIR by:
   6. Optionally attaching the ETCLOVG harness layer responsibility facet per
      step (HarnessFix extension, off by default on the AVG path -- see
      ``attach_harness_layers``).
+  7. Running the Step-3 analysis layer (``harnessfix.agents.analysis.enrich``):
+     well-formedness checks and the provenance / dependency / validation /
+     state-transition / policy-linking / integrity analysis modules
+     (avg.tex Sec. 3.4-3.5).
+  8. Generating claims, evidence, and obligations
+     (``harnessfix.agents.obligations.build_claims_and_obligations``), then
+     coverage analysis (``harnessfix.agents.analysis.compute_coverage``).
 """
 
 from __future__ import annotations
@@ -44,6 +51,7 @@ from harnessfix.models.htir import (
     TemporalLink,
     TraceStep,
 )
+from harnessfix.agents.analysis import compute_coverage, enrich
 from harnessfix.agents.obligations import build_claims_and_obligations
 from harnessfix.utils.llm import chat_json, system, user, DEFAULT_MODEL
 from harnessfix.utils.io import truncate
@@ -90,6 +98,18 @@ class _ControlFlowLinkList(BaseModel):
 class _LayerFacet(BaseModel):
     implicated_layers: list[str] = Field(default_factory=list)
     rationale: str = ""
+
+
+def _coerce_artifact_effect(value: Any) -> ArtifactEffect:
+    """
+    Coerce an LLM-supplied ``effect_category`` string into ``ArtifactEffect``,
+    falling back to ``UNKNOWN`` instead of raising when the model returns a
+    value outside the enum (mirrors the ``role`` fallback to ``"other"``).
+    """
+    try:
+        return ArtifactEffect(value or "unknown")
+    except ValueError:
+        return ArtifactEffect.UNKNOWN
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +162,7 @@ class TraceAbstractionAgent:
         harness_root: str = "",
         generate_obligations: bool = True,
         attach_harness_layers: bool = False,
+        use_semantic_analysis: bool = False,
     ) -> HTIR:
         """
         Compile a raw trace into HTIR.
@@ -150,6 +171,11 @@ class TraceAbstractionAgent:
         (see ``_attach_layer_facets``), which is a per-step LLM call outside
         the AVG proposal. It defaults to off on the AVG path; pass ``True`` to
         opt into the HarnessFix harness-code-attribution extension.
+
+        ``use_semantic_analysis`` gates the LLM-backed passes inside the
+        Step-3 analysis layer (``harnessfix.agents.analysis.enrich``), e.g.
+        free-text final-answer provenance and soft policy-relevance linking.
+        Deterministic analysis passes always run regardless of this flag.
         """
         steps = self._build_steps(raw_steps)
         htir = HTIR(
@@ -185,9 +211,19 @@ class TraceAbstractionAgent:
         if attach_harness_layers:
             self._attach_layer_facets(htir, harness_context)
 
-        # Claims, obligations, and support/constraint/validation edges
+        # Step-3 analysis layer: well-formedness checks + provenance /
+        # dependency / validation / state-transition / policy-linking /
+        # integrity analysis modules (avg.tex Sec. 3.4-3.5). Runs after graph
+        # construction and before obligation generation, which consumes it.
+        enrich(htir, self.domain_spec, use_semantic=use_semantic_analysis)
+
+        # Claims, obligations, and support edges; obligations are also seeded
+        # from unresolved well-formedness/analysis-module issues above.
         if generate_obligations:
             build_claims_and_obligations(htir, self.domain_spec)
+            # Coverage analysis (avg.tex Sec. 3.5) depends on obligations, so
+            # it runs last rather than inside ``enrich``.
+            compute_coverage(htir)
 
         return htir
 
@@ -208,7 +244,7 @@ class TraceAbstractionAgent:
 
             effects = [
                 ArtifactStateEvidence(
-                    effect_category=ArtifactEffect(e.get("effect_category") or "unknown"),
+                    effect_category=_coerce_artifact_effect(e.get("effect_category")),
                     affected_resource=str(e.get("affected_resource") or ""),
                     observed_change=str(e.get("observed_change") or ""),
                     supporting_evidence=str(e.get("supporting_evidence") or ""),
@@ -437,7 +473,7 @@ class TraceAbstractionAgent:
             return []
 
         steps_summary = "\n".join(
-            f"S{s.step_id}: role={s.role.value} status={s.execution_status.value} "
+            f"S{s.step_id}: role={s.role} status={s.execution_status.value} "
             f"req={truncate(s.request_message, 150)}"
             for s in steps
         )

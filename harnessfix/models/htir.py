@@ -454,6 +454,51 @@ class Obligation(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Analysis-module outputs (avg.tex Sec. 3.4-3.5)
+# ---------------------------------------------------------------------------
+
+class WellFormednessIssue(BaseModel):
+    """
+    A domain-independent structural well-formedness failure (avg.tex Sec.
+    3.4, "Well-Formedness Checks"). A well-formedness failure does not mean
+    the task failed -- it means the trace is missing evidence needed for
+    confident verification, so it seeds an unresolved obligation instead of
+    an assigned pass/fail.
+    """
+    rule_id: str = Field(..., description="Which well-formedness/analysis rule failed")
+    severity: Severity = Severity.MEDIUM
+    offending_node_ids: list[int] = Field(
+        default_factory=list,
+        description="step_id/artifact_id values implicated (which kind depends on rule_id)",
+    )
+    message: str = ""
+
+
+class StateTransitionPattern(BaseModel):
+    """
+    A recognised (or attempted-but-broken) expected-pattern instance from
+    State-transition analysis (avg.tex Sec. 3.5), e.g. failing-validation ->
+    relevant-edit -> post-edit-validation -> passing-validation.
+    """
+    pattern_name: str
+    step_ids: list[int] = Field(default_factory=list, description="Ordered step ids forming the (partial) pattern")
+    matched: bool = Field(False, description="Whether the full expected pattern was observed")
+    note: str = ""
+
+
+class CoverageReport(BaseModel):
+    """
+    Evidence coverage by obligation type x evidence type (avg.tex Sec. 3.5,
+    Coverage analysis). Populated after obligation generation, since it
+    reports over ``HTIR.obligations``.
+    """
+    by_obligation_type: dict[str, int] = Field(default_factory=dict)
+    by_evidence_type: dict[str, int] = Field(default_factory=dict)
+    covered_obligations: int = 0
+    total_obligations: int = 0
+
+
+# ---------------------------------------------------------------------------
 # HTIR graph
 # ---------------------------------------------------------------------------
 
@@ -483,6 +528,15 @@ class HTIR(BaseModel):
     validation_links: list[ValidationLink] = Field(default_factory=list)
     provenance_links: list[ArtifactProvenanceLink] = Field(default_factory=list)
     dependency_links: list[DependencyLink] = Field(default_factory=list)
+
+    # Analysis-module outputs (avg.tex Sec. 3.4-3.5). Populated by
+    # harnessfix.agents.analysis.enrich() (well-formedness / most modules) and
+    # harnessfix.agents.analysis.compute_coverage() (coverage, after
+    # obligation generation). default_factory so existing serialized outputs
+    # (data/htir_outputs/*.json) stay backward compatible.
+    wellformedness: list[WellFormednessIssue] = Field(default_factory=list)
+    state_transitions: list[StateTransitionPattern] = Field(default_factory=list)
+    coverage: CoverageReport = Field(default_factory=CoverageReport)
 
     # Path to the harness code under analysis
     harness_root: str = Field("", description="Root directory of the harness codebase")

@@ -1,40 +1,42 @@
 """
 Claim & obligation construction (AVG graph-construction + obligation-generation).
 
-This module realises the deterministic parts of AVG stages 3-4 over an already
-compiled HTIR graph:
+This module realises the deterministic parts of AVG stage 4 (obligation
+generation) over an already compiled *and enriched* HTIR graph:
 
   * lift observable effects into first-class ``EvidenceNode`` objects;
   * induce ``ClaimNode`` objects from step outcomes, artifact provenance, and
     final answers;
+  * wire the support edge set (E_sup);
   * generate ``Obligation`` objects from the domain spec's templates
     (universal / domain / trajectory-triggered) plus trajectory triggers;
-  * wire the support (E_sup), constraint (E_cons), validation (E_val), and a
-    first-cut dependency (E_causal) edge set.
+  * seed additional ``Obligation`` objects from unresolved well-formedness /
+    analysis-module issues (``htir.wellformedness``).
+
+Graph *enrichment* -- the E_val (validation), E_cons (constraint), and
+E_causal (dependency) edge sets, well-formedness checks, and the six AVG
+analysis modules (avg.tex Sec. 3.4-3.5) -- is owned by
+``harnessfix.agents.analysis`` and is expected to have already run over
+``htir`` by the time this function is called (see
+``TraceAbstractionAgent.compile``). This function only *consumes* that
+enrichment.
 
 Checking (running mechanical/semantic checkers to fill ``Obligation.result``)
 is intentionally *not* done here — obligations are emitted with
 ``checker`` routed to a class and ``status = PENDING`` so the checking stage
 can be added on top without reshaping the graph.
-
-The dependency edges (E_causal) wired here are a deterministic first cut
-(consumer step -> producer step of a consumed artifact). Full dependency
-recovery (avg.tex Sec. 3, Dependency analysis -- e.g. an edit depending on a
-failing test even without an explicit artifact-consumption link) is a Step-3
-analysis module; see the TODO in ``_link_dependencies`` below.
 """
 
 from __future__ import annotations
 
-from harnessfix.models.domain import Constraint, DomainSpec
+from harnessfix.models.domain import DomainSpec
 from harnessfix.models.htir import (
     HTIR,
     ArtifactEffect,
     CheckerType,
     ClaimNode,
     ClaimStatus,
-    ConstraintLink,
-    DependencyLink,
+    EscalationRule,
     EvidenceNode,
     EvidenceType,
     ExecutionStatus,
@@ -43,8 +45,6 @@ from harnessfix.models.htir import (
     SupportLink,
     SupportPolarity,
     TraceStep,
-    ValidationKind,
-    ValidationLink,
 )
 from harnessfix.utils.io import truncate
 
@@ -187,39 +187,15 @@ def build_claims_and_obligations(htir: HTIR, spec: DomainSpec) -> HTIR:
                 )
 
     # ------------------------------------------------------------------
-    # 4. Validation edges (E_val): each validation op validates the most recent
-    #    prior artifact-producing step.
-    # ------------------------------------------------------------------
-    ordered = htir.steps_in_order()
-    for i, step in enumerate(ordered):
-        if not _is_role(step.role, _VALIDATION_HINTS):
-            continue
-        target = _last_producer_before(ordered, i)
-        kind = ValidationKind.FULL if "test" in step.role.lower() else ValidationKind.TARGETED
-        htir.validation_links.append(
-            ValidationLink(
-                source_id=step.step_id,
-                target_step_id=target.step_id if target else None,
-                target_artifact_id=(target.produced_artifact_ids[0]
-                                    if target and target.produced_artifact_ids else None),
-                validation_kind=kind,
-                outcome=step.execution_status,
-            )
-        )
-
-    # ------------------------------------------------------------------
-    # 5. Constraint edges (E_cons): tie domain constraints to governed steps.
-    # ------------------------------------------------------------------
-    for constraint in spec.constraints:
-        _link_constraint(htir, constraint)
-
-    # ------------------------------------------------------------------
-    # 5b. Dependency edges (E_causal): first-cut deterministic recovery.
-    # ------------------------------------------------------------------
-    _link_dependencies(htir)
-
-    # ------------------------------------------------------------------
-    # 6. Obligations from templates + trajectory triggers.
+    # 4. Obligations from templates + trajectory triggers.
+    #
+    # NOTE: E_val (validation), E_cons (constraint), and the E_causal
+    # first-cut dependency links are no longer wired here. They are graph
+    # *enrichment*, owned by the Step-3 analysis layer
+    # (harnessfix.agents.analysis.enrich), which the pipeline runs before
+    # this function so ``htir.validation_links`` / ``constraint_links`` /
+    # ``dependency_links`` are already populated by the time obligations
+    # are generated.
     # ------------------------------------------------------------------
     def _emit(template, claim_id: int, step_id: int, scope: ObligationScope) -> None:
         htir.obligations.append(
@@ -253,6 +229,34 @@ def build_claims_and_obligations(htir: HTIR, spec: DomainSpec) -> HTIR:
                 ).claim_id
             _emit(template, target_claim, step.step_id, template.scope)
 
+    # ------------------------------------------------------------------
+    # 5. Unresolved obligations seeded by well-formedness / analysis-module
+    #    issues (avg.tex Sec. 3.4): a failure there does not mean the task
+    #    failed, it means evidence is missing, so it becomes an UNRESOLVED
+    #    claim routed to the ABSTENTION checker rather than a task failure.
+    # ------------------------------------------------------------------
+    for issue in htir.wellformedness:
+        seed_claim = _add_claim(
+            issue.message or f"Well-formedness rule '{issue.rule_id}' is unresolved.",
+            claim_type=f"wellformedness:{issue.rule_id}",
+            step_id=None,
+            status=ClaimStatus.UNRESOLVED,
+        )
+        htir.obligations.append(
+            Obligation(
+                obligation_id=_ob_id.next(),
+                claim_id=seed_claim.claim_id,
+                required_evidence=EvidenceType.NONE,
+                candidate_evidence_ids=[],
+                checker=CheckerType.ABSTENTION,
+                severity=issue.severity,
+                escalation=EscalationRule.REQUEST_EVIDENCE,
+                scope=ObligationScope.TRAJECTORY_TRIGGERED,
+                template_id=f"wellformedness:{issue.rule_id}",
+                description=issue.message,
+            )
+        )
+
     return htir
 
 
@@ -270,13 +274,6 @@ class _Counter:
         return v
 
 
-def _last_producer_before(ordered: list[TraceStep], idx: int) -> TraceStep | None:
-    for j in range(idx - 1, -1, -1):
-        if ordered[j].produced_artifact_ids:
-            return ordered[j]
-    return None
-
-
 def _template_triggers(template, step: TraceStep) -> bool:
     trig = template.trigger
     if not trig:
@@ -291,46 +288,7 @@ def _template_triggers(template, step: TraceStep) -> bool:
     return step.role == trig or trig in step.role.lower()
 
 
-def _link_constraint(htir: HTIR, constraint: Constraint) -> None:
-    applies = constraint.applies_to_operations
-    for step in htir.steps:
-        if applies and step.role not in applies:
-            continue
-        htir.constraint_links.append(
-            ConstraintLink(
-                constraint_id=constraint.constraint_id,
-                step_id=step.step_id,
-                satisfied=None,  # resolved by the (future) checking stage
-                note=constraint.description,
-            )
-        )
-
-
-def _link_dependencies(htir: HTIR) -> None:
-    """
-    Deterministic first cut of E_causal: link each step that consumes an
-    artifact to the step that produced it.
-
-    TODO(Step-3 dependency-analysis module): this only captures dependencies
-    that are already visible through artifact consumption. avg.tex's
-    dependency analysis (Sec. 3) also expects dependencies with no explicit
-    artifact link, e.g. an edit that depends on an earlier failing test, or a
-    final answer depending on a retrieved policy. Recovering those requires
-    trace/semantic analysis beyond this deterministic pass.
-    """
-    for step in htir.steps_in_order():
-        for artifact_id in step.consumed_artifact_ids:
-            artifact = htir.get_artifact(artifact_id)
-            if artifact is None or artifact.produced_by_step_id is None:
-                continue
-            if artifact.produced_by_step_id == step.step_id:
-                continue
-            htir.dependency_links.append(
-                DependencyLink(
-                    source_step_id=step.step_id,
-                    target_step_id=artifact.produced_by_step_id,
-                    target_artifact_id=artifact_id,
-                    reason=f"consumes artifact '{artifact.identifier}' produced by step {artifact.produced_by_step_id}",
-                )
-            )
+# _link_constraint (E_cons) and _link_dependencies (E_causal first cut) have
+# moved to harnessfix.agents.analysis (Step-3 graph-enrichment layer); see
+# ``link_constraints`` / ``link_dependencies`` there.
 
