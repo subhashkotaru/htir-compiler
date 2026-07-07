@@ -272,6 +272,36 @@ class TraceAbstractionAgent:
 
         return htir
 
+    def compile_prefix(
+        self,
+        task_id: str,
+        raw_steps: list[dict[str, Any]],
+        harness_snippets: dict[str, str],
+        prefix_len: int,
+        **compile_kwargs: Any,
+    ) -> HTIR:
+        """
+        Compile only the first ``prefix_len`` steps of ``raw_steps`` into an
+        HTIR -- the partial graph G_{tau<=t} online intervention (AVG Step 7,
+        avg.tex Sec. 3.11) monitors. This is the "simplest" incremental-
+        compilation option noted in the Step-7 handoff: it re-runs the whole
+        deterministic pipeline over a prefix rather than incrementally
+        updating an existing ``HTIR``, which is fine for offline replay of a
+        *recorded* trace (not a live agent).
+
+        ``generate_obligations`` and ``run_checks`` default to ``True`` here
+        (unlike ``compile``) since intervention needs checked obligations;
+        pass them explicitly in ``compile_kwargs`` to override.
+        """
+        compile_kwargs.setdefault("generate_obligations", True)
+        compile_kwargs.setdefault("run_checks", True)
+        return self.compile(
+            task_id=task_id,
+            raw_steps=raw_steps[:prefix_len],
+            harness_snippets=harness_snippets,
+            **compile_kwargs,
+        )
+
     # ------------------------------------------------------------------
     # Step construction
     # ------------------------------------------------------------------

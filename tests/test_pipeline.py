@@ -21,8 +21,11 @@ Builds synthetic HTIRs by hand (no OpenRouter/LLM calls) so this runs without
 
 from __future__ import annotations
 
+import re
+
 from harnessfix.agents.analysis import enrich
 from harnessfix.agents.checking import check_obligations
+from harnessfix.agents.intervention import active_obligations, run_intervention_loop, select_intervention
 from harnessfix.agents.obligations import _template_triggers, build_claims_and_obligations
 from harnessfix.agents.trace_abstraction import TraceAbstractionAgent
 from harnessfix.agents.witness import aggregate, build_witness
@@ -42,8 +45,10 @@ from harnessfix.models.htir import (
     CheckerResult,
     CheckerType,
     ClaimStatus,
+    EscalationRule,
     EvidenceType,
     ExecutionStatus,
+    InterventionAction,
     Obligation,
     ObligationStatus,
     ProvenanceRelation,
@@ -772,3 +777,115 @@ def test_omega_schema_evidence_resolves_schema_obligation():
 
     check_obligations(htir, TERMINAL_DOMAIN_SPEC, domain_artifacts=bundle)
     assert schema_obs[0].status == ObligationStatus.PASSED
+
+
+# ---------------------------------------------------------------------------
+# Step 7 -- online intervention iota_t (harnessfix.agents.intervention)
+# ---------------------------------------------------------------------------
+
+# Raw (request/response) form of the fail -> edit -> pass synthetic trace
+# (mirrors _build_synthetic_htir), for replay through TraceAbstractionAgent.compile_prefix.
+_INTERVENTION_RAW_STEPS = [
+    {"request": "run pytest", "response": "1 failed, 0 passed"},
+    {"request": "edit parser.py to fix failing test", "response": "applied patch"},
+    {"request": "run pytest again", "response": "2 passed"},
+    {"request": "submit final answer", "response": "Fixed the parser bug; tests now pass."},
+]
+
+_INTERVENTION_ANNOTATIONS: dict[int, dict] = {
+    1: dict(
+        role="validation", execution_status=ExecutionStatus.FAILURE,
+        artifact_effects=[{
+            "effect_category": "artifact_change", "affected_resource": "test_report",
+            "observed_change": "test suite run, 1 failure",
+        }],
+    ),
+    2: dict(
+        role="artifact_editing", execution_status=ExecutionStatus.SUCCESS,
+        artifact_effects=[
+            {"effect_category": "read_only", "affected_resource": "test_report", "observed_change": "inspected failure"},
+            {"effect_category": "artifact_change", "affected_resource": "parser.py", "observed_change": "patched parsing logic"},
+        ],
+    ),
+    3: dict(
+        role="validation", execution_status=ExecutionStatus.SUCCESS,
+        artifact_effects=[
+            {"effect_category": "read_only", "affected_resource": "parser.py", "observed_change": "revalidated"},
+            {"effect_category": "artifact_change", "affected_resource": "test_report", "observed_change": "test suite run, all passed"},
+        ],
+    ),
+    4: dict(role="final_submission", execution_status=ExecutionStatus.SUCCESS, artifact_effects=[]),
+}
+
+
+def _fake_annotation_chat_json(messages, schema, model=None, max_tokens=None, **kwargs):
+    """Stubs TraceAbstractionAgent._annotate_step deterministically; other schemas get empty defaults."""
+    user_content = next((m["content"] for m in messages if m.get("role") == "user"), "")
+    match = re.match(r"Step (\d+):", user_content)
+    if match and schema.__name__ == "_StepAnnotation":
+        return schema(**_INTERVENTION_ANNOTATIONS[int(match.group(1))])
+    return schema()
+
+
+def test_active_obligation_gets_repair_intervention_before_revalidation(monkeypatch):
+    """
+    Step 7: replaying the fail->edit->pass trace up to step 2 (right after the
+    edit, before revalidation) surfaces the post-edit-validation obligation
+    (anchored on the edit's artifact_provenance claim) as active, and its
+    deterministic intervention follows its escalation rule (repair, per
+    trig-post-edit-validation in domains/default.yaml).
+    """
+    monkeypatch.setattr("harnessfix.agents.trace_abstraction.chat_json", _fake_annotation_chat_json)
+    agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
+
+    htir_prefix = agent.compile_prefix("intervention-test", _INTERVENTION_RAW_STEPS, {}, 2)
+    claims_by_id = {c.claim_id: c for c in htir_prefix.claims}
+
+    actives = active_obligations(htir_prefix)
+    edit_obligation = next(
+        o for o in actives
+        if o.template_id == "trig-post-edit-validation" and claims_by_id[o.claim_id].source_step_id == 2
+    )
+    assert edit_obligation.status == ObligationStatus.ABSTAINED
+
+    action = select_intervention(edit_obligation, htir_prefix)
+    assert action == InterventionAction.REPAIR
+
+
+def test_active_obligation_resolves_once_revalidation_passes(monkeypatch):
+    """Step 7: once the revalidation step is included, that same obligation is no longer active."""
+    monkeypatch.setattr("harnessfix.agents.trace_abstraction.chat_json", _fake_annotation_chat_json)
+    agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
+
+    htir_prefix = agent.compile_prefix("intervention-test", _INTERVENTION_RAW_STEPS, {}, 3)
+    claims_by_id = {c.claim_id: c for c in htir_prefix.claims}
+
+    remaining = [
+        o for o in active_obligations(htir_prefix)
+        if o.template_id == "trig-post-edit-validation" and claims_by_id[o.claim_id].source_step_id == 2
+    ]
+    assert remaining == []
+
+
+def test_select_intervention_defaults_to_obligation_escalation():
+    """Step 7: with the default benefit/cost/risk functions, iota_t reduces to alpha_i (escalation)."""
+    ob = _obligation(1, ObligationStatus.FAILED, Severity.HIGH, p_fail=1.0)
+    ob.escalation = EscalationRule.VETO
+    htir = HTIR(task_id="intervention-unit-test")
+
+    assert select_intervention(ob, htir) == InterventionAction.VETO
+
+
+def test_run_intervention_loop_is_deterministic_and_idempotent(monkeypatch):
+    """Step 7: replaying the same trace twice yields an identical intervention log."""
+    monkeypatch.setattr("harnessfix.agents.trace_abstraction.chat_json", _fake_annotation_chat_json)
+    agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
+
+    htir1 = run_intervention_loop(agent, "loop-test", _INTERVENTION_RAW_STEPS, {})
+    log1 = [entry.model_dump() for entry in htir1.intervention_log]
+
+    htir2 = run_intervention_loop(agent, "loop-test", _INTERVENTION_RAW_STEPS, {})
+    log2 = [entry.model_dump() for entry in htir2.intervention_log]
+
+    assert log1, "expected at least one recorded intervention"
+    assert log1 == log2

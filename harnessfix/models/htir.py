@@ -531,6 +531,24 @@ class VerificationWitness(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Online intervention log (avg.tex Sec. 3.11, AVG Step 7)
+# ---------------------------------------------------------------------------
+
+class InterventionLogEntry(BaseModel):
+    """
+    One recorded intervention decision: at step ``step_id``, over the partial
+    graph G_{tau<=step_id}, ``obligation_id`` was active (high-severity,
+    failing/abstaining) and the harness chose ``action`` (iota_t). Purely a
+    recommendation trace (``harnessfix.agents.intervention``); does not drive
+    an agent.
+    """
+    step_id: int
+    obligation_id: int
+    action: InterventionAction
+    rationale: str = ""
+
+
+# ---------------------------------------------------------------------------
 # HTIR graph
 # ---------------------------------------------------------------------------
 
@@ -577,6 +595,12 @@ class HTIR(BaseModel):
     # stay backward compatible.
     aggregate: Optional[AggregateResult] = None
     witness: Optional[VerificationWitness] = None
+
+    # AVG Step 7 output (avg.tex Sec. 3.11). Populated by
+    # harnessfix.agents.intervention.run_intervention_loop() over a *prefix*
+    # replay of a recorded trace; empty by default so existing serialized
+    # outputs (data/htir_outputs/*.json) stay backward compatible.
+    intervention_log: list[InterventionLogEntry] = Field(default_factory=list)
 
     # Path to the harness code under analysis
     harness_root: str = Field("", description="Root directory of the harness codebase")
