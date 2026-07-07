@@ -32,7 +32,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from harnessfix.models.domain import DEFAULT_DOMAIN_SPEC, DomainSpec
+from harnessfix.models.domain import DEFAULT_DOMAIN_SPEC, DomainArtifactBundle, DomainSpec
 from harnessfix.models.htir import (
     HTIR,
     ArtifactEffect,
@@ -53,7 +53,9 @@ from harnessfix.models.htir import (
     TraceStep,
 )
 from harnessfix.agents.analysis import compute_coverage, enrich
+from harnessfix.agents.checking import check_obligations
 from harnessfix.agents.obligations import build_claims_and_obligations
+from harnessfix.agents.witness import aggregate, build_witness
 from harnessfix.utils.llm import chat_json, system, user, DEFAULT_MODEL
 from harnessfix.utils.io import truncate
 
@@ -164,6 +166,8 @@ class TraceAbstractionAgent:
         generate_obligations: bool = True,
         attach_harness_layers: bool = False,
         use_semantic_analysis: bool = False,
+        run_checks: bool = False,
+        domain_artifacts: DomainArtifactBundle | None = None,
     ) -> HTIR:
         """
         Compile a raw trace into HTIR.
@@ -176,7 +180,21 @@ class TraceAbstractionAgent:
         ``use_semantic_analysis`` gates the LLM-backed passes inside the
         Step-3 analysis layer (``harnessfix.agents.analysis.enrich``), e.g.
         free-text final-answer provenance and soft policy-relevance linking.
-        Deterministic analysis passes always run regardless of this flag.
+        Deterministic analysis passes always run regardless of this flag. The
+        same flag also gates the SEMANTIC checker class in
+        ``harnessfix.agents.checking.check_obligations`` when ``run_checks``
+        is on.
+
+        ``run_checks`` (AVG Steps 5-6, off by default so Step-1..4 output is
+        unchanged when it's off) extends the pipeline tail to
+        ``check_obligations -> aggregate -> build_witness`` after obligation
+        generation, filling ``Obligation.result``/``status``,
+        ``ClaimNode.status``, ``HTIR.aggregate``, and ``HTIR.witness``.
+        Requires ``generate_obligations=True`` (there is nothing to check
+        otherwise). ``domain_artifacts`` is an optional Omega_d bundle
+        (avg.tex Sec. 2) passed through to the checkers, e.g. for schema
+        checks; absent by default, in which case those checkers abstain
+        rather than fake a pass.
         """
         steps = self._build_steps(raw_steps)
         htir = HTIR(
@@ -225,6 +243,19 @@ class TraceAbstractionAgent:
             # Coverage analysis (avg.tex Sec. 3.5) depends on obligations, so
             # it runs last rather than inside ``enrich``.
             compute_coverage(htir)
+
+            # AVG Steps 5-6 (avg.tex Sec. 3.8-3.10): check each obligation,
+            # aggregate into a trajectory-level status, and build the
+            # verification witness. Off by default; requires obligations.
+            if run_checks:
+                check_obligations(
+                    htir, self.domain_spec,
+                    use_semantic=use_semantic_analysis,
+                    domain_artifacts=domain_artifacts,
+                    model=self.model,
+                )
+                aggregate(htir)
+                build_witness(htir)
 
         return htir
 

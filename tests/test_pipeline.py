@@ -25,15 +25,18 @@ from harnessfix.agents.analysis import enrich
 from harnessfix.agents.checking import check_obligations
 from harnessfix.agents.obligations import _template_triggers, build_claims_and_obligations
 from harnessfix.agents.trace_abstraction import TraceAbstractionAgent
+from harnessfix.agents.witness import aggregate, build_witness
 from harnessfix.models.domain import DEFAULT_DOMAIN_SPEC, Constraint, DomainSpec, ObligationTemplate
 from harnessfix.models.htir import (
     HTIR,
     ArtifactEffect,
     ArtifactStateEvidence,
+    CheckerResult,
     CheckerType,
     ClaimStatus,
     EvidenceType,
     ExecutionStatus,
+    Obligation,
     ObligationStatus,
     ProvenanceRelation,
     Severity,
@@ -531,3 +534,99 @@ def test_check_obligations_is_idempotent():
 
     assert first == second
     assert first_claim_statuses == second_claim_statuses
+
+
+# ---------------------------------------------------------------------------
+# Step 6 -- aggregation z_tau + verification witness W_tau (harnessfix.agents.witness)
+# ---------------------------------------------------------------------------
+
+def _obligation(
+    obligation_id: int, status: ObligationStatus, severity: Severity,
+    *, p_pass: float = 0.0, p_fail: float = 0.0, p_abstain: float = 0.0,
+    evidence_used: list[int] | None = None, candidate_evidence_ids: list[int] | None = None,
+) -> Obligation:
+    return Obligation(
+        obligation_id=obligation_id,
+        claim_id=obligation_id,
+        severity=severity,
+        status=status,
+        candidate_evidence_ids=candidate_evidence_ids or [],
+        result=CheckerResult(p_pass=p_pass, p_fail=p_fail, p_abstain=p_abstain, evidence_used=evidence_used or []),
+    )
+
+
+def test_aggregate_all_pass_trace_is_valid():
+    """Step 6: a trace with only passed obligations aggregates to 'valid' with an empty O-."""
+    htir = HTIR(task_id="agg-all-pass", obligations=[
+        _obligation(1, ObligationStatus.PASSED, Severity.LOW, p_pass=1.0),
+        _obligation(2, ObligationStatus.PASSED, Severity.HIGH, p_pass=1.0),
+    ])
+
+    z = aggregate(htir)
+    assert z.predicted_status == "valid"
+
+    w = build_witness(htir)
+    assert w.failed_obligation_ids == []
+    assert w.passed_obligation_ids == [1, 2]
+
+
+def test_aggregate_forced_failed_critical_obligation_is_invalid():
+    """Step 6: a failed CRITICAL obligation vetoes to 'invalid' even with many passes."""
+    htir = HTIR(task_id="agg-veto", obligations=[
+        _obligation(1, ObligationStatus.PASSED, Severity.LOW, p_pass=1.0),
+        _obligation(2, ObligationStatus.PASSED, Severity.LOW, p_pass=1.0),
+        _obligation(3, ObligationStatus.PASSED, Severity.LOW, p_pass=1.0),
+        _obligation(4, ObligationStatus.FAILED, Severity.CRITICAL, p_fail=1.0, evidence_used=[10]),
+    ])
+
+    z = aggregate(htir)
+    assert z.predicted_status == "invalid"
+
+    w = build_witness(htir)
+    assert w.failed_obligation_ids == [4]
+    assert 10 in w.witness_evidence_ids
+
+
+def test_aggregate_abstain_heavy_high_severity_is_uncertain():
+    """Step 6: no failures but many abstained high-severity obligations => 'uncertain', not 'valid'."""
+    htir = HTIR(task_id="agg-uncertain", obligations=[
+        _obligation(1, ObligationStatus.ABSTAINED, Severity.HIGH, p_abstain=1.0),
+        _obligation(2, ObligationStatus.ABSTAINED, Severity.HIGH, p_abstain=1.0),
+        _obligation(3, ObligationStatus.PASSED, Severity.LOW, p_pass=1.0),
+    ])
+
+    z = aggregate(htir)
+    assert z.predicted_status == "uncertain"
+
+
+def test_build_witness_is_deterministic_and_idempotent():
+    """Step 6: build_witness makes no LLM call and re-running it yields an identical witness."""
+    htir = _build_compiled_synthetic_htir()
+    check_obligations(htir, DEFAULT_DOMAIN_SPEC)
+    aggregate(htir)
+
+    first = build_witness(htir).model_dump()
+    second = build_witness(htir).model_dump()
+
+    assert first == second
+
+
+def test_compile_run_checks_flag_populates_aggregate_and_witness(monkeypatch):
+    """Step 6 wiring: TraceAbstractionAgent.compile(run_checks=True) fills HTIR.aggregate/witness."""
+    def _fake_chat_json(messages, schema, model=None, max_tokens=None, **kwargs):
+        return schema(role="final_submission", execution_status=ExecutionStatus.SUCCESS, artifact_effects=[])
+
+    monkeypatch.setattr("harnessfix.agents.trace_abstraction.chat_json", _fake_chat_json)
+
+    agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
+    htir = agent.compile(
+        task_id="compile-run-checks",
+        raw_steps=[{"request": "submit", "response": "final answer"}],
+        harness_snippets={},
+        run_checks=True,
+    )
+
+    assert htir.aggregate is not None
+    assert htir.witness is not None
+    assert htir.aggregate.predicted_status in ("valid", "invalid", "uncertain")
+    assert all(o.status != ObligationStatus.PENDING for o in htir.obligations)

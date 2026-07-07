@@ -499,6 +499,38 @@ class CoverageReport(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Aggregation + verification witness (avg.tex Sec. 3.9-3.10, AVG Step 6)
+# ---------------------------------------------------------------------------
+
+class AggregateResult(BaseModel):
+    """
+    z_tau = (y_hat, u_hat, c_hat, eta_hat): the trajectory-level status
+    aggregated from all checked obligations (avg.tex Sec. 3.9). Populated by
+    ``harnessfix.agents.witness.aggregate``, which must run after
+    ``harnessfix.agents.checking.check_obligations``.
+    """
+    predicted_status: str = Field("uncertain", description="y_hat: 'valid' / 'invalid' / 'uncertain'")
+    uncertainty: float = Field(0.0, description="u_hat: severity-weighted abstention mass in [0, 1]")
+    evidence_coverage: float = Field(0.0, description="c_hat: rolled up from CoverageReport")
+    aggregated_evidence_ids: list[int] = Field(
+        default_factory=list, description="eta_hat: union of evidence used across all checked obligations"
+    )
+
+
+class VerificationWitness(BaseModel):
+    """
+    W_tau = (O+, O-, O-empty, E_W, R_W): the stated output of AVG (avg.tex
+    Sec. 3.10). Populated by ``harnessfix.agents.witness.build_witness``,
+    which must run after ``aggregate``.
+    """
+    passed_obligation_ids: list[int] = Field(default_factory=list, description="O+")
+    failed_obligation_ids: list[int] = Field(default_factory=list, description="O-")
+    abstained_obligation_ids: list[int] = Field(default_factory=list, description="O-empty")
+    witness_evidence_ids: list[int] = Field(default_factory=list, description="E_W")
+    review_recommendation: str = Field("", description="R_W: a short deterministic review summary")
+
+
+# ---------------------------------------------------------------------------
 # HTIR graph
 # ---------------------------------------------------------------------------
 
@@ -537,6 +569,14 @@ class HTIR(BaseModel):
     wellformedness: list[WellFormednessIssue] = Field(default_factory=list)
     state_transitions: list[StateTransitionPattern] = Field(default_factory=list)
     coverage: CoverageReport = Field(default_factory=CoverageReport)
+
+    # AVG Step 6 outputs (avg.tex Sec. 3.9-3.10). Populated by
+    # harnessfix.agents.witness.aggregate() / build_witness(), which run
+    # after harnessfix.agents.checking.check_obligations(). Optional and
+    # default None so existing serialized outputs (data/htir_outputs/*.json)
+    # stay backward compatible.
+    aggregate: Optional[AggregateResult] = None
+    witness: Optional[VerificationWitness] = None
 
     # Path to the harness code under analysis
     harness_root: str = Field("", description="Root directory of the harness codebase")
