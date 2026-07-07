@@ -22,6 +22,7 @@ Builds synthetic HTIRs by hand (no OpenRouter/LLM calls) so this runs without
 from __future__ import annotations
 
 from harnessfix.agents.analysis import enrich
+from harnessfix.agents.checking import check_obligations
 from harnessfix.agents.obligations import _template_triggers, build_claims_and_obligations
 from harnessfix.agents.trace_abstraction import TraceAbstractionAgent
 from harnessfix.models.domain import DEFAULT_DOMAIN_SPEC, Constraint, DomainSpec, ObligationTemplate
@@ -30,8 +31,10 @@ from harnessfix.models.htir import (
     ArtifactEffect,
     ArtifactStateEvidence,
     CheckerType,
+    ClaimStatus,
     EvidenceType,
     ExecutionStatus,
+    ObligationStatus,
     ProvenanceRelation,
     Severity,
     SupportPolarity,
@@ -440,3 +443,91 @@ def test_obligations_deduped_by_claim_and_template():
 
     matching = [o for o in htir.obligations if o.template_id == "dup-a"]
     assert len(matching) == 1
+
+
+# ---------------------------------------------------------------------------
+# Step 5 -- checker execution (harnessfix.agents.checking)
+# ---------------------------------------------------------------------------
+
+def test_post_edit_validation_obligation_passes_mechanically():
+    """
+    Step 5: the trig-post-edit-validation obligation anchored on the edit
+    step's (step 2, parser.py) artifact_provenance claim is PASSED
+    mechanically, because the later validation step 3 revalidated it with
+    ExecutionStatus.SUCCESS.
+    """
+    htir = _build_compiled_synthetic_htir()
+    check_obligations(htir, DEFAULT_DOMAIN_SPEC)
+
+    claims_by_id = {c.claim_id: c for c in htir.claims}
+    post_edit = [
+        o for o in htir.obligations
+        if o.template_id == "trig-post-edit-validation"
+        and claims_by_id[o.claim_id].source_step_id == 2
+    ]
+    assert len(post_edit) == 1
+    ob = post_edit[0]
+    assert ob.status == ObligationStatus.PASSED
+    assert ob.result is not None
+    assert ob.result.p_pass == 1.0
+
+
+def test_failing_step_execution_claim_is_refuted_after_checking():
+    """Step 5: the failing step-1 execution-status claim ends up REFUTED, never SUPPORTED."""
+    htir = _build_compiled_synthetic_htir()
+    check_obligations(htir, DEFAULT_DOMAIN_SPEC)
+
+    step1_claim = next(
+        c for c in htir.claims if c.claim_type == "execution_status" and c.source_step_id == 1
+    )
+    assert step1_claim.status == ClaimStatus.REFUTED
+
+
+def test_wellformedness_seeded_obligation_abstains():
+    """Step 5: a well-formedness-seeded (ABSTENTION-routed) obligation abstains with p_abstain==1.0."""
+    htir = _build_compiled_synthetic_htir()
+    check_obligations(htir, DEFAULT_DOMAIN_SPEC)
+
+    seeded = [o for o in htir.obligations if o.checker == CheckerType.ABSTENTION]
+    assert seeded, "expected at least one ABSTENTION-routed obligation in the synthetic trace"
+    for ob in seeded:
+        assert ob.status == ObligationStatus.ABSTAINED
+        assert ob.result.p_abstain == 1.0
+
+
+def test_semantic_obligations_abstain_without_llm_call(monkeypatch):
+    """
+    Step 5: with use_semantic=False (the default), every SEMANTIC obligation
+    abstains and chat_json is never invoked.
+    """
+    htir = _build_compiled_synthetic_htir()
+
+    def _fail_if_called(*args, **kwargs):
+        raise AssertionError("chat_json must not be called when use_semantic=False")
+
+    monkeypatch.setattr("harnessfix.agents.checking.chat_json", _fail_if_called)
+
+    check_obligations(htir, DEFAULT_DOMAIN_SPEC, use_semantic=False)
+
+    semantic_obligations = [o for o in htir.obligations if o.checker == CheckerType.SEMANTIC]
+    assert semantic_obligations
+    for ob in semantic_obligations:
+        assert ob.status == ObligationStatus.ABSTAINED
+        assert ob.result.p_abstain == 1.0
+
+
+def test_check_obligations_is_idempotent():
+    """Step 5: calling check_obligations twice yields identical results/statuses."""
+    htir = _build_compiled_synthetic_htir()
+    check_obligations(htir, DEFAULT_DOMAIN_SPEC)
+
+    first = [(o.status, o.result.model_dump()) for o in htir.obligations]
+    first_claim_statuses = [c.status for c in htir.claims]
+
+    check_obligations(htir, DEFAULT_DOMAIN_SPEC)
+
+    second = [(o.status, o.result.model_dump()) for o in htir.obligations]
+    second_claim_statuses = [c.status for c in htir.claims]
+
+    assert first == second
+    assert first_claim_statuses == second_claim_statuses

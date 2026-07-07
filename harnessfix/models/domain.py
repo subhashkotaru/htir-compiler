@@ -15,6 +15,7 @@ through small, declarative specs.
 
 from __future__ import annotations
 
+from enum import Enum
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -164,3 +165,81 @@ TERMINAL_DOMAIN_SPEC: DomainSpec = DOMAIN_SPECS.get("terminal_swe", DEFAULT_DOMA
 def get_domain_spec(domain_id: str) -> DomainSpec:
     """Look up a domain spec by id, defaulting to the default spec."""
     return DOMAIN_SPECS.get(domain_id, DEFAULT_DOMAIN_SPEC)
+
+
+# ---------------------------------------------------------------------------
+# Domain artifacts Omega_d (avg.tex Sec. 2, "Domain artifacts")
+# ---------------------------------------------------------------------------
+#
+# Omega_d = {schemas, manuals, logs, policies, tests, historical traces,
+# counterexamples}: weak supervision content a checker can compare a claim
+# against. Distinct from S_d, which only *declares* that a constraint or
+# obligation exists -- Omega_d supplies the actual content (a policy's text,
+# a schema's structure, ...). Optional: a domain with no Omega_d bundle
+# behaves exactly as it did before this was introduced (see
+# ``load_domain_artifacts`` returning ``None``).
+
+
+class ArtifactKind(str, Enum):
+    """The kinds of weak supervision artifacts an Omega_d bundle may contain."""
+    SCHEMA = "schema"
+    MANUAL = "manual"
+    LOG = "log"
+    POLICY = "policy"
+    TEST = "test"
+    HISTORICAL_TRACE = "historical_trace"
+    COUNTEREXAMPLE = "counterexample"
+
+
+class DomainArtifact(BaseModel):
+    """A single element of Omega_d."""
+    artifact_kind: ArtifactKind
+    identifier: str = Field(..., description="Human/tool identifier, e.g. a policy or schema name")
+    content: str = Field("", description="The artifact's actual content (policy text, schema body, log excerpt, ...)")
+    metadata: dict = Field(default_factory=dict)
+
+
+class DomainArtifactBundle(BaseModel):
+    """Omega_d for one domain: the full set of weak supervision artifacts."""
+    domain_id: str
+    artifacts: list[DomainArtifact] = Field(default_factory=list)
+
+    def by_kind(self, kind: ArtifactKind) -> list[DomainArtifact]:
+        return [a for a in self.artifacts if a.artifact_kind == kind]
+
+    def get(self, kind: ArtifactKind, identifier: str) -> DomainArtifact | None:
+        for a in self.artifacts:
+            if a.artifact_kind == kind and a.identifier == identifier:
+                return a
+        return None
+
+
+def load_domain_artifacts(domain_id: str, directory: str | Path = DOMAINS_DIR) -> DomainArtifactBundle | None:
+    """
+    Discover and load Omega_d for ``domain_id`` from
+    ``<directory>/<domain_id>.artifacts/*.yaml`` (mirrors ``load_domain_spec``'s
+    YAML-as-source-of-truth convention). Each YAML file is one
+    ``DomainArtifact``. Returns ``None`` when the directory is absent, empty,
+    or nothing parses -- callers must treat a missing bundle as "no Omega_d
+    available" and fall back to today's behavior (abstain rather than fake
+    evidence), never raise.
+    """
+    import yaml  # imported lazily so pyyaml stays an optional dependency
+
+    art_dir = Path(directory) / f"{domain_id}.artifacts"
+    if not art_dir.exists():
+        return None
+
+    artifacts: list[DomainArtifact] = []
+    for p in sorted([*art_dir.glob("*.yaml"), *art_dir.glob("*.yml")]):
+        try:
+            data = yaml.safe_load(p.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                continue
+            artifacts.append(DomainArtifact.model_validate(data))
+        except Exception:
+            continue
+
+    if not artifacts:
+        return None
+    return DomainArtifactBundle(domain_id=domain_id, artifacts=artifacts)
