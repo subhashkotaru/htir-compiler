@@ -25,6 +25,16 @@ import re
 
 from harnessfix.agents.analysis import enrich
 from harnessfix.agents.checking import check_obligations
+from harnessfix.agents.harness_improvement import (
+    EditTarget,
+    HarnessConfig,
+    WitnessCorpus,
+    WitnessRecord,
+    accept_edit,
+    apply_domain_spec_edit,
+    mine_recurring_failures,
+    score_config,
+)
 from harnessfix.agents.intervention import active_obligations, run_intervention_loop, select_intervention
 from harnessfix.agents.obligations import _template_triggers, build_claims_and_obligations
 from harnessfix.agents.trace_abstraction import TraceAbstractionAgent
@@ -55,6 +65,7 @@ from harnessfix.models.htir import (
     Severity,
     SupportPolarity,
     TraceStep,
+    VerificationWitness,
 )
 
 
@@ -889,3 +900,89 @@ def test_run_intervention_loop_is_deterministic_and_idempotent(monkeypatch):
 
     assert log1, "expected at least one recorded intervention"
     assert log1 == log2
+
+
+# ---------------------------------------------------------------------------
+# Step 8 -- offline harness improvement (harnessfix.agents.harness_improvement)
+# ---------------------------------------------------------------------------
+
+def _hidden_test_failure_corpus(n: int = 4) -> WitnessCorpus:
+    return WitnessCorpus(records=[
+        WitnessRecord(
+            trace_id=f"trace-{i}",
+            witness=VerificationWitness(passed_obligation_ids=[i], review_recommendation="ok"),
+            task_outcome="resolved",
+            failure_tags=["hidden_test_failure"],
+        )
+        for i in range(n)
+    ])
+
+
+def test_mine_recurring_failures_proposes_stronger_validation_and_raises_score():
+    """
+    Step 8: a corpus where every trace shows a recurring hidden-test-failure
+    tag proposes a stronger validation obligation template; applying it to
+    S_d and re-scoring (as an active obligation) raises J_hat, and
+    accept_edit gates it through.
+    """
+    corpus = _hidden_test_failure_corpus()
+
+    proposals = mine_recurring_failures(corpus)
+    assert len(proposals) == 1
+    edit = proposals[0]
+    assert edit.target == EditTarget.DOMAIN_SPEC
+    assert edit.obligation_template is not None
+    assert edit.obligation_template.template_id == "harness-hidden-test-validation"
+
+    baseline_config = HarnessConfig()
+    baseline_j = score_config(corpus, baseline_config)
+
+    edited_spec = apply_domain_spec_edit(DEFAULT_DOMAIN_SPEC, edit)
+    assert edit.obligation_template.template_id in {t.template_id for t in edited_spec.obligation_templates}
+    # Original spec must not be mutated in place.
+    assert edit.obligation_template.template_id not in {t.template_id for t in DEFAULT_DOMAIN_SPEC.obligation_templates}
+
+    edited_config = HarnessConfig(active_obligation_template_ids=frozenset({edit.obligation_template.template_id}))
+    edited_j = score_config(corpus, edited_config)
+
+    assert edited_j > baseline_j
+    assert accept_edit(baseline_j, edited_j, epsilon=0.01, safe=True) is True
+
+
+def test_mine_recurring_failures_no_signal_proposes_nothing():
+    """Step 8: a corpus with no recognised recurring-failure tags proposes nothing."""
+    corpus = WitnessCorpus(records=[
+        WitnessRecord(trace_id="a", witness=VerificationWitness(), task_outcome="resolved"),
+        WitnessRecord(trace_id="b", witness=VerificationWitness(), task_outcome="resolved", failure_tags=["unmapped_tag"]),
+    ])
+    assert mine_recurring_failures(corpus) == []
+
+
+def test_mine_recurring_failures_below_threshold_proposes_nothing():
+    """Step 8: a tag appearing in too few traces is treated as noise, not a pattern."""
+    corpus = WitnessCorpus(records=[
+        WitnessRecord(trace_id="a", witness=VerificationWitness(), task_outcome="resolved", failure_tags=["hidden_test_failure"]),
+        WitnessRecord(trace_id="b", witness=VerificationWitness(), task_outcome="resolved"),
+        WitnessRecord(trace_id="c", witness=VerificationWitness(), task_outcome="resolved"),
+        WitnessRecord(trace_id="d", witness=VerificationWitness(), task_outcome="resolved"),
+    ])
+    assert mine_recurring_failures(corpus) == []
+
+
+def test_apply_domain_spec_edit_is_idempotent():
+    """Step 8: applying the same proposed edit twice does not duplicate the obligation template."""
+    corpus = _hidden_test_failure_corpus()
+    edit = mine_recurring_failures(corpus)[0]
+
+    once = apply_domain_spec_edit(DEFAULT_DOMAIN_SPEC, edit)
+    twice = apply_domain_spec_edit(once, edit)
+
+    matching = [t for t in twice.obligation_templates if t.template_id == edit.obligation_template.template_id]
+    assert len(matching) == 1
+
+
+def test_accept_edit_gate_requires_improvement_and_safety():
+    """Step 8: Accept(Delta h) = I[J_hat improves by > epsilon AND Safe(Delta h)]."""
+    assert accept_edit(1.0, 1.5, epsilon=0.01, safe=True) is True
+    assert accept_edit(1.0, 1.005, epsilon=0.01, safe=True) is False  # improvement too small
+    assert accept_edit(1.0, 2.0, epsilon=0.01, safe=False) is False  # unsafe, even if it improves
