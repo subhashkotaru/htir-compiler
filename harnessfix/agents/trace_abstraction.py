@@ -147,9 +147,19 @@ class TraceAbstractionAgent:
         )
     """
 
-    def __init__(self, model: str = DEFAULT_MODEL, domain_spec: DomainSpec = DEFAULT_DOMAIN_SPEC):
+    def __init__(
+        self,
+        model: str = DEFAULT_MODEL,
+        domain_spec: DomainSpec = DEFAULT_DOMAIN_SPEC,
+        domain_artifacts: DomainArtifactBundle | None = None,
+    ):
         self.model = model
         self.domain_spec = domain_spec
+        # Omega_d (avg.tex Sec. 2, work item A): optional weak-supervision
+        # artifacts consulted by the analysis/obligation/checking layers.
+        # None (the default) leaves every downstream pass's behavior
+        # identical to before Omega_d was introduced.
+        self.domain_artifacts = domain_artifacts
 
     # ------------------------------------------------------------------
     # Public interface
@@ -192,10 +202,13 @@ class TraceAbstractionAgent:
         ``ClaimNode.status``, ``HTIR.aggregate``, and ``HTIR.witness``.
         Requires ``generate_obligations=True`` (there is nothing to check
         otherwise). ``domain_artifacts`` is an optional Omega_d bundle
-        (avg.tex Sec. 2) passed through to the checkers, e.g. for schema
-        checks; absent by default, in which case those checkers abstain
+        (avg.tex Sec. 2) threaded through the analysis (policy-linking),
+        obligation-generation (schema/policy evidence), and checking layers;
+        defaults to ``self.domain_artifacts`` when not given explicitly, and
+        absent entirely by default, in which case those checkers abstain
         rather than fake a pass.
         """
+        domain_artifacts = domain_artifacts if domain_artifacts is not None else self.domain_artifacts
         steps = self._build_steps(raw_steps)
         htir = HTIR(
             task_id=task_id,
@@ -234,12 +247,12 @@ class TraceAbstractionAgent:
         # dependency / validation / state-transition / policy-linking /
         # integrity analysis modules (avg.tex Sec. 3.4-3.5). Runs after graph
         # construction and before obligation generation, which consumes it.
-        enrich(htir, self.domain_spec, use_semantic=use_semantic_analysis)
+        enrich(htir, self.domain_spec, use_semantic=use_semantic_analysis, domain_artifacts=domain_artifacts)
 
         # Claims, obligations, and support edges; obligations are also seeded
         # from unresolved well-formedness/analysis-module issues above.
         if generate_obligations:
-            build_claims_and_obligations(htir, self.domain_spec)
+            build_claims_and_obligations(htir, self.domain_spec, domain_artifacts=domain_artifacts)
             # Coverage analysis (avg.tex Sec. 3.5) depends on obligations, so
             # it runs last rather than inside ``enrich``.
             compute_coverage(htir)

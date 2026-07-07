@@ -221,7 +221,7 @@ def _check_mechanical(
     domain_artifacts: DomainArtifactBundle | None,
 ) -> CheckerResult:
     if ob.required_evidence == EvidenceType.SCHEMA:
-        return _check_schema(spec, claim, domain_artifacts)
+        return _check_schema(spec, claim, domain_artifacts, ob.candidate_evidence_ids)
 
     if ob.template_id in _POST_EDIT_VALIDATION_TEMPLATES or (
         claim.claim_type == "artifact_provenance" and ob.template_id and "validat" in ob.template_id
@@ -341,13 +341,23 @@ def _evidence_at_step(htir: HTIR, step_id: int) -> list[EvidenceNode]:
 
 
 def _check_schema(
-    spec: DomainSpec, claim: ClaimNode, domain_artifacts: DomainArtifactBundle | None
+    spec: DomainSpec, claim: ClaimNode, domain_artifacts: DomainArtifactBundle | None,
+    candidate_evidence_ids: list[int] | None = None,
 ) -> CheckerResult:
     """
-    Structural check against an Omega_d ``schema`` artifact. Abstains
-    whenever no Omega_d bundle (or no matching schema artifact) is available
-    -- schema conformance is never faked.
+    Structural check against an Omega_d ``schema`` artifact. Prefers the
+    r_i-typed candidate evidence ``E_i`` that ``build_claims_and_obligations``
+    already resolved against Omega_d (work item A) -- if Step 4 found and
+    attached a matching schema artifact, its presence in E_i *is* the
+    evidence, so this checker consumes it rather than re-deriving it here.
+    Falls back to a direct (spec, domain_artifacts) lookup for callers that
+    invoke ``check_obligations`` with a bundle that wasn't also passed to
+    obligation generation. Abstains whenever neither is available -- schema
+    conformance is never faked.
     """
+    if candidate_evidence_ids:
+        return _decide(evidence_used=candidate_evidence_ids, passed=True)
+
     if domain_artifacts is None:
         return _abstain()
     schema_artifacts = domain_artifacts.by_kind(ArtifactKind.SCHEMA)

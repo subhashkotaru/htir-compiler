@@ -37,7 +37,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from harnessfix.models.domain import DomainSpec
+from harnessfix.models.domain import ArtifactKind, DomainArtifactBundle, DomainSpec
 from harnessfix.models.htir import (
     ArtifactEffect,
     ConstraintLink,
@@ -52,7 +52,13 @@ from harnessfix.models.htir import (
     ValidationLink,
     WellFormednessIssue,
 )
-from harnessfix.agents.obligations import _EDIT_HINTS, _FINAL_HINTS, _VALIDATION_HINTS, _is_role
+from harnessfix.agents.obligations import (
+    _EDIT_HINTS,
+    _FINAL_HINTS,
+    _VALIDATION_HINTS,
+    _is_role,
+    _policy_sensitive_steps,
+)
 from harnessfix.utils.io import truncate
 from harnessfix.utils.llm import DEFAULT_MODEL, chat_json, system, user
 
@@ -72,7 +78,7 @@ _DELETION_HINTS = ("delete", "deleted", "deletion", "remove", "removed", "rm ")
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def enrich(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False) -> HTIR:
+def enrich(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False, domain_artifacts: DomainArtifactBundle | None = None) -> HTIR:
     """
     Run the Step-3 analysis layer over an already graph-constructed
     ``htir`` (``_extract_artifacts`` + temporal links must already be
@@ -91,13 +97,17 @@ def enrich(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False) -> HTIR:
 
     Coverage analysis is intentionally excluded; call ``compute_coverage``
     after ``build_claims_and_obligations``.
+
+    ``domain_artifacts`` is an optional Omega_d bundle (avg.tex Sec. 2, work
+    item A), threaded through to ``link_policy``; ``None`` (the default)
+    leaves this pass's behavior identical to before Omega_d was introduced.
     """
     check_wellformedness(htir, spec)
     link_provenance_to_final_answer(htir, use_semantic=use_semantic)
     link_dependencies(htir)
     link_validations(htir)
     analyze_state_transitions(htir)
-    link_policy(htir, spec, use_semantic=use_semantic)
+    link_policy(htir, spec, use_semantic=use_semantic, domain_artifacts=domain_artifacts)
     check_integrity(htir)
     return htir
 
@@ -226,14 +236,6 @@ def check_wellformedness(htir: HTIR, spec: DomainSpec) -> list[WellFormednessIss
 
     htir.wellformedness.extend(issues)
     return issues
-
-
-def _policy_sensitive_steps(htir: HTIR, spec: DomainSpec) -> list[TraceStep]:
-    """Steps governed by a domain constraint that explicitly names their role."""
-    governed_roles = {role for c in spec.constraints for role in c.applies_to_operations}
-    if not governed_roles:
-        return []
-    return [s for s in htir.steps_in_order() if s.role in governed_roles]
 
 
 def _emit_policy_unlinked_issues(htir: HTIR, spec: DomainSpec) -> None:
@@ -551,7 +553,10 @@ def analyze_state_transitions(htir: HTIR) -> None:
 # 3.4 Policy-linking analysis (+ E_cons constraint wiring)
 # ---------------------------------------------------------------------------
 
-def link_policy(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False, model: str = DEFAULT_MODEL) -> None:
+def link_policy(
+    htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False,
+    domain_artifacts: DomainArtifactBundle | None = None, model: str = DEFAULT_MODEL,
+) -> None:
     """
     Policy-linking analysis (avg.tex Sec. 3.5): connects policy-sensitive
     operations to policy artifacts they consumed; if a policy-sensitive step
@@ -562,6 +567,15 @@ def link_policy(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False, mod
     Also wires the constraint edges (E_cons), formerly
     ``obligations._link_constraint``: ties every domain constraint (S_d.K_d)
     to the steps it governs.
+
+    ``domain_artifacts`` (Omega_d, work item A) supplies *real* policy
+    artifacts beyond the in-trace ``_POLICY_ARTIFACT_TYPE`` lookup above: when
+    provided, every policy-sensitive step gets a dependency edge (E_causal) to
+    each loaded Omega_d policy artifact, so Step 5's checkers have a real
+    neighbourhood edge to content, not just the S_d declaration that a
+    constraint exists. This does not suppress ``policy_action_unlinked`` --
+    the step still lacks *in-trace* evidence of consumption; deciding pass/
+    fail from Omega_d content is Step 5's job, not this analysis pass's.
     """
     link_constraints(htir, spec)
 
@@ -570,11 +584,35 @@ def link_policy(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False, mod
     if use_semantic and policy_artifacts:
         _link_policy_semantic(htir, spec, policy_artifacts, model=model)
 
+    if domain_artifacts is not None:
+        _link_omega_policy_artifacts(htir, spec, domain_artifacts)
+
     # Mechanical unresolved-obligation emission always runs, regardless of
     # whether the semantic pass above found additional (soft) relevance --
     # it only suppresses steps that ended up with an explicit consumption
     # link to a policy artifact.
     _emit_policy_unlinked_issues(htir, spec)
+
+
+def _link_omega_policy_artifacts(htir: HTIR, spec: DomainSpec, domain_artifacts: DomainArtifactBundle) -> None:
+    """
+    Record a dependency edge from each policy-sensitive step to every loaded
+    Omega_d policy artifact (avg.tex Sec. 2). Omega_d artifacts are never
+    added as ``ArtifactNode``s (no graph-node bloat) -- the artifact's
+    identifier is carried in the edge's ``reason`` text instead.
+    """
+    policy_artifacts = domain_artifacts.by_kind(ArtifactKind.POLICY)
+    if not policy_artifacts:
+        return
+    existing = {(lk.source_step_id, lk.reason) for lk in htir.dependency_links}
+    for step in _policy_sensitive_steps(htir, spec):
+        for artifact in policy_artifacts:
+            reason = f"step governed by Omega_d policy artifact '{artifact.identifier}'"
+            key = (step.step_id, reason)
+            if key in existing:
+                continue
+            htir.dependency_links.append(DependencyLink(source_step_id=step.step_id, reason=reason))
+            existing.add(key)
 
 
 def link_constraints(htir: HTIR, spec: DomainSpec) -> None:

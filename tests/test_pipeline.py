@@ -26,7 +26,15 @@ from harnessfix.agents.checking import check_obligations
 from harnessfix.agents.obligations import _template_triggers, build_claims_and_obligations
 from harnessfix.agents.trace_abstraction import TraceAbstractionAgent
 from harnessfix.agents.witness import aggregate, build_witness
-from harnessfix.models.domain import DEFAULT_DOMAIN_SPEC, Constraint, DomainSpec, ObligationTemplate
+from harnessfix.models.domain import (
+    DEFAULT_DOMAIN_SPEC,
+    ArtifactKind,
+    Constraint,
+    DomainArtifact,
+    DomainArtifactBundle,
+    DomainSpec,
+    ObligationTemplate,
+)
 from harnessfix.models.htir import (
     HTIR,
     ArtifactEffect,
@@ -630,3 +638,137 @@ def test_compile_run_checks_flag_populates_aggregate_and_witness(monkeypatch):
     assert htir.witness is not None
     assert htir.aggregate.predicted_status in ("valid", "invalid", "uncertain")
     assert all(o.status != ObligationStatus.PENDING for o in htir.obligations)
+
+
+# ---------------------------------------------------------------------------
+# Work item A -- Omega_d weak domain artifacts (harnessfix.models.domain)
+# ---------------------------------------------------------------------------
+
+def _policy_governed_spec() -> DomainSpec:
+    return DomainSpec(
+        domain_id="policy-omega-test",
+        operation_types=DEFAULT_DOMAIN_SPEC.operation_types,
+        constraints=[
+            Constraint(
+                constraint_id="policy-required",
+                description="Final answers must cite an applicable policy.",
+                severity=Severity.HIGH,
+                applies_to_operations=["final_submission"],
+            )
+        ],
+    )
+
+
+def test_omega_bundle_produces_policy_compliance_obligation_with_candidate_evidence():
+    """
+    Work item A: with a loaded Omega_d policy artifact, a policy-sensitive
+    step gets a real omega-policy-compliance obligation whose candidate
+    evidence points at that artifact's content, still PENDING (Step 5's job
+    to discharge).
+    """
+    spec = _policy_governed_spec()
+    steps = [
+        TraceStep(
+            step_id=1, request_message="submit", response_message="Done, fabricated the results.",
+            role="final_submission", execution_status=ExecutionStatus.SUCCESS,
+        ),
+    ]
+    htir = HTIR(task_id="omega-policy-test", domain_id=spec.domain_id, steps=steps)
+    bundle = DomainArtifactBundle(
+        domain_id=spec.domain_id,
+        artifacts=[
+            DomainArtifact(
+                artifact_kind=ArtifactKind.POLICY,
+                identifier="no-fabrication-policy",
+                content="Agents must not fabricate results.",
+            )
+        ],
+    )
+
+    enrich(htir, spec, domain_artifacts=bundle)
+    build_claims_and_obligations(htir, spec, domain_artifacts=bundle)
+
+    omega_obs = [o for o in htir.obligations if o.template_id == "omega-policy-compliance"]
+    assert len(omega_obs) == 1
+    ob = omega_obs[0]
+    assert ob.status == ObligationStatus.PENDING
+    assert ob.checker == CheckerType.SEMANTIC
+    assert ob.candidate_evidence_ids, "expected E_i to point at the Omega_d policy artifact"
+
+    evidence_by_id = {e.evidence_id for e in htir.evidence}
+    assert set(ob.candidate_evidence_ids) <= evidence_by_id
+    pointed_evidence = next(e for e in htir.evidence if e.evidence_id in ob.candidate_evidence_ids)
+    assert "no-fabrication-policy" in pointed_evidence.description
+    assert "fabricate" in pointed_evidence.content
+
+    dep_reasons = [lk.reason for lk in htir.dependency_links if lk.source_step_id == 1]
+    assert any("no-fabrication-policy" in r for r in dep_reasons)
+
+
+def test_omega_bundle_absent_leaves_obligations_unchanged():
+    """Work item A: with no bundle loaded, behavior is identical to before Omega_d existed."""
+    spec = _policy_governed_spec()
+    steps = [
+        TraceStep(
+            step_id=1, request_message="submit", response_message="Done.",
+            role="final_submission", execution_status=ExecutionStatus.SUCCESS,
+        ),
+    ]
+    htir = HTIR(task_id="omega-absent-test", domain_id=spec.domain_id, steps=steps)
+
+    enrich(htir, spec)
+    build_claims_and_obligations(htir, spec)
+
+    assert not [o for o in htir.obligations if o.template_id == "omega-policy-compliance"]
+    assert not any("Omega_d" in lk.reason for lk in htir.dependency_links)
+
+
+def test_omega_schema_evidence_resolves_schema_obligation():
+    """
+    Work item A: an Omega_d schema artifact matching an artifact type's
+    schema_hint gives the swe-generated-schema obligation real E_i, and Step
+    5's schema checker then passes mechanically by consuming it.
+    """
+    from harnessfix.models.domain import TERMINAL_DOMAIN_SPEC
+
+    steps = [
+        TraceStep(
+            step_id=1,
+            request_message="edit implementation",
+            response_message="wrote test report",
+            role="edit_file",
+            execution_status=ExecutionStatus.SUCCESS,
+            artifact_state_effects=[
+                ArtifactStateEvidence(
+                    effect_category=ArtifactEffect.ARTIFACT_CHANGE,
+                    affected_resource="test_report",
+                    observed_change="generated a test report",
+                )
+            ],
+        ),
+    ]
+    htir = HTIR(task_id="omega-schema-test", domain_id=TERMINAL_DOMAIN_SPEC.domain_id, steps=steps)
+    agent = TraceAbstractionAgent(domain_spec=TERMINAL_DOMAIN_SPEC)
+    agent._extract_artifacts(htir)
+    enrich(htir, TERMINAL_DOMAIN_SPEC)
+
+    bundle = DomainArtifactBundle(
+        domain_id=TERMINAL_DOMAIN_SPEC.domain_id,
+        artifacts=[
+            DomainArtifact(
+                artifact_kind=ArtifactKind.SCHEMA,
+                identifier="test_report",
+                content="{pass_count:int, fail_count:int, exit_code:int}",
+            )
+        ],
+    )
+    build_claims_and_obligations(htir, TERMINAL_DOMAIN_SPEC, domain_artifacts=bundle)
+
+    schema_obs = [o for o in htir.obligations if o.template_id == "swe-generated-schema"]
+    assert len(schema_obs) == 1
+    assert schema_obs[0].candidate_evidence_ids
+    schema_evidence = next(e for e in htir.evidence if e.evidence_id in schema_obs[0].candidate_evidence_ids)
+    assert schema_evidence.evidence_type == EvidenceType.SCHEMA
+
+    check_obligations(htir, TERMINAL_DOMAIN_SPEC, domain_artifacts=bundle)
+    assert schema_obs[0].status == ObligationStatus.PASSED

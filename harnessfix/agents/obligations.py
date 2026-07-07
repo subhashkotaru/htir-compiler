@@ -37,7 +37,7 @@ step/artifact ids by necessity).
 
 from __future__ import annotations
 
-from harnessfix.models.domain import DomainSpec, ObligationTemplate
+from harnessfix.models.domain import ArtifactKind, DomainArtifactBundle, DomainSpec, ObligationTemplate
 from harnessfix.models.htir import (
     HTIR,
     ArtifactEffect,
@@ -161,7 +161,23 @@ def _evidence_supports(
     return SupportPolarity.SUPPORTS
 
 
-def build_claims_and_obligations(htir: HTIR, spec: DomainSpec) -> HTIR:
+def _policy_sensitive_steps(htir: HTIR, spec: DomainSpec) -> list[TraceStep]:
+    """
+    Steps governed by a domain constraint that explicitly names their role.
+    Shared by ``analysis.link_policy``/``check_wellformedness`` (Step 3) and
+    the Omega_d-informed obligations below (Step 4, work item A); lives here
+    rather than in ``analysis.py`` because ``analysis.py`` already imports
+    helpers from this module and importing the other way would be circular.
+    """
+    governed_roles = {role for c in spec.constraints for role in c.applies_to_operations}
+    if not governed_roles:
+        return []
+    return [s for s in htir.steps_in_order() if s.role in governed_roles]
+
+
+def build_claims_and_obligations(
+    htir: HTIR, spec: DomainSpec, *, domain_artifacts: DomainArtifactBundle | None = None
+) -> HTIR:
     """
     Populate ``htir`` in place with evidence, claim, and obligation nodes and
     the support/constraint/validation edges implied by its steps and artifacts,
@@ -172,6 +188,18 @@ def build_claims_and_obligations(htir: HTIR, spec: DomainSpec) -> HTIR:
     ``htir.steps`` / ``htir.artifacts`` / ``htir.wellformedness`` and ``spec``,
     so a second call clears and rebuilds those lists rather than appending to
     them (a naive re-run would otherwise double every node).
+
+    ``domain_artifacts`` is an optional Omega_d bundle (avg.tex Sec. 2, work
+    item A). When ``None`` (the default), behavior is byte-for-byte identical
+    to before Omega_d was introduced. When provided, it feeds two things real
+    evidence content instead of leaving them evidence-starved: (a) SCHEMA
+    evidence for produced artifacts whose type declares a ``schema_hint`` and
+    has a matching Omega_d ``schema`` artifact, consumed by the existing
+    ``uni-tool-schema``/``swe-generated-schema`` templates' E_i; and (b) new
+    ``omega-policy-compliance`` obligations (one per policy-sensitive step x
+    Omega_d ``policy`` artifact) whose E_i points at that policy artifact's
+    content. Omega_d artifacts are never added as ``HTIR`` nodes themselves
+    (no new ``ArtifactNode``s) -- only as evidence content a checker consults.
     """
     htir.claims.clear()
     htir.evidence.clear()
@@ -220,6 +248,12 @@ def build_claims_and_obligations(htir: HTIR, spec: DomainSpec) -> HTIR:
             htir.evidence.append(ev)
             evidence_by_id[ev.evidence_id] = ev
             evidence_by_step.setdefault(step.step_id, []).append(ev.evidence_id)
+
+    # Omega_d-informed SCHEMA evidence (work item A): only when a bundle is
+    # loaded, so this is a no-op (and existing behavior/fixtures unchanged)
+    # when domain_artifacts is None.
+    if domain_artifacts is not None:
+        _inject_omega_schema_evidence(htir, spec, domain_artifacts, evidence_by_step, evidence_by_id, _ev_id)
 
     # ------------------------------------------------------------------
     # 2. Claim nodes.
@@ -381,6 +415,16 @@ def build_claims_and_obligations(htir: HTIR, spec: DomainSpec) -> HTIR:
             )
         )
 
+    # ------------------------------------------------------------------
+    # 6. Omega_d-informed obligations (avg.tex Sec. 2, work item A): only
+    #    when a bundle is loaded, so build_claims_and_obligations(htir, spec)
+    #    with no bundle is byte-for-byte identical to before Omega_d existed.
+    # ------------------------------------------------------------------
+    if domain_artifacts is not None:
+        _emit_policy_compliance_obligations(
+            htir, spec, domain_artifacts, _add_claim, _ev_id, _ob_id,
+        )
+
     return htir
 
 
@@ -396,6 +440,107 @@ class _Counter:
         v = self._n
         self._n += 1
         return v
+
+
+def _inject_omega_schema_evidence(
+    htir: HTIR,
+    spec: DomainSpec,
+    domain_artifacts: DomainArtifactBundle,
+    evidence_by_step: dict[int, list[int]],
+    evidence_by_id: dict[int, EvidenceNode],
+    ev_id_counter: "_Counter",
+) -> None:
+    """
+    Work item A: resolve a domain artifact type's ``schema_hint`` against a
+    loaded Omega_d ``schema`` artifact (matched by identifier == artifact
+    type name) and, for every step that produced an artifact of that type,
+    add a SCHEMA-typed evidence node so ``uni-tool-schema``/
+    ``swe-generated-schema`` obligations get real E_i instead of always
+    being evidence-starved. No-op when no Omega_d schema artifact matches
+    any hinted artifact type.
+    """
+    schema_by_identifier = {a.identifier: a for a in domain_artifacts.by_kind(ArtifactKind.SCHEMA)}
+    if not schema_by_identifier:
+        return
+    hinted_types = {at.name for at in spec.artifact_types if at.schema_hint}
+    if not hinted_types:
+        return
+
+    for step in htir.steps_in_order():
+        for art_id in step.produced_artifact_ids:
+            artifact = htir.get_artifact(art_id)
+            if artifact is None or artifact.artifact_type not in hinted_types:
+                continue
+            schema_artifact = schema_by_identifier.get(artifact.artifact_type)
+            if schema_artifact is None:
+                continue
+            ev = EvidenceNode(
+                evidence_id=ev_id_counter.next(),
+                evidence_type=EvidenceType.SCHEMA,
+                description=(
+                    f"Omega_d schema artifact '{schema_artifact.identifier}' "
+                    f"for artifact type '{artifact.artifact_type}'"
+                ),
+                content=truncate(schema_artifact.content, 500),
+                artifact_ids=[art_id],
+                step_ids=[step.step_id],
+            )
+            htir.evidence.append(ev)
+            evidence_by_id[ev.evidence_id] = ev
+            evidence_by_step.setdefault(step.step_id, []).append(ev.evidence_id)
+
+
+def _emit_policy_compliance_obligations(
+    htir: HTIR,
+    spec: DomainSpec,
+    domain_artifacts: DomainArtifactBundle,
+    add_claim,
+    ev_id_counter: "_Counter",
+    ob_id_counter: "_Counter",
+) -> None:
+    """
+    Work item A: one ``omega-policy-compliance`` obligation per
+    (policy-sensitive step, Omega_d ``policy`` artifact), so checkers have a
+    real policy artifact to check the step/final-answer against instead of
+    only the ``S_d`` declaration that a policy constraint exists. Routed to
+    the SEMANTIC checker (POLICY required evidence, avg.tex Sec. 3.8) and
+    left PENDING -- discharging it is Step 5's job, not this function's.
+    """
+    policy_artifacts = domain_artifacts.by_kind(ArtifactKind.POLICY)
+    if not policy_artifacts:
+        return
+
+    for step in _policy_sensitive_steps(htir, spec):
+        for artifact in policy_artifacts:
+            ev = EvidenceNode(
+                evidence_id=ev_id_counter.next(),
+                evidence_type=EvidenceType.POLICY,
+                description=f"Omega_d policy artifact '{artifact.identifier}'",
+                content=truncate(artifact.content, 500),
+                step_ids=[step.step_id],
+            )
+            htir.evidence.append(ev)
+
+            claim = add_claim(
+                f"Step {step.step_id} ({step.role}) complies with policy '{artifact.identifier}'.",
+                claim_type="policy_compliance",
+                step_id=step.step_id,
+            )
+
+            htir.obligations.append(
+                Obligation(
+                    obligation_id=ob_id_counter.next(),
+                    claim_id=claim.claim_id,
+                    required_evidence=EvidenceType.POLICY,
+                    candidate_evidence_ids=[ev.evidence_id],
+                    checker=_checker_for_evidence(EvidenceType.POLICY),
+                    severity=Severity.HIGH,
+                    escalation=EscalationRule.ESCALATE,
+                    scope=ObligationScope.TRAJECTORY_TRIGGERED,
+                    template_id="omega-policy-compliance",
+                    description=f"Step complies with Omega_d policy artifact '{artifact.identifier}'.",
+                )
+            )
 
 
 def _template_triggers(template: ObligationTemplate, step: TraceStep) -> bool:
