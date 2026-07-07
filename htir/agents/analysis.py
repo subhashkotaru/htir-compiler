@@ -5,7 +5,7 @@ Analysis modules  (avg.tex Sec. 3.4 "Well-Formedness Checks" and Sec. 3.5
 This module is the Step-3 graph-*enrichment* layer: it sits between graph
 construction (``TraceAbstractionAgent._extract_artifacts`` / temporal /
 reuse / control-flow) and obligation generation
-(``harnessfix.agents.obligations.build_claims_and_obligations``). Per the
+(``htir.agents.obligations.build_claims_and_obligations``). Per the
 pipeline, it now *owns*:
 
   * well-formedness checks (domain-independent structural validation);
@@ -37,8 +37,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from harnessfix.models.domain import ArtifactKind, DomainArtifactBundle, DomainSpec
-from harnessfix.models.htir import (
+from htir.models.domain import ArtifactKind, DomainArtifactBundle, DomainSpec
+from htir.models.htir import (
     ArtifactEffect,
     ConstraintLink,
     CoverageReport,
@@ -52,19 +52,19 @@ from harnessfix.models.htir import (
     ValidationLink,
     WellFormednessIssue,
 )
-from harnessfix.agents.obligations import (
+from htir.agents.obligations import (
     _EDIT_HINTS,
     _FINAL_HINTS,
     _VALIDATION_HINTS,
     _is_role,
     _policy_sensitive_steps,
 )
-from harnessfix.utils.io import truncate
-from harnessfix.utils.llm import DEFAULT_MODEL, chat_json, system, user
+from htir.utils.io import truncate
+from htir.utils.llm import DEFAULT_MODEL, chat_json, system, user
 
 # Artifact type used to recognise policy documents/rules among an HTIR's
 # artifacts. Domains are free to declare an artifact type named "policy" in
-# their R_d (see harnessfix/domains/*.yaml); if none of the compiled
+# their R_d (see htir/domains/*.yaml); if none of the compiled
 # artifacts use it, policy-linking degrades gracefully (nothing to link, but
 # unresolved obligations are still emitted for policy-sensitive steps).
 _POLICY_ARTIFACT_TYPE = "policy"

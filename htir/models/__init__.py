@@ -1,5 +1,5 @@
 """HTIR data models and domain specifications."""
-from harnessfix.models.htir import (
+from htir.models.htir import (
     HTIR,
     TraceStep,
     ArtifactNode,
@@ -36,7 +36,7 @@ from harnessfix.models.htir import (
     HarnessLayerFacet,
     NodeLocalEvidence,
 )
-from harnessfix.models.domain import (
+from htir.models.domain import (
     DomainSpec,
     OperationType,
     ArtifactTypeSpec,

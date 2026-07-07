@@ -33,15 +33,15 @@ Entry points:
 
 Purely a recommendation trace: nothing here drives an agent. Keeps the
 alpha_i (fixed, per-obligation) vs. iota_t (chosen online, per-step)
-distinction documented at ``harnessfix/models/htir.py:118-154``.
+distinction documented at ``htir/models/htir.py:118-154``.
 """
 
 from __future__ import annotations
 
 from typing import Any, Callable
 
-from harnessfix.agents.witness import HIGH_SEVERITIES
-from harnessfix.models.htir import (
+from htir.agents.witness import HIGH_SEVERITIES
+from htir.models.htir import (
     HTIR,
     InterventionAction,
     InterventionLogEntry,

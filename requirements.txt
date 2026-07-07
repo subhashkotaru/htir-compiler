@@ -1,4 +1,8 @@
-openai>=1.30.0
+# Core (deterministic pipeline — no LLM required).
+# For editable installs prefer: pip install -e ".[dev]"
 pydantic>=2.0.0
-python-dotenv>=1.0.0
 pyyaml>=6.0
+
+# Optional LLM-backed semantic checks/analysis (also: pip install "htir[llm]")
+# openai>=1.30.0
+# python-dotenv>=1.0.0

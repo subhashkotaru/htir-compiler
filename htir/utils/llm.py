@@ -15,7 +15,6 @@ import json
 import os
 from typing import Any, Optional, Type, TypeVar
 
-from openai import OpenAI
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
@@ -23,12 +22,22 @@ T = TypeVar("T", bound=BaseModel)
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "openai/gpt-4o"   # OpenRouter model slug; change freely
 
-_client: Optional[OpenAI] = None
+_client: Optional[Any] = None
 
 
-def get_client() -> OpenAI:
+def get_client() -> Any:
     global _client
     if _client is None:
+        # Imported lazily so the deterministic pipeline (and ``import htir``)
+        # works without the optional ``llm`` extra installed. Install it with
+        # ``pip install htir[llm]`` to enable semantic checks/analysis.
+        try:
+            from openai import OpenAI
+        except ImportError as exc:  # pragma: no cover - only without the extra
+            raise ImportError(
+                "The 'openai' package is required for LLM-backed passes. "
+                "Install it with: pip install 'htir[llm]'"
+            ) from exc
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
             raise EnvironmentError(
@@ -40,8 +49,8 @@ def get_client() -> OpenAI:
             base_url=OPENROUTER_BASE_URL,
             default_headers={
                 # Optional but recommended by OpenRouter docs
-                "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "https://github.com/harnessfix"),
-                "X-Title": os.getenv("OPENROUTER_APP_NAME", "HarnessFix"),
+                "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "https://github.com/htir/htir"),
+                "X-Title": os.getenv("OPENROUTER_APP_NAME", "HTIR"),
             },
         )
     return _client

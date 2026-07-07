@@ -16,7 +16,7 @@ generation) over an already compiled *and enriched* HTIR graph:
 Graph *enrichment* -- the E_val (validation), E_cons (constraint), and
 E_causal (dependency) edge sets, well-formedness checks, and the six AVG
 analysis modules (avg.tex Sec. 3.4-3.5) -- is owned by
-``harnessfix.agents.analysis`` and is expected to have already run over
+``htir.agents.analysis`` and is expected to have already run over
 ``htir`` by the time this function is called (see
 ``TraceAbstractionAgent.compile``). This function only *consumes* that
 enrichment.
@@ -37,8 +37,8 @@ step/artifact ids by necessity).
 
 from __future__ import annotations
 
-from harnessfix.models.domain import ArtifactKind, DomainArtifactBundle, DomainSpec, ObligationTemplate
-from harnessfix.models.htir import (
+from htir.models.domain import ArtifactKind, DomainArtifactBundle, DomainSpec, ObligationTemplate
+from htir.models.htir import (
     HTIR,
     ArtifactEffect,
     CheckerType,
@@ -56,7 +56,7 @@ from harnessfix.models.htir import (
     TraceStep,
     WellFormednessIssue,
 )
-from harnessfix.utils.io import truncate
+from htir.utils.io import truncate
 
 # Operation-type names treated as validations / edits / final answers.
 # These are heuristics over the domain vocabulary; specialised domains can use
@@ -328,7 +328,7 @@ def build_claims_and_obligations(
     # NOTE: E_val (validation), E_cons (constraint), and the E_causal
     # first-cut dependency links are no longer wired here. They are graph
     # *enrichment*, owned by the Step-3 analysis layer
-    # (harnessfix.agents.analysis.enrich), which the pipeline runs before
+    # (htir.agents.analysis.enrich), which the pipeline runs before
     # this function so ``htir.validation_links`` / ``constraint_links`` /
     # ``dependency_links`` are already populated by the time obligations
     # are generated.
@@ -568,6 +568,6 @@ def _template_triggers(template: ObligationTemplate, step: TraceStep) -> bool:
 
 
 # _link_constraint (E_cons) and _link_dependencies (E_causal first cut) have
-# moved to harnessfix.agents.analysis (Step-3 graph-enrichment layer); see
+# moved to htir.agents.analysis (Step-3 graph-enrichment layer); see
 # ``link_constraints`` / ``link_dependencies`` there.
 

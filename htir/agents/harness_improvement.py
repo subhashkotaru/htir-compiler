@@ -39,8 +39,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from harnessfix.models.domain import DomainSpec, ObligationTemplate
-from harnessfix.models.htir import (
+from htir.models.domain import DomainSpec, ObligationTemplate
+from htir.models.htir import (
     AggregateResult,
     EscalationRule,
     EvidenceType,

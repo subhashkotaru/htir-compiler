@@ -15,8 +15,13 @@ provenance, causal, support, constraint, and validation edge families.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Callable, Optional
+from pydantic import BaseModel, Field, PrivateAttr
+
+# Version of the HTIR graph schema itself (the serialized interchange format),
+# independent of the package ``__version__``. Downstream tools that consume
+# serialized HTIR should check this and refuse or migrate on a major bump.
+HTIR_SCHEMA_VERSION = "1.0"
 
 
 # ---------------------------------------------------------------------------
@@ -26,7 +31,7 @@ from pydantic import BaseModel, Field
 # NOTE: operation *type* is no longer a fixed enum. AVG requires operation
 # types to come from the active domain specification (S_d.P_d), so a step's
 # ``role`` is a plain string validated against the domain spec's operation
-# vocabulary. See harnessfix/models/domain.py.
+# vocabulary. See htir/models/domain.py.
 
 
 class ExecutionStatus(str, Enum):
@@ -349,6 +354,28 @@ class NodeLocalEvidence(BaseModel):
 # Graph nodes
 # ---------------------------------------------------------------------------
 
+class ToolCall(BaseModel):
+    """
+    A single structured tool/function invocation observed within a step.
+
+    Framework-neutral: trace adapters (``htir.adapters``) populate this from
+    whatever their source calls a tool call (OpenAI ``tool_calls``, Anthropic
+    ``tool_use``/``tool_result`` blocks, LangChain ``tool_calls``, an
+    OpenInference/OTel tool span, ...). Keeping name/arguments/result
+    *structured* -- rather than concatenated into a response string -- is what
+    lets mechanical checkers reason about tool validity, arguments, and
+    outcomes. ``raw`` preserves the untouched source payload for lossless
+    round-tripping and adapter-specific checks.
+    """
+    name: str = Field(..., description="Tool / function name")
+    arguments: dict[str, Any] = Field(default_factory=dict, description="Parsed call arguments, when structured")
+    arguments_text: str = Field("", description="Raw argument string when arguments could not be parsed to a dict")
+    result: str = Field("", description="Tool result / observation text, if returned in-trace")
+    status: ExecutionStatus = Field(ExecutionStatus.UNKNOWN, description="Outcome of the tool call, if observable")
+    tool_call_id: str = Field("", description="Provider-assigned id used to correlate a call with its result")
+    raw: dict[str, Any] = Field(default_factory=dict, description="Untouched source payload for this tool call")
+
+
 class TraceStep(BaseModel):
     """
     Operation node: a single recoverable execution step in an agent trajectory
@@ -363,6 +390,11 @@ class TraceStep(BaseModel):
     role: str = Field("other", description="Domain operation type name; 'other' if unmatched")
     execution_status: ExecutionStatus = ExecutionStatus.UNKNOWN
     artifact_state_effects: list[ArtifactStateEvidence] = Field(default_factory=list)
+
+    # Structured tool calls made in this step (framework-neutral; populated by
+    # adapters). Distinct from the flat ``response_message`` so checkers can
+    # inspect tool name/arguments/result/status without string-parsing.
+    tool_calls: list[ToolCall] = Field(default_factory=list)
 
     # First-class artifact-node references (provenance edges to ArtifactNode ids)
     consumed_artifact_ids: list[int] = Field(default_factory=list)
@@ -506,8 +538,8 @@ class AggregateResult(BaseModel):
     """
     z_tau = (y_hat, u_hat, c_hat, eta_hat): the trajectory-level status
     aggregated from all checked obligations (avg.tex Sec. 3.9). Populated by
-    ``harnessfix.agents.witness.aggregate``, which must run after
-    ``harnessfix.agents.checking.check_obligations``.
+    ``htir.agents.witness.aggregate``, which must run after
+    ``htir.agents.checking.check_obligations``.
     """
     predicted_status: str = Field("uncertain", description="y_hat: 'valid' / 'invalid' / 'uncertain'")
     uncertainty: float = Field(0.0, description="u_hat: severity-weighted abstention mass in [0, 1]")
@@ -520,7 +552,7 @@ class AggregateResult(BaseModel):
 class VerificationWitness(BaseModel):
     """
     W_tau = (O+, O-, O-empty, E_W, R_W): the stated output of AVG (avg.tex
-    Sec. 3.10). Populated by ``harnessfix.agents.witness.build_witness``,
+    Sec. 3.10). Populated by ``htir.agents.witness.build_witness``,
     which must run after ``aggregate``.
     """
     passed_obligation_ids: list[int] = Field(default_factory=list, description="O+")
@@ -539,7 +571,7 @@ class InterventionLogEntry(BaseModel):
     One recorded intervention decision: at step ``step_id``, over the partial
     graph G_{tau<=step_id}, ``obligation_id`` was active (high-severity,
     failing/abstaining) and the harness chose ``action`` (iota_t). Purely a
-    recommendation trace (``harnessfix.agents.intervention``); does not drive
+    recommendation trace (``htir.agents.intervention``); does not drive
     an agent.
     """
     step_id: int
@@ -557,6 +589,10 @@ class HTIR(BaseModel):
     The complete Harness-aware Trace Intermediate Representation / AVG
     verification graph for one agent execution run.
     """
+    schema_version: str = Field(
+        HTIR_SCHEMA_VERSION,
+        description="Version of the HTIR graph schema this object conforms to (interchange contract).",
+    )
     task_id: str = Field(..., description="Identifier for the task this trace belongs to")
     agent_name: str = Field("", description="Name of the agent harness that produced this trace")
     outcome: str = Field("", description="Externally evaluated result (e.g. 'failed', 'resolved')")
@@ -580,8 +616,8 @@ class HTIR(BaseModel):
     dependency_links: list[DependencyLink] = Field(default_factory=list)
 
     # Analysis-module outputs (avg.tex Sec. 3.4-3.5). Populated by
-    # harnessfix.agents.analysis.enrich() (well-formedness / most modules) and
-    # harnessfix.agents.analysis.compute_coverage() (coverage, after
+    # htir.agents.analysis.enrich() (well-formedness / most modules) and
+    # htir.agents.analysis.compute_coverage() (coverage, after
     # obligation generation). default_factory so existing serialized outputs
     # (data/htir_outputs/*.json) stay backward compatible.
     wellformedness: list[WellFormednessIssue] = Field(default_factory=list)
@@ -589,15 +625,15 @@ class HTIR(BaseModel):
     coverage: CoverageReport = Field(default_factory=CoverageReport)
 
     # AVG Step 6 outputs (avg.tex Sec. 3.9-3.10). Populated by
-    # harnessfix.agents.witness.aggregate() / build_witness(), which run
-    # after harnessfix.agents.checking.check_obligations(). Optional and
+    # htir.agents.witness.aggregate() / build_witness(), which run
+    # after htir.agents.checking.check_obligations(). Optional and
     # default None so existing serialized outputs (data/htir_outputs/*.json)
     # stay backward compatible.
     aggregate: Optional[AggregateResult] = None
     witness: Optional[VerificationWitness] = None
 
     # AVG Step 7 output (avg.tex Sec. 3.11). Populated by
-    # harnessfix.agents.intervention.run_intervention_loop() over a *prefix*
+    # htir.agents.intervention.run_intervention_loop() over a *prefix*
     # replay of a recorded trace; empty by default so existing serialized
     # outputs (data/htir_outputs/*.json) stay backward compatible.
     intervention_log: list[InterventionLogEntry] = Field(default_factory=list)
@@ -605,31 +641,41 @@ class HTIR(BaseModel):
     # Path to the harness code under analysis
     harness_root: str = Field("", description="Root directory of the harness codebase")
 
+    # -- id-lookup indexes --------------------------------------------------
+    #
+    # Amortized O(1) node lookups instead of O(n) scans, which matters for long
+    # enterprise traces (checkers/analysis call these inside loops). The cache
+    # is keyed by node kind and guarded by the backing list's *length*: this
+    # codebase only ever appends to or clears these lists, so a length change
+    # is a sufficient staleness signal. (If a caller ever mutates a node's id
+    # in place without changing the list length, call ``invalidate_indexes``.)
+    _index_cache: dict[str, tuple[int, dict[int, Any]]] = PrivateAttr(default_factory=dict)
+
+    def invalidate_indexes(self) -> None:
+        """Drop cached id-lookup indexes (only needed after in-place id edits)."""
+        self._index_cache.clear()
+
+    def _index(self, name: str, items: list, key: Callable[[Any], int]) -> dict[int, Any]:
+        cached = self._index_cache.get(name)
+        if cached is None or cached[0] != len(items):
+            built = {key(it): it for it in items}
+            self._index_cache[name] = (len(items), built)
+            return built
+        return cached[1]
+
     # -- accessors ----------------------------------------------------------
 
     def get_step(self, step_id: int) -> Optional[TraceStep]:
-        for s in self.steps:
-            if s.step_id == step_id:
-                return s
-        return None
+        return self._index("steps", self.steps, lambda s: s.step_id).get(step_id)
 
     def get_artifact(self, artifact_id: int) -> Optional[ArtifactNode]:
-        for a in self.artifacts:
-            if a.artifact_id == artifact_id:
-                return a
-        return None
+        return self._index("artifacts", self.artifacts, lambda a: a.artifact_id).get(artifact_id)
 
     def get_claim(self, claim_id: int) -> Optional[ClaimNode]:
-        for c in self.claims:
-            if c.claim_id == claim_id:
-                return c
-        return None
+        return self._index("claims", self.claims, lambda c: c.claim_id).get(claim_id)
 
     def get_obligation(self, obligation_id: int) -> Optional[Obligation]:
-        for o in self.obligations:
-            if o.obligation_id == obligation_id:
-                return o
-        return None
+        return self._index("obligations", self.obligations, lambda o: o.obligation_id).get(obligation_id)
 
     def steps_in_order(self) -> list[TraceStep]:
         return sorted(self.steps, key=lambda s: s.step_id)

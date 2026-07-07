@@ -2,7 +2,7 @@
 Aggregation z_tau + Verification witness W_tau (AVG Step 6, avg.tex Sec.
 3.9-3.10 "Aggregating Obligation Results" / "Verification Witness").
 
-This module collapses the checked obligation set (``harnessfix.agents.
+This module collapses the checked obligation set (``htir.agents.
 checking.check_obligations`` must already have run) into a trajectory-level
 status and the verification witness that is AVG's stated output. It does not
 run any checkers itself and makes no LLM calls -- aggregation and the review
@@ -29,7 +29,7 @@ they are auditable and testable (see ``HIGH_SEVERITIES``,
 
 from __future__ import annotations
 
-from harnessfix.models.htir import (
+from htir.models.htir import (
     AggregateResult,
     HTIR,
     Obligation,

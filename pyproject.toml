@@ -3,20 +3,63 @@ requires = ["setuptools>=67", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "htir-compiler"
+name = "htir"
 version = "0.1.0"
-description = "HTIR: Harness-aware Trace Intermediate Representation compiler"
+description = "Framework-neutral verification for black-box agent trajectories: compile any agent trace into an evidence-carrying verification witness."
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "HTIR contributors" }]
+keywords = [
+    "llm", "agents", "agent-verification", "trace", "observability",
+    "openinference", "opentelemetry", "langchain", "evaluation", "guardrails",
+    "process-supervision", "ai-safety",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Quality Assurance",
+    "Typing :: Typed",
+]
 dependencies = [
-    "openai>=1.30.0",
     "pydantic>=2.0.0",
-    "python-dotenv>=1.0.0",
     "pyyaml>=6.0",
 ]
 
+[project.optional-dependencies]
+# LLM-backed semantic checks / analysis are optional; the deterministic
+# pipeline (ingest -> graph -> mechanical checks -> witness) needs none of it.
+llm = ["openai>=1.30.0", "python-dotenv>=1.0.0"]
+dev = ["pytest>=7.0", "openai>=1.30.0", "python-dotenv>=1.0.0"]
+
+[project.scripts]
+htir = "htir.cli:main"
+
+# Extension-point groups: third-party packages can add a framework adapter or
+# a mechanical checker by advertising an entry point here (loaded via
+# htir.adapters.load_entry_point_adapters / checker_registry.load_entry_point_checkers).
+[project.entry-points."htir.adapters"]
+# example = "my_pkg.htir_adapter"
+
+[project.entry-points."htir.checkers"]
+# example = "my_pkg.htir_checker"
+
+[project.urls]
+Homepage = "https://github.com/htir/htir"
+Repository = "https://github.com/htir/htir"
+Issues = "https://github.com/htir/htir/issues"
+
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["harnessfix*"]
+include = ["htir*"]
 
 [tool.setuptools.package-data]
-harnessfix = ["domains/*.yaml"]
+htir = ["domains/*.yaml", "domains/*.yml", "domains/**/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

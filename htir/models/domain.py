@@ -20,7 +20,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from harnessfix.models.htir import (
+from htir.models.htir import (
     EscalationRule,
     EvidenceType,
     ObligationScope,

@@ -1,13 +1,25 @@
 # Handoff: Harden AVG Step 4 (obligation generation)
 
+> **STATUS: COMPLETED (2026-07-07) — historical planning document.**
+> Every item below has been implemented and verified (36 tests pass in
+> `~/.venv`): the Step-4 bug fixes (B1–…), all seven "Code cleanup" items,
+> Step 5 (`htir/agents/checking.py`), and Step 6
+> (`htir/agents/witness.py`). The two items this doc calls "out of
+> scope for the whole handoff" — online intervention `iota_t` (Step 7,
+> `htir/agents/intervention.py`) and offline harness improvement
+> (Step 8, `htir/agents/harness_improvement.py`) — were subsequently
+> built as well. This file is retained as a design record; for the current
+> AVG↔code mapping see [`avg-mapping.md`](avg-mapping.md). Read the
+> imperative "Goal / TODO / out of scope" framing below as past tense.
+
 Audience: an AI agent continuing this repo. Scope: **make obligation
 generation correct and faithful to avg.tex Sec. 3.6 ("Generating Verification
 Obligations")**. Do NOT build checker execution (Step 5) or the witness
 (Step 6) here — obligations must still be emitted `status=PENDING`,
 `result=None`.
 
-Primary file: `harnessfix/agents/obligations.py::build_claims_and_obligations`.
-Consumes enrichment from `harnessfix/agents/analysis.py` (already run by
+Primary file: `htir/agents/obligations.py::build_claims_and_obligations`.
+Consumes enrichment from `htir/agents/analysis.py` (already run by
 `TraceAbstractionAgent.compile`). Ground truth: `avg.tex` Sec. 3.6, the
 obligation tuple in Sec. 2, and the checker-routing rules in Sec. 3.8.
 
@@ -214,7 +226,7 @@ filling `Obligation.result` (a `CheckerResult`) and `Obligation.status`
 `ClaimNode.status` (`SUPPORTED`/`REFUTED`/`UNRESOLVED`). This is the central
 verification act; do it only after Step 4 is hardened.
 
-New file: `harnessfix/agents/checking.py`. Do NOT touch graph construction or
+New file: `htir/agents/checking.py`. Do NOT touch graph construction or
 obligation generation. Entry point suggestion:
 `check_obligations(htir, spec, *, use_semantic=False, model=DEFAULT_MODEL) -> HTIR`.
 
@@ -288,7 +300,7 @@ with the three probabilities summing to 1. Keep context local (avg.tex Sec.
 Goal: collapse the checked obligations into a trajectory-level status and emit
 the verification witness `W_tau`, the stated output of AVG. Depends on Step 5.
 
-### New models (add to `harnessfix/models/htir.py`)
+### New models (add to `htir/models/htir.py`)
 - `AggregateResult` for `z_tau = (y_hat, u_hat, c_hat, eta_hat)`:
   - `predicted_status: str` (e.g. `valid` / `invalid` / `uncertain`),
   - `uncertainty: float`,
@@ -304,7 +316,7 @@ the verification witness `W_tau`, the stated output of AVG. Depends on Step 5.
   and `witness: Optional[VerificationWitness] = None` (default None →
   serialized fixtures stay backward-compatible).
 
-### New file: `harnessfix/agents/witness.py`
+### New file: `htir/agents/witness.py`
 Entry points: `aggregate(htir) -> AggregateResult` and
 `build_witness(htir) -> VerificationWitness`.
 

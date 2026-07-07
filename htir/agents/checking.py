@@ -2,7 +2,7 @@
 Checker execution (AVG Step 5, avg.tex Sec. 3.8 "Checking Obligations").
 
 This module discharges each ``Obligation`` produced by
-``harnessfix.agents.obligations.build_claims_and_obligations`` by running the
+``htir.agents.obligations.build_claims_and_obligations`` by running the
 checker class routed to it (``Obligation.checker``, q_i), filling
 ``Obligation.result`` (``CheckerResult``) and ``Obligation.status``
 (``PASSED``/``FAILED``/``ABSTAINED``), and propagating the outcome to the
@@ -48,8 +48,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from harnessfix.models.domain import ArtifactKind, DomainArtifactBundle, DomainSpec
-from harnessfix.models.htir import (
+from htir.models.domain import ArtifactKind, DomainArtifactBundle, DomainSpec
+from htir.models.htir import (
     CheckerResult,
     CheckerType,
     ClaimNode,
@@ -64,8 +64,9 @@ from harnessfix.models.htir import (
     SupportPolarity,
     ValidationLink,
 )
-from harnessfix.utils.io import truncate
-from harnessfix.utils.llm import DEFAULT_MODEL, chat_json, system, user
+from htir.agents.checker_registry import CheckerContext, register_checker, resolve_checker
+from htir.utils.io import truncate
+from htir.utils.llm import DEFAULT_MODEL, chat_json, system, user
 
 # Template ids that implement the "post-edit-validation" pattern: a source
 # edit should be followed by relevant validation. Both the universal/
@@ -220,29 +221,52 @@ def _check_mechanical(
     *,
     domain_artifacts: DomainArtifactBundle | None,
 ) -> CheckerResult:
-    if ob.required_evidence == EvidenceType.SCHEMA:
-        return _check_schema(spec, claim, domain_artifacts, ob.candidate_evidence_ids)
-
-    if ob.template_id in _POST_EDIT_VALIDATION_TEMPLATES or (
-        claim.claim_type == "artifact_provenance" and ob.template_id and "validat" in ob.template_id
-    ):
-        return _check_post_edit_validation(htir, claim)
-
-    if ob.template_id == _EXPLAIN_FAILURE_TEMPLATE:
-        return _check_explained_failure(htir, claim)
-
-    if claim.claim_type == "execution_status":
-        return _check_execution_status(htir, claim, ob.candidate_evidence_ids)
-
-    if claim.claim_type == "artifact_provenance":
-        return _check_provenance(htir, claim)
-
-    # No specific mechanical rule for this claim type/template: fall back to
-    # the general contract -- empty E_i is a signal to abstain, never to
-    # search the whole graph or fake a pass.
-    if not ob.candidate_evidence_ids:
+    # Route through the checker registry so domains / third-party packages can
+    # add mechanical checkers without editing this module. The built-ins below
+    # register at import; ``resolve_checker`` encodes the precedence
+    # (required_evidence -> template_id -> claim_type).
+    checker = resolve_checker(ob, claim)
+    if checker is None:
+        # No specific mechanical rule: abstain (empty/irrelevant E_i is a
+        # signal to abstain, never to search the whole graph or fake a pass).
         return _abstain()
-    return _abstain()
+    ctx = CheckerContext(
+        htir=htir, spec=spec, obligation=ob, claim=claim,
+        evidence_by_id=evidence_by_id, domain_artifacts=domain_artifacts,
+    )
+    return checker(ctx)
+
+
+# ---------------------------------------------------------------------------
+# Built-in mechanical checkers, registered into the checker registry. Each is
+# a thin CheckerContext-shaped wrapper over a rule function below, so the rules
+# stay independently testable and the registry is the single dispatch point.
+# Community checkers register the same way (see checker_registry).
+# ---------------------------------------------------------------------------
+
+@register_checker(required_evidence=EvidenceType.SCHEMA)
+def _mech_schema(ctx: CheckerContext) -> CheckerResult:
+    return _check_schema(ctx.spec, ctx.claim, ctx.domain_artifacts, ctx.obligation.candidate_evidence_ids)
+
+
+@register_checker(template_id=_POST_EDIT_VALIDATION_TEMPLATES)
+def _mech_post_edit_validation(ctx: CheckerContext) -> CheckerResult:
+    return _check_post_edit_validation(ctx.htir, ctx.claim)
+
+
+@register_checker(template_id=_EXPLAIN_FAILURE_TEMPLATE)
+def _mech_explained_failure(ctx: CheckerContext) -> CheckerResult:
+    return _check_explained_failure(ctx.htir, ctx.claim)
+
+
+@register_checker(claim_type="execution_status")
+def _mech_execution_status(ctx: CheckerContext) -> CheckerResult:
+    return _check_execution_status(ctx.htir, ctx.claim, ctx.obligation.candidate_evidence_ids)
+
+
+@register_checker(claim_type="artifact_provenance")
+def _mech_provenance(ctx: CheckerContext) -> CheckerResult:
+    return _check_provenance(ctx.htir, ctx.claim)
 
 
 def _check_execution_status(htir: HTIR, claim: ClaimNode, candidate_evidence_ids: list[int]) -> CheckerResult:

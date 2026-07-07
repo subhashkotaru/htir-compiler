@@ -2,7 +2,7 @@
 #
 # This is the source of truth for the built-in "default" domain. Copy this
 # file to create your own domain spec, edit the four sections below, and drop
-# it in this directory (harnessfix/domains/) — it is auto-discovered by
+# it in this directory (htir/domains/) — it is auto-discovered by
 # domain_id at import time. No Python changes required.
 #
 #   operation_types      (P_d)  the operation vocabulary a step's `role` maps to

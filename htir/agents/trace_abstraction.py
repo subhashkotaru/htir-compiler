@@ -16,24 +16,25 @@ Compiles raw agent execution traces and harness code into HTIR by:
   6. Optionally attaching the ETCLOVG harness layer responsibility facet per
      step (HarnessFix extension, off by default on the AVG path -- see
      ``attach_harness_layers``).
-  7. Running the Step-3 analysis layer (``harnessfix.agents.analysis.enrich``):
+  7. Running the Step-3 analysis layer (``htir.agents.analysis.enrich``):
      well-formedness checks and the provenance / dependency / validation /
      state-transition / policy-linking / integrity analysis modules
      (avg.tex Sec. 3.4-3.5).
   8. Generating claims, evidence, and obligations
-     (``harnessfix.agents.obligations.build_claims_and_obligations``), then
-     coverage analysis (``harnessfix.agents.analysis.compute_coverage``).
+     (``htir.agents.obligations.build_claims_and_obligations``), then
+     coverage analysis (``htir.agents.analysis.compute_coverage``).
 """
 
 from __future__ import annotations
 
 import json
+import warnings
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from harnessfix.models.domain import DEFAULT_DOMAIN_SPEC, DomainArtifactBundle, DomainSpec
-from harnessfix.models.htir import (
+from htir.models.domain import DEFAULT_DOMAIN_SPEC, DomainArtifactBundle, DomainSpec
+from htir.models.htir import (
     HTIR,
     ArtifactEffect,
     ArtifactNode,
@@ -50,14 +51,15 @@ from harnessfix.models.htir import (
     ProvenanceRelation,
     ReuseRelation,
     TemporalLink,
+    ToolCall,
     TraceStep,
 )
-from harnessfix.agents.analysis import compute_coverage, enrich
-from harnessfix.agents.checking import check_obligations
-from harnessfix.agents.obligations import build_claims_and_obligations
-from harnessfix.agents.witness import aggregate, build_witness
-from harnessfix.utils.llm import chat_json, system, user, DEFAULT_MODEL
-from harnessfix.utils.io import truncate
+from htir.agents.analysis import compute_coverage, enrich
+from htir.agents.checking import check_obligations
+from htir.agents.obligations import build_claims_and_obligations
+from htir.agents.witness import aggregate, build_witness
+from htir.utils.llm import chat_json, system, user, DEFAULT_MODEL
+from htir.utils.io import truncate
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +115,42 @@ def _coerce_artifact_effect(value: Any) -> ArtifactEffect:
         return ArtifactEffect(value or "unknown")
     except ValueError:
         return ArtifactEffect.UNKNOWN
+
+
+def _coerce_execution_status(value: Any) -> ExecutionStatus:
+    """Coerce an adapter-supplied status hint into ``ExecutionStatus``."""
+    try:
+        return ExecutionStatus(value or "unknown")
+    except ValueError:
+        return ExecutionStatus.UNKNOWN
+
+
+# Canonical step-dict keys (see ``htir.adapters.base``); everything else on a
+# raw step dict is preserved as ``TraceStep.raw_metadata``.
+_CANONICAL_STEP_KEYS = frozenset({
+    "request", "response", "prompt", "output", "input", "result", "completion",
+    "tool_calls", "role_hint", "status_hint", "artifact_effects", "metadata",
+})
+
+
+def _parse_tool_calls(raw_calls: list[dict[str, Any]]) -> list[ToolCall]:
+    """Build ``ToolCall`` nodes from canonical tool-call dicts (see adapters)."""
+    calls: list[ToolCall] = []
+    for tc in raw_calls:
+        if not isinstance(tc, dict):
+            continue
+        calls.append(
+            ToolCall(
+                name=str(tc.get("name") or "tool"),
+                arguments=tc.get("arguments") if isinstance(tc.get("arguments"), dict) else {},
+                arguments_text=str(tc.get("arguments_text") or ""),
+                result=str(tc.get("result") or ""),
+                status=_coerce_execution_status(tc.get("status")),
+                tool_call_id=str(tc.get("tool_call_id") or ""),
+                raw=tc.get("raw") if isinstance(tc.get("raw"), dict) else {},
+            )
+        )
+    return calls
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +213,7 @@ class TraceAbstractionAgent:
         harness_root: str = "",
         generate_obligations: bool = True,
         attach_harness_layers: bool = False,
+        infer_harness_links: bool = False,
         use_semantic_analysis: bool = False,
         run_checks: bool = False,
         domain_artifacts: DomainArtifactBundle | None = None,
@@ -182,17 +221,29 @@ class TraceAbstractionAgent:
         """
         Compile a raw trace into HTIR.
 
+        The deterministic AVG pipeline runs with **no LLM / no API key**:
+        artifact extraction, analysis modules, obligation generation, and
+        (with ``run_checks``) the mechanical checkers, aggregation, and
+        witness. The LLM is used only for the opt-in passes below and for
+        annotating steps whose adapter did not supply a ``role_hint``.
+
         ``attach_harness_layers`` controls the HarnessFix ETCLOVG layer facet
         (see ``_attach_layer_facets``), which is a per-step LLM call outside
         the AVG proposal. It defaults to off on the AVG path; pass ``True`` to
         opt into the HarnessFix harness-code-attribution extension.
 
+        ``infer_harness_links`` gates the two HarnessFix step->step link passes
+        (input-reuse and control-flow inference), each an LLM call and neither
+        part of the AVG graph. Off by default so the core path is offline and
+        reproducible; pass ``True`` to populate ``input_reuse_links`` /
+        ``control_flow_links`` for harness-attribution diagnostics.
+
         ``use_semantic_analysis`` gates the LLM-backed passes inside the
-        Step-3 analysis layer (``harnessfix.agents.analysis.enrich``), e.g.
+        Step-3 analysis layer (``htir.agents.analysis.enrich``), e.g.
         free-text final-answer provenance and soft policy-relevance linking.
         Deterministic analysis passes always run regardless of this flag. The
         same flag also gates the SEMANTIC checker class in
-        ``harnessfix.agents.checking.check_obligations`` when ``run_checks``
+        ``htir.agents.checking.check_obligations`` when ``run_checks``
         is on.
 
         ``run_checks`` (AVG Steps 5-6, off by default so Step-1..4 output is
@@ -228,15 +279,16 @@ class TraceAbstractionAgent:
                 TemporalLink(source_id=steps[i].step_id, target_id=steps[i + 1].step_id)
             )
 
-        harness_context = self._summarise_harness(harness_snippets)
-
-        # Input-reuse links (HarnessFix extension, NOT AVG provenance)
-        reuse_links = self._infer_input_reuse(steps, harness_context)
-        htir.input_reuse_links = reuse_links
-
-        # Control flow links (HarnessFix extension, NOT AVG E_causal)
-        cf_links = self._infer_control_flow(steps, harness_context)
-        htir.control_flow_links = cf_links
+        # HarnessFix step->step link inference (input-reuse + control-flow) is
+        # an opt-in LLM extension, off by default so the core path is offline.
+        harness_context = ""
+        if infer_harness_links or attach_harness_layers:
+            harness_context = self._summarise_harness(harness_snippets)
+        if infer_harness_links:
+            # Input-reuse links (HarnessFix extension, NOT AVG provenance)
+            htir.input_reuse_links = self._infer_input_reuse(steps, harness_context)
+            # Control flow links (HarnessFix extension, NOT AVG E_causal)
+            htir.control_flow_links = self._infer_control_flow(steps, harness_context)
 
         # Node-local evidence + (optional) layer facets
         self._attach_node_local_evidence(htir)
@@ -302,20 +354,89 @@ class TraceAbstractionAgent:
             **compile_kwargs,
         )
 
+    def compile_many(
+        self,
+        traces: list[dict[str, Any]],
+        *,
+        max_workers: int | None = None,
+        **compile_kwargs: Any,
+    ) -> list[HTIR]:
+        """
+        Compile many traces (enterprise batch verification). Each item in
+        ``traces`` is a dict of keyword arguments for :meth:`compile` (at least
+        ``task_id`` and ``raw_steps``; ``harness_snippets`` defaults to ``{}``).
+        Results preserve input order.
+
+        ``max_workers`` runs compiles concurrently in a thread pool. Threads
+        help when the pipeline is LLM/IO-bound (``run_checks``/
+        ``use_semantic``); the default deterministic path is CPU-bound, so
+        leave it ``None`` (sequential) unless you are network-bound.
+        """
+        def _one(spec: dict[str, Any]) -> HTIR:
+            kwargs = {"harness_snippets": {}, **compile_kwargs, **spec}
+            return self.compile(**kwargs)
+
+        if max_workers and len(traces) > 1:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                return list(pool.map(_one, traces))
+        return [_one(spec) for spec in traces]
+
     # ------------------------------------------------------------------
     # Step construction
     # ------------------------------------------------------------------
 
     def _build_steps(self, raw_steps: list[dict[str, Any]]) -> list[TraceStep]:
         steps: list[TraceStep] = []
+        valid_roles = set(self.domain_spec.operation_type_names())
+        llm_available = True  # flips off (once) if no API key / no openai extra
         for i, raw in enumerate(raw_steps, start=1):
             req = str(raw.get("request", raw.get("prompt", raw.get("input", ""))))
             resp = str(raw.get("response", raw.get("output", raw.get("result", ""))))
+            tool_calls = _parse_tool_calls(raw.get("tool_calls") or [])
 
-            annotation = self._annotate_step(i, req, resp)
+            # Adapter-provided annotation (role_hint / status_hint /
+            # artifact_effects) short-circuits the LLM annotation pass, so a
+            # trace whose adapter already knows the operation type compiles
+            # fully offline (no API key). Otherwise use the LLM -- and if the
+            # LLM is unavailable (offline / no key), degrade gracefully to a
+            # default annotation rather than crashing, so a graph is always
+            # produced (roles fall back to "other"/tool-name promotion).
+            if any(k in raw for k in ("role_hint", "status_hint", "artifact_effects")):
+                role_raw = str(raw.get("role_hint") or "other")
+                status = _coerce_execution_status(raw.get("status_hint"))
+                effects_src = raw.get("artifact_effects") or []
+            else:
+                annotation = _StepAnnotation()
+                if llm_available:
+                    try:
+                        annotation = self._annotate_step(i, req, resp)
+                    except (EnvironmentError, ImportError) as exc:
+                        # No API key / openai extra: annotate deterministically
+                        # for the rest of the trace instead of failing.
+                        llm_available = False
+                        warnings.warn(
+                            f"LLM step annotation unavailable ({exc}); compiling with "
+                            "default roles. Supply adapter role hints or set an API key "
+                            "for richer operation-type inference.",
+                            RuntimeWarning,
+                            stacklevel=2,
+                        )
+                role_raw = annotation.role
+                status = annotation.execution_status
+                effects_src = annotation.artifact_effects
 
-            valid_roles = set(self.domain_spec.operation_type_names())
-            role = annotation.role if annotation.role in valid_roles else "other"
+            role = role_raw if role_raw in valid_roles else "other"
+            # Let structured tool calls drive the domain role: if the role is
+            # still generic, promote it from a tool-call name that matches a
+            # domain operation type (e.g. an OTel/openai `run_test` tool call
+            # -> the `run_test` operation), else fall back to `tool_invocation`.
+            if role in ("other", "tool_invocation") and tool_calls:
+                named = next((tc.name for tc in tool_calls if tc.name in valid_roles), None)
+                if named is not None:
+                    role = named
+                elif role == "other" and "tool_invocation" in valid_roles:
+                    role = "tool_invocation"
 
             effects = [
                 ArtifactStateEvidence(
@@ -324,8 +445,14 @@ class TraceAbstractionAgent:
                     observed_change=str(e.get("observed_change") or ""),
                     supporting_evidence=str(e.get("supporting_evidence") or ""),
                 )
-                for e in annotation.artifact_effects
+                for e in effects_src
             ]
+
+            metadata = dict(raw.get("metadata") or {})
+            metadata.update({
+                k: v for k, v in raw.items()
+                if k not in _CANONICAL_STEP_KEYS
+            })
 
             steps.append(
                 TraceStep(
@@ -333,9 +460,10 @@ class TraceAbstractionAgent:
                     request_message=req,
                     response_message=resp,
                     role=role,
-                    execution_status=annotation.execution_status,
+                    execution_status=status,
                     artifact_state_effects=effects,
-                    raw_metadata={k: v for k, v in raw.items() if k not in ("request", "response", "prompt", "output")},
+                    tool_calls=tool_calls,
+                    raw_metadata=metadata,
                 )
             )
         return steps

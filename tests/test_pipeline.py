@@ -8,10 +8,10 @@ Builds synthetic HTIRs by hand (no OpenRouter/LLM calls) so this runs without
 
   * ``TraceAbstractionAgent._extract_artifacts`` -- artifact nodes +
     ``ArtifactProvenanceLink`` (E_prov).
-  * ``harnessfix.agents.analysis.enrich`` -- well-formedness issues and the
+  * ``htir.agents.analysis.enrich`` -- well-formedness issues and the
     provenance / dependency / validation / state-transition / policy-linking
     / integrity analysis modules (avg.tex Sec. 3.4-3.5).
-  * ``harnessfix.agents.obligations.build_claims_and_obligations`` -- claim /
+  * ``htir.agents.obligations.build_claims_and_obligations`` -- claim /
     evidence / obligation nodes, the support edges, and obligations seeded
     from unresolved well-formedness issues.
   * a regression test for the ``role.value`` crash in
@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import re
 
-from harnessfix.agents.analysis import enrich
-from harnessfix.agents.checking import check_obligations
-from harnessfix.agents.harness_improvement import (
+from htir.agents.analysis import enrich
+from htir.agents.checking import check_obligations
+from htir.agents.harness_improvement import (
     EditTarget,
     HarnessConfig,
     WitnessCorpus,
@@ -35,11 +35,11 @@ from harnessfix.agents.harness_improvement import (
     mine_recurring_failures,
     score_config,
 )
-from harnessfix.agents.intervention import active_obligations, run_intervention_loop, select_intervention
-from harnessfix.agents.obligations import _template_triggers, build_claims_and_obligations
-from harnessfix.agents.trace_abstraction import TraceAbstractionAgent
-from harnessfix.agents.witness import aggregate, build_witness
-from harnessfix.models.domain import (
+from htir.agents.intervention import active_obligations, run_intervention_loop, select_intervention
+from htir.agents.obligations import _template_triggers, build_claims_and_obligations
+from htir.agents.trace_abstraction import TraceAbstractionAgent
+from htir.agents.witness import aggregate, build_witness
+from htir.models.domain import (
     DEFAULT_DOMAIN_SPEC,
     ArtifactKind,
     Constraint,
@@ -48,7 +48,7 @@ from harnessfix.models.domain import (
     DomainSpec,
     ObligationTemplate,
 )
-from harnessfix.models.htir import (
+from htir.models.htir import (
     HTIR,
     ArtifactEffect,
     ArtifactStateEvidence,
@@ -212,7 +212,7 @@ def test_infer_control_flow_batch_role_is_plain_string(monkeypatch):
     def _fake_chat_json(messages, schema, model=None, max_tokens=None, **kwargs):
         return schema()  # empty _ControlFlowLinkList
 
-    monkeypatch.setattr("harnessfix.agents.trace_abstraction.chat_json", _fake_chat_json)
+    monkeypatch.setattr("htir.agents.trace_abstraction.chat_json", _fake_chat_json)
 
     agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
     links = agent._infer_control_flow_batch(steps, harness_context="")
@@ -426,7 +426,7 @@ def test_integrity_finding_escalates_to_veto():
     enrich(htir, DEFAULT_DOMAIN_SPEC)
     build_claims_and_obligations(htir, DEFAULT_DOMAIN_SPEC)
 
-    from harnessfix.models.htir import EscalationRule
+    from htir.models.htir import EscalationRule
 
     seeded = [o for o in htir.obligations if o.template_id == "wellformedness:integrity_test_modified"]
     assert len(seeded) == 1
@@ -473,7 +473,7 @@ def test_obligations_deduped_by_claim_and_template():
 
 
 # ---------------------------------------------------------------------------
-# Step 5 -- checker execution (harnessfix.agents.checking)
+# Step 5 -- checker execution (htir.agents.checking)
 # ---------------------------------------------------------------------------
 
 def test_post_edit_validation_obligation_passes_mechanically():
@@ -532,7 +532,7 @@ def test_semantic_obligations_abstain_without_llm_call(monkeypatch):
     def _fail_if_called(*args, **kwargs):
         raise AssertionError("chat_json must not be called when use_semantic=False")
 
-    monkeypatch.setattr("harnessfix.agents.checking.chat_json", _fail_if_called)
+    monkeypatch.setattr("htir.agents.checking.chat_json", _fail_if_called)
 
     check_obligations(htir, DEFAULT_DOMAIN_SPEC, use_semantic=False)
 
@@ -561,7 +561,7 @@ def test_check_obligations_is_idempotent():
 
 
 # ---------------------------------------------------------------------------
-# Step 6 -- aggregation z_tau + verification witness W_tau (harnessfix.agents.witness)
+# Step 6 -- aggregation z_tau + verification witness W_tau (htir.agents.witness)
 # ---------------------------------------------------------------------------
 
 def _obligation(
@@ -640,7 +640,7 @@ def test_compile_run_checks_flag_populates_aggregate_and_witness(monkeypatch):
     def _fake_chat_json(messages, schema, model=None, max_tokens=None, **kwargs):
         return schema(role="final_submission", execution_status=ExecutionStatus.SUCCESS, artifact_effects=[])
 
-    monkeypatch.setattr("harnessfix.agents.trace_abstraction.chat_json", _fake_chat_json)
+    monkeypatch.setattr("htir.agents.trace_abstraction.chat_json", _fake_chat_json)
 
     agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
     htir = agent.compile(
@@ -657,7 +657,7 @@ def test_compile_run_checks_flag_populates_aggregate_and_witness(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Work item A -- Omega_d weak domain artifacts (harnessfix.models.domain)
+# Work item A -- Omega_d weak domain artifacts (htir.models.domain)
 # ---------------------------------------------------------------------------
 
 def _policy_governed_spec() -> DomainSpec:
@@ -745,7 +745,7 @@ def test_omega_schema_evidence_resolves_schema_obligation():
     schema_hint gives the swe-generated-schema obligation real E_i, and Step
     5's schema checker then passes mechanically by consuming it.
     """
-    from harnessfix.models.domain import TERMINAL_DOMAIN_SPEC
+    from htir.models.domain import TERMINAL_DOMAIN_SPEC
 
     steps = [
         TraceStep(
@@ -791,7 +791,7 @@ def test_omega_schema_evidence_resolves_schema_obligation():
 
 
 # ---------------------------------------------------------------------------
-# Step 7 -- online intervention iota_t (harnessfix.agents.intervention)
+# Step 7 -- online intervention iota_t (htir.agents.intervention)
 # ---------------------------------------------------------------------------
 
 # Raw (request/response) form of the fail -> edit -> pass synthetic trace
@@ -846,7 +846,7 @@ def test_active_obligation_gets_repair_intervention_before_revalidation(monkeypa
     deterministic intervention follows its escalation rule (repair, per
     trig-post-edit-validation in domains/default.yaml).
     """
-    monkeypatch.setattr("harnessfix.agents.trace_abstraction.chat_json", _fake_annotation_chat_json)
+    monkeypatch.setattr("htir.agents.trace_abstraction.chat_json", _fake_annotation_chat_json)
     agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
 
     htir_prefix = agent.compile_prefix("intervention-test", _INTERVENTION_RAW_STEPS, {}, 2)
@@ -865,7 +865,7 @@ def test_active_obligation_gets_repair_intervention_before_revalidation(monkeypa
 
 def test_active_obligation_resolves_once_revalidation_passes(monkeypatch):
     """Step 7: once the revalidation step is included, that same obligation is no longer active."""
-    monkeypatch.setattr("harnessfix.agents.trace_abstraction.chat_json", _fake_annotation_chat_json)
+    monkeypatch.setattr("htir.agents.trace_abstraction.chat_json", _fake_annotation_chat_json)
     agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
 
     htir_prefix = agent.compile_prefix("intervention-test", _INTERVENTION_RAW_STEPS, {}, 3)
@@ -889,7 +889,7 @@ def test_select_intervention_defaults_to_obligation_escalation():
 
 def test_run_intervention_loop_is_deterministic_and_idempotent(monkeypatch):
     """Step 7: replaying the same trace twice yields an identical intervention log."""
-    monkeypatch.setattr("harnessfix.agents.trace_abstraction.chat_json", _fake_annotation_chat_json)
+    monkeypatch.setattr("htir.agents.trace_abstraction.chat_json", _fake_annotation_chat_json)
     agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
 
     htir1 = run_intervention_loop(agent, "loop-test", _INTERVENTION_RAW_STEPS, {})
@@ -903,7 +903,7 @@ def test_run_intervention_loop_is_deterministic_and_idempotent(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Step 8 -- offline harness improvement (harnessfix.agents.harness_improvement)
+# Step 8 -- offline harness improvement (htir.agents.harness_improvement)
 # ---------------------------------------------------------------------------
 
 def _hidden_test_failure_corpus(n: int = 4) -> WitnessCorpus:
