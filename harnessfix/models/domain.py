@@ -75,6 +75,13 @@ class ObligationTemplate(BaseModel):
     required_evidence: EvidenceType = EvidenceType.SEMANTIC
     severity: Severity = Severity.MEDIUM
     escalation: EscalationRule = EscalationRule.REQUEST_EVIDENCE
+    target_claim_type: str = Field(
+        "",
+        description="``ClaimNode.claim_type`` this template's obligations should anchor "
+        "on (e.g. 'execution_status', 'artifact_provenance', 'final_answer_support'). "
+        "Empty = no existing claim of that type is expected; a synthetic claim typed "
+        "``template_id`` is created instead.",
+    )
 
 
 class DomainSpec(BaseModel):

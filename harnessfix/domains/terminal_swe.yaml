@@ -39,6 +39,7 @@ obligation_templates:
     required_evidence: executable
     severity: high
     escalation: repair
+    target_claim_type: artifact_provenance
 
   - template_id: swe-generated-schema
     claim_template: Generated files match the expected schema.

@@ -1,5 +1,6 @@
 """
-Trace Abstraction Agent  (Section III-A of the paper)
+Trace Abstraction Agent  (AVG Steps 1-2: raw trace -> typed events ->
+verification graph)
 
 Compiles raw agent execution traces and harness code into HTIR by:
   1. Normalising each step into a TraceStep with role, execution status,
@@ -67,7 +68,7 @@ class _StepAnnotation(BaseModel):
     artifact_effects: list[dict] = Field(default_factory=list)
 
 
-class _ProvenanceLink(BaseModel):
+class _InputReuseLink(BaseModel):
     """LLM schema for a HarnessFix input-reuse link (NOT AVG E_prov)."""
     source_id: int
     target_id: int
@@ -77,9 +78,9 @@ class _ProvenanceLink(BaseModel):
     harness_code_refs: list[dict] = Field(default_factory=list)
 
 
-class _ProvenanceLinkList(BaseModel):
-    """LLM schema wrapper for a batch of ``_ProvenanceLink`` (input-reuse) results."""
-    links: list[_ProvenanceLink] = Field(default_factory=list)
+class _InputReuseLinkList(BaseModel):
+    """LLM schema wrapper for a batch of ``_InputReuseLink`` results."""
+    links: list[_InputReuseLink] = Field(default_factory=list)
 
 
 class _ControlFlowLink(BaseModel):
@@ -366,7 +367,7 @@ class TraceAbstractionAgent:
     def _infer_artifact_type(identifier: str, known_types: set[str]) -> str:
         """Best-effort mapping of an identifier to a domain artifact type."""
         ident = identifier.lower()
-        if "." in ident and "/" in ident or ident.endswith(
+        if ("." in ident and "/" in ident) or ident.endswith(
             (".py", ".r", ".js", ".ts", ".json", ".yaml", ".csv", ".txt", ".md")
         ):
             candidate = "source_file" if "source_file" in known_types else "file"
@@ -428,7 +429,7 @@ class TraceAbstractionAgent:
                 "{file_path, start_line, end_line, description})."
             ),
         ]
-        result = chat_json(msgs, _ProvenanceLinkList, model=self.model, max_tokens=2048)
+        result = chat_json(msgs, _InputReuseLinkList, model=self.model, max_tokens=2048)
 
         links: list[InputReuseLink] = []
         for lk in result.links:

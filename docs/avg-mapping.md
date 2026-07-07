@@ -5,10 +5,13 @@ concrete class/field in this codebase that realises it, and any known
 deviation. HarnessFix concepts that are *not* part of AVG are called out
 explicitly so they are not mistaken for proposal constructs.
 
-Scope: this repo currently implements AVG Steps 1-2 (`raw trace -> typed
-events -> verification graph G_tau`). Steps 3-6 (analysis modules,
-well-formedness checks, checker execution, aggregation, witness, online
-loop) are unbuilt; see "Out of scope" at the bottom.
+Scope: this repo currently implements AVG Steps 1-4: `raw trace -> typed
+events -> verification graph G_tau` (Steps 1-2), well-formedness checks and
+the analysis modules (Step 3, `harnessfix.agents.analysis`), and claim /
+evidence / obligation generation (Step 4,
+`harnessfix.agents.obligations.build_claims_and_obligations`). Steps 5-6
+(checker execution, aggregation, verification witness) and the online
+intervention loop are unbuilt; see "Out of scope" at the bottom.
 
 ## Node kinds
 
@@ -26,7 +29,7 @@ loop) are unbuilt; see "Out of scope" at the bottom.
 |---|---|---|---|
 | `E_temp` (temporal) | `TemporalLink` | `temporal_links` | Preserves original execution order. |
 | `E_prov` (provenance) | `ArtifactProvenanceLink` | `provenance_links` | Artifact-centric: links each artifact to the operation that `created`/`read`/`modified` it (avg.tex Sec. 3, Provenance analysis). Populated deterministically in `TraceAbstractionAgent._extract_artifacts`. |
-| `E_causal` (dependency) | `DependencyLink` | `dependency_links` | "Which operations depend on earlier artifacts" (avg.tex Sec. 3, Dependency analysis). First cut populated deterministically in `harnessfix/agents/obligations.py::_link_dependencies` (consumer step -> producer step of a consumed artifact); full recovery (e.g. edit depends on a failing test with no explicit artifact link) is a Step-3 analysis module — see the `TODO` there. |
+| `E_causal` (dependency) | `DependencyLink` | `dependency_links` | "Which operations depend on earlier artifacts" (avg.tex Sec. 3, Dependency analysis). Populated by the Step-3 analysis module `harnessfix/agents/analysis.py::link_dependencies`: consumer step -> producer step of a consumed artifact, edit -> most recent failing validation, and final answer -> policy artifact. |
 | `E_sup` (support) | `SupportLink` | `support_links` | Evidence supports/refutes a claim. |
 | `E_cons` (constraint) | `ConstraintLink` | `constraint_links` | Domain constraint (`S_d.K_d`) governing a step/artifact. |
 | `E_val` (validation) | `ValidationLink` | `validation_links` | Validation operation -> the step/artifact it validates. |
@@ -74,17 +77,14 @@ compatibility but not yet wired to any online loop.
 Domain specs are YAML-driven (`harnessfix/domains/*.yaml`), loaded via
 `harnessfix.models.domain.load_domain_spec`.
 
-## Out of scope (Steps 3-6, unbuilt, not inconsistencies)
+## Out of scope (Steps 5-6, unbuilt, not inconsistencies)
 
-Left as `TODO` seams; the edge/node fixes above are prerequisites for them:
+Left as `TODO` seams; Steps 1-4 above are prerequisites for them:
 
 - `Ω_d` domain artifacts beyond `S_d` (if the proposal introduces more).
-- Well-formedness checks (avg.tex Sec. 3, "Well-Formedness Checks").
-- Named analysis modules beyond dependency's first cut: state-transition,
-  policy-linking, integrity, coverage analysis.
-- Checker execution filling `CheckerResult` (`p_pass`/`p_fail`/`p_abstain`/
-  `score`/`evidence_used`) — obligations are emitted `PENDING` with a routed
-  `checker` class only.
-- Aggregation `z_tau` and severity-aware veto.
-- Verification witness `W_tau`.
+- Checker execution (Step 5) filling `CheckerResult` (`p_pass`/`p_fail`/
+  `p_abstain`/`score`/`evidence_used`) — obligations are emitted `PENDING`
+  with a routed `checker` class only.
+- Aggregation `z_tau` and severity-aware veto (Step 6).
+- Verification witness `W_tau` (Step 6).
 - Online intervention loop (`InterventionAction` / `iota_t`).

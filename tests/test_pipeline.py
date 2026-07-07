@@ -22,17 +22,19 @@ Builds synthetic HTIRs by hand (no OpenRouter/LLM calls) so this runs without
 from __future__ import annotations
 
 from harnessfix.agents.analysis import enrich
-from harnessfix.agents.obligations import build_claims_and_obligations
+from harnessfix.agents.obligations import _template_triggers, build_claims_and_obligations
 from harnessfix.agents.trace_abstraction import TraceAbstractionAgent
-from harnessfix.models.domain import DEFAULT_DOMAIN_SPEC, Constraint, DomainSpec
+from harnessfix.models.domain import DEFAULT_DOMAIN_SPEC, Constraint, DomainSpec, ObligationTemplate
 from harnessfix.models.htir import (
     HTIR,
     ArtifactEffect,
     ArtifactStateEvidence,
     CheckerType,
+    EvidenceType,
     ExecutionStatus,
     ProvenanceRelation,
     Severity,
+    SupportPolarity,
     TraceStep,
 )
 
@@ -269,3 +271,172 @@ def test_integrity_flags_direct_test_modification():
     issues = [i for i in htir.wellformedness if i.rule_id == "integrity_test_modified"]
     assert len(issues) == 1
     assert issues[0].offending_node_ids[0] == 1
+
+
+def _build_compiled_synthetic_htir():
+    """``_build_synthetic_htir`` run through artifact extraction + enrich + obligations."""
+    htir = _build_synthetic_htir()
+    agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
+    agent._extract_artifacts(htir)
+    enrich(htir, DEFAULT_DOMAIN_SPEC)
+    build_claims_and_obligations(htir, DEFAULT_DOMAIN_SPEC)
+    return htir
+
+
+def test_failing_step_evidence_refutes_its_execution_status_claim():
+    """B1: a FAILURE execution-status claim is REFUTED, not SUPPORTED, by its evidence."""
+    htir = _build_compiled_synthetic_htir()
+
+    step1_claim = next(
+        c for c in htir.claims if c.claim_type == "execution_status" and c.source_step_id == 1
+    )
+    links = [lk for lk in htir.support_links if lk.claim_id == step1_claim.claim_id]
+    assert links, "expected at least one support link for the failing step's execution claim"
+    assert all(lk.polarity == SupportPolarity.REFUTES for lk in links)
+
+
+def test_obligation_candidate_evidence_matches_required_evidence_type():
+    """B2: candidate_evidence_ids (E_i) only contain evidence of the required type r_i."""
+    htir = _build_compiled_synthetic_htir()
+    evidence_type_by_id = {e.evidence_id: e.evidence_type for e in htir.evidence}
+
+    for ob in htir.obligations:
+        for ev_id in ob.candidate_evidence_ids:
+            assert evidence_type_by_id[ev_id] == ob.required_evidence
+
+
+def test_validation_obligation_anchors_on_execution_status_not_artifact_provenance():
+    """
+    B3: step 1 and step 3 are both validations that also produce/mutate an
+    artifact (test_report), so ``claim_ids[-1]`` (the old, positional logic)
+    would incorrectly land on the artifact_provenance claim. The
+    ``uni-validation-backed`` template declares ``target_claim_type:
+    execution_status``, so its obligation must anchor on that step's
+    execution_status claim instead.
+    """
+    htir = _build_compiled_synthetic_htir()
+
+    validation_obligations = [o for o in htir.obligations if o.template_id == "uni-validation-backed"]
+    assert validation_obligations
+
+    claims_by_id = {c.claim_id: c for c in htir.claims}
+    for ob in validation_obligations:
+        claim = claims_by_id[ob.claim_id]
+        assert claim.claim_type == "execution_status"
+
+
+def test_explain_failure_obligation_has_routed_checker():
+    """B4: trig-explain-failure (r_i = log) must be routed to a real checker, not UNASSIGNED."""
+    htir = _build_compiled_synthetic_htir()
+
+    explain_failure = [o for o in htir.obligations if o.template_id == "trig-explain-failure"]
+    assert explain_failure
+    assert all(o.checker != CheckerType.UNASSIGNED for o in explain_failure)
+
+
+def test_build_claims_and_obligations_is_idempotent():
+    """B5: calling build_claims_and_obligations twice must not duplicate nodes/edges."""
+    htir = _build_synthetic_htir()
+    agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
+    agent._extract_artifacts(htir)
+    enrich(htir, DEFAULT_DOMAIN_SPEC)
+
+    build_claims_and_obligations(htir, DEFAULT_DOMAIN_SPEC)
+    first_counts = (
+        len(htir.claims), len(htir.evidence), len(htir.obligations), len(htir.support_links),
+    )
+
+    build_claims_and_obligations(htir, DEFAULT_DOMAIN_SPEC)
+    second_counts = (
+        len(htir.claims), len(htir.evidence), len(htir.obligations), len(htir.support_links),
+    )
+
+    assert first_counts == second_counts
+
+
+def test_template_trigger_is_exact_not_substring():
+    """B6: a 'decision' trigger must not fire on the 'orchestration_decision' operation type."""
+    template = ObligationTemplate(
+        template_id="t-decision",
+        claim_template="unused",
+        trigger="decision",
+        required_evidence=EvidenceType.NONE,
+    )
+    step = TraceStep(
+        step_id=1,
+        request_message="plan next action",
+        response_message="decided to run tests",
+        role="orchestration_decision",
+        execution_status=ExecutionStatus.SUCCESS,
+    )
+    assert _template_triggers(template, step) is False
+
+
+def test_integrity_finding_escalates_to_veto():
+    """B7: a HIGH-severity integrity finding seeds an obligation escalating to VETO."""
+    steps = [
+        TraceStep(
+            step_id=1,
+            request_message="edit test_report.py",
+            response_message="patched test assertions directly",
+            role="artifact_editing",
+            execution_status=ExecutionStatus.SUCCESS,
+            artifact_state_effects=[
+                ArtifactStateEvidence(
+                    effect_category=ArtifactEffect.ARTIFACT_CHANGE,
+                    affected_resource="test_report.py",
+                    observed_change="modified assertions to force a pass",
+                )
+            ],
+        ),
+    ]
+    htir = HTIR(task_id="integrity-escalation-test", domain_id=DEFAULT_DOMAIN_SPEC.domain_id, steps=steps)
+    agent = TraceAbstractionAgent(domain_spec=DEFAULT_DOMAIN_SPEC)
+    agent._extract_artifacts(htir)
+    enrich(htir, DEFAULT_DOMAIN_SPEC)
+    build_claims_and_obligations(htir, DEFAULT_DOMAIN_SPEC)
+
+    from harnessfix.models.htir import EscalationRule
+
+    seeded = [o for o in htir.obligations if o.template_id == "wellformedness:integrity_test_modified"]
+    assert len(seeded) == 1
+    assert seeded[0].escalation == EscalationRule.VETO
+
+
+def test_obligations_deduped_by_claim_and_template():
+    """B8: two templates with the same trigger firing on the same claim don't duplicate obligations."""
+    spec = DomainSpec(
+        domain_id="dedup-test",
+        operation_types=DEFAULT_DOMAIN_SPEC.operation_types,
+        obligation_templates=[
+            ObligationTemplate(
+                template_id="dup-a",
+                claim_template="Final answer is supported.",
+                trigger="final_submission",
+                required_evidence=EvidenceType.NONE,
+                target_claim_type="final_answer_support",
+            ),
+            ObligationTemplate(
+                template_id="dup-a",
+                claim_template="Final answer is supported (duplicate template id).",
+                trigger="final_submission",
+                required_evidence=EvidenceType.NONE,
+                target_claim_type="final_answer_support",
+            ),
+        ],
+    )
+    steps = [
+        TraceStep(
+            step_id=1,
+            request_message="submit final answer",
+            response_message="Done.",
+            role="final_submission",
+            execution_status=ExecutionStatus.SUCCESS,
+        ),
+    ]
+    htir = HTIR(task_id="dedup-smoke-test", domain_id=spec.domain_id, steps=steps)
+    enrich(htir, spec)
+    build_claims_and_obligations(htir, spec)
+
+    matching = [o for o in htir.obligations if o.template_id == "dup-a"]
+    assert len(matching) == 1

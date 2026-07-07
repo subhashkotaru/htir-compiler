@@ -134,8 +134,12 @@ def check_wellformedness(htir: HTIR, spec: DomainSpec) -> list[WellFormednessIss
                 )
             )
 
-    # (b) every artifact mutation has producer provenance + before/after
-    #     when available.
+    # (b) every artifact mutation has a recorded before/after change
+    #     description when available. (Producer provenance itself is always
+    #     present by construction: ``TraceAbstractionAgent._extract_artifacts``
+    #     sets ``produced_by_step_id`` on every artifact touched by a
+    #     created/modified provenance link, so a separate
+    #     "missing provenance" check here would be unreachable dead code.)
     effects_by_step_and_resource: dict[tuple[int, str], str] = {
         (s.step_id, eff.affected_resource): eff.observed_change
         for s in ordered
@@ -145,15 +149,7 @@ def check_wellformedness(htir: HTIR, spec: DomainSpec) -> list[WellFormednessIss
         if link.relation.value not in ("created", "modified"):
             continue
         artifact = htir.get_artifact(link.artifact_id)
-        if artifact is None or artifact.produced_by_step_id is None:
-            issues.append(
-                WellFormednessIssue(
-                    rule_id="artifact_mutation_missing_provenance",
-                    severity=Severity.HIGH,
-                    offending_node_ids=[link.artifact_id, link.step_id],
-                    message=f"Artifact {link.artifact_id} mutated at step {link.step_id} has no producer provenance.",
-                )
-            )
+        if artifact is None:
             continue
         observed = effects_by_step_and_resource.get((link.step_id, artifact.identifier), "")
         if not observed.strip():
@@ -212,7 +208,7 @@ def check_wellformedness(htir: HTIR, spec: DomainSpec) -> list[WellFormednessIss
 
     # (f) every failed validation that motivates a later edit connects to a
     #     later validation attempt or an unresolved obligation.
-    for i, step in enumerate(ordered):
+    for step in ordered:
         if not (_is_role(step.role, _VALIDATION_HINTS) and step.execution_status == ExecutionStatus.FAILURE):
             continue
         has_later_validation = any(

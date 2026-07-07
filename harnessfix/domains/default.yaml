@@ -17,6 +17,10 @@
 #   escalation:        accept | request-evidence | rerank | veto | repair | clarify | escalate
 #   trigger:           an operation-type name, or a special event:
 #                      artifact_edit | failed_step | "" (always)
+#   target_claim_type: the ClaimNode.claim_type an obligation should anchor on
+#                      (execution_status | artifact_provenance |
+#                      final_answer_support), or omit to synthesize a claim
+#                      typed after the template's own template_id.
 
 domain_id: default
 description: Cross-domain default specification for heterogeneous agent traces.
@@ -62,6 +66,7 @@ obligation_templates:
     required_evidence: semantic
     severity: high
     escalation: escalate
+    target_claim_type: final_answer_support
 
   - template_id: uni-validation-backed
     claim_template: Validation claim is backed by a validation artifact.
@@ -70,6 +75,7 @@ obligation_templates:
     required_evidence: executable
     severity: medium
     escalation: request-evidence
+    target_claim_type: execution_status
 
   # -- trajectory-triggered --
   - template_id: trig-post-edit-validation
@@ -79,6 +85,7 @@ obligation_templates:
     required_evidence: executable
     severity: high
     escalation: repair
+    target_claim_type: artifact_provenance
 
   - template_id: trig-explain-failure
     claim_template: A failed step is explained or addressed by a later step.
@@ -87,3 +94,4 @@ obligation_templates:
     required_evidence: log
     severity: medium
     escalation: repair
+    target_claim_type: execution_status
