@@ -89,6 +89,7 @@ def check_obligations(
     spec: DomainSpec,
     *,
     use_semantic: bool = False,
+    disable_mechanical: bool = False,
     domain_artifacts: DomainArtifactBundle | None = None,
     model: str = DEFAULT_MODEL,
 ) -> HTIR:
@@ -96,6 +97,18 @@ def check_obligations(
     Run the checker routed to each obligation in ``htir.obligations``, filling
     ``result``/``status`` and propagating to the linked claim's ``status``.
     Mutates ``htir`` in place and returns it for chaining.
+
+    ``use_semantic`` / ``disable_mechanical`` gate the two checker families so
+    the same pipeline expresses the paper's verifier arms (avg.tex Sec. 4.3;
+    see ``htir.agents.baselines``):
+
+    * full AVG   -> ``use_semantic=True,  disable_mechanical=False``
+    * exec-only  -> ``use_semantic=False, disable_mechanical=False`` (default)
+    * exec-free  -> ``use_semantic=True,  disable_mechanical=True``
+
+    When ``disable_mechanical`` is set, MECHANICAL-routed obligations abstain
+    without running their checker (no execution evidence is consulted), which
+    is exactly the execution-free ablation.
 
     Idempotent: recomputes and overwrites every obligation's result/status
     (and every affected claim's status) rather than appending/skipping, so a
@@ -112,7 +125,8 @@ def check_obligations(
         claim = claims_by_id.get(ob.claim_id)
         result = _run_checker(
             htir, spec, ob, claim, evidence_by_id,
-            use_semantic=use_semantic, domain_artifacts=domain_artifacts, model=model,
+            use_semantic=use_semantic, disable_mechanical=disable_mechanical,
+            domain_artifacts=domain_artifacts, model=model,
         )
         ob.result = result
         ob.status = _status_from_result(result)
@@ -190,6 +204,7 @@ def _run_checker(
     evidence_by_id: dict[int, EvidenceNode],
     *,
     use_semantic: bool,
+    disable_mechanical: bool = False,
     domain_artifacts: DomainArtifactBundle | None,
     model: str,
 ) -> CheckerResult:
@@ -200,6 +215,9 @@ def _run_checker(
         return _abstain()
 
     if ob.checker == CheckerType.MECHANICAL:
+        if disable_mechanical:
+            # Execution-free ablation: no mechanical evidence is consulted.
+            return _abstain()
         return _check_mechanical(htir, spec, ob, claim, evidence_by_id, domain_artifacts=domain_artifacts)
     if ob.checker == CheckerType.SEMANTIC:
         return _check_semantic(ob, claim, evidence_by_id, use_semantic=use_semantic, model=model)

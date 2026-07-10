@@ -36,6 +36,7 @@ from htir.adapters import (  # noqa: E402,F401  (imported for side effects)
     openai_messages,
     openinference,
     raw,
+    terminal,
     turns,
 )
 
