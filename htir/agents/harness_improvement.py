@@ -155,7 +155,10 @@ MIN_RECURRENCE_FRACTION = 0.5
 
 
 def mine_recurring_failures(
-    corpus: WitnessCorpus, *, min_fraction: float = MIN_RECURRENCE_FRACTION
+    corpus: WitnessCorpus,
+    *,
+    min_fraction: float = MIN_RECURRENCE_FRACTION,
+    known_templates: dict[str, ObligationTemplate] | None = None,
 ) -> list[ProposedEdit]:
     """
     Scan ``corpus.records[*].failure_tags`` for tags recurring in at least
@@ -166,7 +169,16 @@ def mine_recurring_failures(
     CSV-schema obligation). A tag with no known template mapping, or that
     doesn't recur often enough, proposes nothing -- this stays a mechanical,
     auditable pattern-match, not a generative process.
+
+    ``known_templates`` maps a recognised failure tag to the obligation
+    template that guards against it. It defaults to the domain-neutral
+    :data:`_KNOWN_FAILURE_TEMPLATES`; a concrete domain passes a specialised
+    map so the remediation template it proposes actually *binds* to that
+    domain's operation vocabulary (e.g. a terminal task triggers the
+    hidden-test obligation on its ``run_test`` operation rather than the
+    neutral ``validation`` trigger). Unrecognised tags still propose nothing.
     """
+    templates = known_templates if known_templates is not None else _KNOWN_FAILURE_TEMPLATES
     n = len(corpus.records)
     if n == 0:
         return []
@@ -181,7 +193,7 @@ def mine_recurring_failures(
         count = counts[tag]
         if count / n < min_fraction:
             continue
-        template = _KNOWN_FAILURE_TEMPLATES.get(tag)
+        template = templates.get(tag)
         if template is None:
             continue
         proposals.append(
@@ -239,7 +251,12 @@ W_FAILURE_MISSED = 1.0
 DEFAULT_ACCEPT_EPSILON = 0.01
 
 
-def score_config(corpus: WitnessCorpus, config: HarnessConfig) -> float:
+def score_config(
+    corpus: WitnessCorpus,
+    config: HarnessConfig,
+    *,
+    known_templates: dict[str, ObligationTemplate] | None = None,
+) -> float:
     """
     J_hat(h) (avg.tex Sec. 3.12): task success, failed obligations,
     unresolved high-severity obligations, evidence coverage, cost, and
@@ -248,7 +265,13 @@ def score_config(corpus: WitnessCorpus, config: HarnessConfig) -> float:
     -- a tag whose mapped template is active is rewarded (caught); one whose
     mapped template is not active is penalized (missed). Returns 0.0 for an
     empty corpus.
+
+    ``known_templates`` (the tag -> guarding-template map) must match the one
+    passed to :func:`mine_recurring_failures` so the catch/miss term keys on
+    the same template ids the loop actually applies; it defaults to the
+    domain-neutral :data:`_KNOWN_FAILURE_TEMPLATES`.
     """
+    templates = known_templates if known_templates is not None else _KNOWN_FAILURE_TEMPLATES
     records = corpus.records
     n = len(records)
     if n == 0:
@@ -265,7 +288,7 @@ def score_config(corpus: WitnessCorpus, config: HarnessConfig) -> float:
     missed = 0
     for record in records:
         for tag in record.failure_tags:
-            template_id = _KNOWN_FAILURE_TEMPLATES.get(tag)
+            template_id = templates.get(tag)
             template_id = template_id.template_id if template_id is not None else None
             if template_id is not None and template_id in config.active_obligation_template_ids:
                 caught += 1

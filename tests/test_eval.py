@@ -512,3 +512,137 @@ def test_run_sa4_end_to_end_offline():
         assert failed.precision >= anyc.precision
     if failed.first_fire_frac_median is not None and anyc.first_fire_frac_median is not None:
         assert failed.first_fire_frac_median <= anyc.first_fire_frac_median
+
+
+# ---------------------------------------------------------------------------
+# SA-5: offline harness improvement loop (Q4b)
+# ---------------------------------------------------------------------------
+
+def _synthetic_terminal_trace(task_name, reward, *, with_test):
+    """
+    A turn-schema terminal trace: a few passing shell commands and, optionally,
+    a passing test run. A reward-0 command-only trace compiles to a *false
+    valid* under the base spec (visible commands pass, no genuine test); a
+    reward-1 with-test trace is a genuinely tested valid.
+    """
+    steps = [{"src": "user", "msg": "do the task", "tools": None, "obs": None}]
+    for i in range(3):
+        steps.append({"src": "assistant", "msg": "run",
+                      "tools": [{"fn": "bash", "cmd": f"echo {i}"}], "obs": "done\nExit code: 0"})
+    if with_test:
+        steps.append({"src": "assistant", "msg": "test",
+                      "tools": [{"fn": "bash", "cmd": "pytest -q"}], "obs": "1 passed\nExit code: 0"})
+    return {"task_name": task_name, "reward": reward, "steps": steps}
+
+
+def test_hidden_test_validation_checker_passes_with_test_else_abstains():
+    """The mined obligation's checker passes only when the trajectory contains a
+    genuine successful test run; otherwise it abstains (never fails), so it can
+    only withhold credit, never fabricate a false invalid."""
+    from htir.agents.checker_registry import CheckerContext
+    from htir.agents.trace_abstraction import TraceAbstractionAgent
+    from htir.eval.experiment_sa5 import _check_hidden_test_validation
+    from htir.models.domain import TERMINAL_DOMAIN_SPEC
+    from htir.models.htir import (
+        CheckerType, ClaimNode, EscalationRule, EvidenceType, Obligation,
+        ObligationScope, Severity,
+    )
+
+    agent = TraceAbstractionAgent(domain_spec=TERMINAL_DOMAIN_SPEC)
+    claim = ClaimNode(claim_id=1, statement="s", claim_type="execution_status")
+    ob = Obligation(
+        obligation_id=1, claim_id=1, required_evidence=EvidenceType.EXECUTABLE,
+        checker=CheckerType.MECHANICAL, severity=Severity.HIGH,
+        escalation=EscalationRule.ESCALATE, scope=ObligationScope.DOMAIN,
+        template_id="harness-hidden-test-validation",
+    )
+
+    def ctx_for(with_test):
+        h = agent.compile("t", to_canonical_steps(_synthetic_terminal_trace("t", 1, with_test=with_test)), {})
+        return CheckerContext(htir=h, spec=TERMINAL_DOMAIN_SPEC, obligation=ob, claim=claim, evidence_by_id={})
+
+    passed = _check_hidden_test_validation(ctx_for(with_test=True))
+    assert passed.p_pass == 1.0 and passed.p_fail == 0.0
+
+    abstained = _check_hidden_test_validation(ctx_for(with_test=False))
+    assert abstained.p_abstain == 1.0 and abstained.p_fail == 0.0
+
+
+def test_mine_and_score_with_terminal_templates_gate_through():
+    """The Step-8 primitives, driven by the terminal tag->template map, propose
+    the run_command-bound remediation and score it as an accepted edit."""
+    from htir.agents.harness_improvement import (
+        HarnessConfig, WitnessCorpus, WitnessRecord, accept_edit,
+        mine_recurring_failures, score_config,
+    )
+    from htir.eval.experiment_sa5 import (
+        HIDDEN_TEST_TEMPLATE_ID, TERMINAL_FAILURE_TEMPLATES,
+    )
+    from htir.models.htir import VerificationWitness
+
+    corpus = WitnessCorpus(records=[
+        WitnessRecord(
+            trace_id=f"t{i}",
+            witness=VerificationWitness(passed_obligation_ids=[i]),
+            task_outcome="failed",
+            failure_tags=["hidden_test_failure"],
+        )
+        for i in range(6)
+    ])
+
+    proposals = mine_recurring_failures(
+        corpus, min_fraction=0.05, known_templates=TERMINAL_FAILURE_TEMPLATES
+    )
+    assert len(proposals) == 1
+    tmpl = proposals[0].obligation_template
+    assert tmpl.template_id == HIDDEN_TEST_TEMPLATE_ID
+    assert tmpl.trigger == "run_command"  # bound to the terminal vocabulary, not 'validation'
+
+    base = HarnessConfig()
+    edited = HarnessConfig(active_obligation_template_ids=frozenset({tmpl.template_id}))
+    j_base = score_config(corpus, base, known_templates=TERMINAL_FAILURE_TEMPLATES)
+    j_edit = score_config(corpus, edited, known_templates=TERMINAL_FAILURE_TEMPLATES)
+    assert j_edit > j_base
+    assert accept_edit(j_base, j_edit, epsilon=0.01, safe=True) is True
+
+
+def test_run_sa5_end_to_end_offline():
+    """
+    run_sa5 mines the accumulating witness corpus, gates + applies the stronger
+    validation obligation, and generalizes to unseen held-out task families:
+    the mined edit cuts the held-out false-valid rate and introduces zero new
+    false vetoes, while the exemplar's obligation set grows across spec versions.
+    """
+    from htir.eval.experiment_sa5 import HIDDEN_TEST_TEMPLATE_ID, run_sa5
+
+    traces = []
+    for fam in range(30):
+        name = f"fam-{fam}"
+        traces.append(_synthetic_terminal_trace(name, 0, with_test=False))  # false-valid blind spot
+        traces.append(_synthetic_terminal_trace(name, 1, with_test=True))   # genuinely tested valid
+
+    result = run_sa5(traces, n_batches=3, holdout_fraction=0.3, seed=0, progress_every=0, log=None)
+
+    assert result.n_experience > 0 and result.n_holdout > 0
+    assert result.n_batches == 3
+
+    # The loop mined, gated, and applied exactly the terminal remediation.
+    assert result.total_accepted == 1
+    assert HIDDEN_TEST_TEMPLATE_ID in result.final_template_ids
+
+    # J_hat learning curve: the offline loop is non-decreasing and ends strictly
+    # above the frozen no-offline-loop baseline (ablation #5).
+    jloop = [b.jhat_loop for b in result.batches]
+    assert jloop == sorted(jloop)
+    assert result.batches[-1].jhat_loop > result.batches[-1].jhat_noloop
+
+    # Generalization to unseen task families: false-valid drops, and the edit
+    # introduces no new false vetoes (the remediation only ever abstains).
+    assert result.false_valid_after <= result.false_valid_before
+    assert result.false_valid_before > 0.0  # there was a blind spot to fix
+    assert result.negative_transfer <= 0.0
+
+    # Spec growth: the exemplar accretes obligations as S_d versions accrete.
+    assert len(result.spec_growth) >= 2
+    assert result.spec_growth[-1].n_templates > result.spec_growth[0].n_templates
+    assert result.spec_growth[-1].exemplar_obligations >= result.spec_growth[0].exemplar_obligations
