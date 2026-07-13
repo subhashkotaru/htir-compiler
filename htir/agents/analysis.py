@@ -78,7 +78,7 @@ _DELETION_HINTS = ("delete", "deleted", "deletion", "remove", "removed", "rm ")
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def enrich(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False, domain_artifacts: DomainArtifactBundle | None = None) -> HTIR:
+def enrich(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False, domain_artifacts: DomainArtifactBundle | None = None, run_integrity: bool = True) -> HTIR:
     """
     Run the Step-3 analysis layer over an already graph-constructed
     ``htir`` (``_extract_artifacts`` + temporal links must already be
@@ -101,6 +101,13 @@ def enrich(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False, domain_a
     ``domain_artifacts`` is an optional Omega_d bundle (avg.tex Sec. 2, work
     item A), threaded through to ``link_policy``; ``None`` (the default)
     leaves this pass's behavior identical to before Omega_d was introduced.
+
+    ``run_integrity`` (default on) gates the integrity analysis module (Step
+    3.5, ``check_integrity``): the shortcut/tamper detector that seeds HIGH-
+    severity unresolved obligations. Pass ``run_integrity=False`` for the
+    no-integrity-verifier ablation (avg.tex Sec. 4.6 #4), which removes those
+    obligations so the trajectory can no longer have credit withheld on
+    integrity grounds -- the exact reliability drop SA-6 measures.
     """
     check_wellformedness(htir, spec)
     link_provenance_to_final_answer(htir, use_semantic=use_semantic)
@@ -108,7 +115,8 @@ def enrich(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False, domain_a
     link_validations(htir)
     analyze_state_transitions(htir)
     link_policy(htir, spec, use_semantic=use_semantic, domain_artifacts=domain_artifacts)
-    check_integrity(htir)
+    if run_integrity:
+        check_integrity(htir)
     return htir
 
 

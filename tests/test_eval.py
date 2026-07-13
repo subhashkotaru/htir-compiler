@@ -646,3 +646,94 @@ def test_run_sa5_end_to_end_offline():
     assert len(result.spec_growth) >= 2
     assert result.spec_growth[-1].n_templates > result.spec_growth[0].n_templates
     assert result.spec_growth[-1].exemplar_obligations >= result.spec_growth[0].exemplar_obligations
+
+
+# ---------------------------------------------------------------------------
+# SA-6: stress tests + integrity ablation (Sec. 4.5 / 4.6 #4)
+# ---------------------------------------------------------------------------
+
+def test_sa6_perturbations_trigger_integrity_rules_and_are_ablatable():
+    """Each perturbation appends its shortcut sequence and fires *its* integrity
+    rule when the integrity module runs, and none of those rules survive when
+    integrity is ablated (compile(run_integrity=False))."""
+    from htir.agents.trace_abstraction import TraceAbstractionAgent
+    from htir.eval.experiment_sa6 import PERTURBATIONS
+    from htir.models.domain import TERMINAL_DOMAIN_SPEC
+
+    agent = TraceAbstractionAgent(domain_spec=TERMINAL_DOMAIN_SPEC)
+    base = to_canonical_steps(_synthetic_terminal_trace("t", 1, with_test=True))
+
+    for name, fn, rule in PERTURBATIONS:
+        perturbed = fn(base)
+        assert len(perturbed) == len(base) + 2  # pure: appends a 2-step shortcut
+        assert perturbed[: len(base)] == base    # and never mutates the prefix
+
+        on = agent.compile("t", perturbed, {}, run_integrity=True)
+        off = agent.compile("t", perturbed, {}, run_integrity=False)
+        on_rules = {w.rule_id for w in on.wellformedness if w.rule_id.startswith("integrity_")}
+        off_rules = {w.rule_id for w in off.wellformedness if w.rule_id.startswith("integrity_")}
+        assert rule in on_rules, f"{name} did not fire {rule}"
+        assert not off_rules, f"{name} left integrity findings under ablation"
+
+
+def test_sa6_cell_math():
+    """_cell tallies statuses into false-valid / catch rates correctly."""
+    from htir.eval.experiment_sa6 import _cell
+    from htir.eval.weak_labels import LABEL_INVALID, LABEL_VALID, STATUS_UNCERTAIN
+
+    statuses = [LABEL_VALID, LABEL_VALID, STATUS_UNCERTAIN, LABEL_INVALID]  # 2 valid, 1 unc, 1 inv
+    c = _cell("p", "arm", statuses, truth=LABEL_INVALID)
+    assert (c.valid, c.uncertain, c.invalid, c.n) == (2, 1, 1, 4)
+    assert c.false_valid_rate == 0.5
+    assert c.shortcut_catch_rate == 0.5
+    assert c.catch_via_abstain == 0.25 and c.catch_via_veto == 0.25
+    assert c.false_invalid_rate == 0.25
+
+
+def test_run_sa6_end_to_end_offline():
+    """
+    run_sa6 injects the shortcut perturbations into valid-labeled base traces
+    and reports the integrity ablation: removing the integrity verifier raises
+    the false-valid rate on the integrity-load-bearing perturbations, the
+    integrity arm never does worse, and integrity adds no false-invalids on the
+    clean control (no negative transfer). The monolith is blind to shortcuts.
+    """
+    from htir.eval.experiment_sa6 import (
+        ARM_INTEGRITY, ARM_MONOLITHIC, ARM_NO_INTEGRITY, run_sa6,
+    )
+
+    # A base population of genuinely-tested valids (reward=1); a handful of
+    # reward-0 traces are ignored (base population is would-be successes).
+    traces = []
+    for i in range(24):
+        traces.append(_synthetic_terminal_trace(f"ok-{i}", 1, with_test=True))
+    traces.append(_synthetic_terminal_trace("bad", 0, with_test=False))
+
+    result = run_sa6(traces, progress_every=0, log=None)
+    assert result.n_base == 24  # only the valid-labeled traces are perturbed
+
+    by_name = {pr.perturbation: pr for pr in result.perturbations}
+
+    # No negative transfer: on the clean control the two AVG arms are identical
+    # (integrity is inert on legitimate traces).
+    clean = {c.arm: c for c in result.clean_control}
+    assert clean[ARM_INTEGRITY].false_invalid_rate == clean[ARM_NO_INTEGRITY].false_invalid_rate
+
+    for pr in result.perturbations:
+        cells = {c.arm: c for c in pr.cells}
+        # The integrity arm is never *more* false-valid than without integrity,
+        # and the ablation delta is the (non-negative) reliability it restores.
+        assert cells[ARM_INTEGRITY].false_valid_rate <= cells[ARM_NO_INTEGRITY].false_valid_rate
+        assert pr.ablation_false_valid_drop >= 0.0
+        # The monolith (no graph) is at least as blind as the graph-without-integrity.
+        assert cells[ARM_MONOLITHIC].false_valid_rate >= cells[ARM_NO_INTEGRITY].false_valid_rate
+
+    # The two integrity-load-bearing perturbations show a strictly positive
+    # ablation gap and fire their rule on every trace; the monolith is fully blind.
+    for name in ("test_tamper", "artifact_deletion"):
+        pr = by_name[name]
+        assert pr.integrity_rule_fire_rate == 1.0
+        assert pr.ablation_false_valid_drop > 0.0
+        cells = {c.arm: c for c in pr.cells}
+        assert cells[ARM_INTEGRITY].false_valid_rate == 0.0
+        assert cells[ARM_MONOLITHIC].false_valid_rate == 1.0

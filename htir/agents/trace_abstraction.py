@@ -216,6 +216,7 @@ class TraceAbstractionAgent:
         infer_harness_links: bool = False,
         use_semantic_analysis: bool = False,
         run_checks: bool = False,
+        run_integrity: bool = True,
         domain_artifacts: DomainArtifactBundle | None = None,
     ) -> HTIR:
         """
@@ -258,6 +259,10 @@ class TraceAbstractionAgent:
         defaults to ``self.domain_artifacts`` when not given explicitly, and
         absent entirely by default, in which case those checkers abstain
         rather than fake a pass.
+
+        ``run_integrity`` (default on) gates the Step-3.5 integrity analysis
+        module; ``run_integrity=False`` is the no-integrity-verifier ablation
+        (avg.tex Sec. 4.6 #4) used by SA-6 to measure the shortcut-catch drop.
         """
         domain_artifacts = domain_artifacts if domain_artifacts is not None else self.domain_artifacts
         steps = self._build_steps(raw_steps)
@@ -299,7 +304,7 @@ class TraceAbstractionAgent:
         # dependency / validation / state-transition / policy-linking /
         # integrity analysis modules (avg.tex Sec. 3.4-3.5). Runs after graph
         # construction and before obligation generation, which consumes it.
-        enrich(htir, self.domain_spec, use_semantic=use_semantic_analysis, domain_artifacts=domain_artifacts)
+        enrich(htir, self.domain_spec, use_semantic=use_semantic_analysis, domain_artifacts=domain_artifacts, run_integrity=run_integrity)
 
         # Claims, obligations, and support edges; obligations are also seeded
         # from unresolved well-formedness/analysis-module issues above.
