@@ -1,0 +1,17 @@
+# Omega_d TEST artifact for the terminal_swe domain.
+#
+# A weak reference to the domain's validation entry point (the check a
+# post-edit-validation obligation expects a trajectory to have run). Content is
+# the canonical invocation, not a gold label; it documents what "validated"
+# means for this domain so witness patterns can flag trajectories that edited
+# source but never ran it.
+artifact_kind: test
+identifier: regression
+content: |
+  Canonical validation for a terminal_swe task is the project's test runner,
+  e.g. `pytest -q` (or the task-specific `./run-tests.sh`). A trajectory that
+  edits an implementation file but never runs the suite afterward leaves its
+  post-edit-validation obligation unresolved.
+metadata:
+  runner: pytest
+  source: terminal_swe domain convention

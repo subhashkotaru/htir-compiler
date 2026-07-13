@@ -106,10 +106,31 @@ def balanced_sample(
     return sample
 
 
+def normalize_steps_field(trace: dict[str, Any]) -> dict[str, Any]:
+    """
+    Return ``trace`` with its ``steps`` field guaranteed to be a list.
+
+    The HF ``terminalbench-trajectories`` dataset (and JSONL caches of it)
+    serialize the per-row ``steps`` as a *JSON string*, whereas the adapters
+    expect a decoded ``list[dict]``. Decode it if needed; leave an already-list
+    (this repo's ``data/raw_traces`` convention) untouched. A copy is returned
+    only when a decode was necessary, so the caller's dict is never mutated.
+    """
+    steps = trace.get("steps")
+    if isinstance(steps, str):
+        try:
+            decoded = json.loads(steps)
+        except (json.JSONDecodeError, ValueError):
+            decoded = []
+        trace = {**trace, "steps": decoded if isinstance(decoded, list) else []}
+    return trace
+
+
 def to_canonical_steps(trace: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Canonical step dicts for one raw trace via the terminal adapter, ready for
     ``TraceAbstractionAgent.compile``. Thin convenience over ``load_trace`` so
-    callers don't reach into the adapter layer.
+    callers don't reach into the adapter layer. Decodes a JSON-string ``steps``
+    field (HF dataset convention) first so the adapter sees a step list.
     """
-    return load_trace(trace, adapter="terminal")
+    return load_trace(normalize_steps_field(trace), adapter="terminal")

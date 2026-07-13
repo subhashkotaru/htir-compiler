@@ -145,6 +145,43 @@ raw trace → typed events → verification graph Gτ → analysis modules
 The serialized graph carries a `schema_version` (interchange contract). Batch
 many traces with `TraceAbstractionAgent().compile_many([...])`.
 
+## Reproducing the experiments
+
+The evaluation harness lives in `htir.eval`. **SA-1 (Q1: graph vs. monolith)**
+scores four verifier arms — full AVG, execution-only, execution-free, and a
+monolithic single-scalar judge — over a balanced Terminal-Bench sample, and
+reports false-valid rate, resolved accuracy, failure-flag precision/recall,
+abstention, and a cost proxy.
+
+```bash
+pip install "htir[eval]"    # + datasets loader (Hugging Face `datasets`)
+
+# Balanced 3k Terminal-Bench sample, all four arms, fully offline:
+python -m htir.eval.experiment_sa1 --hf --n 3000 --out sa1_results.json
+
+# ...or replay from a local JSON/JSONL sample in the {steps, reward, ...} schema:
+python -m htir.eval.experiment_sa1 --cache sample.jsonl --out sa1_results.json
+
+# Add --use-llm to enable the LLM monolith and the semantic checker (needs a key).
+```
+
+```
+SA-1: Graph vs. Monolith  |  n=3000 (base-rate valid 0.50)  |  use_llm=False
+  arm          false_valid  res_acc  abstain  ff_prec  cost/tr
+  avg_full           0.187    0.403    0.827    0.697     1.29
+  exec_only          0.187    0.403    0.827    0.697     0.00
+  exec_free          0.000    0.000    1.000    0.000     1.29
+  monolithic         0.830    0.555    0.038    0.810     1.00
+```
+
+The monolith credits 83% of failed runs as valid; the obligation graph cuts
+that to 19% by abstaining where evidence is insufficient — the gap widens on
+long-horizon traces. **Offline note:** with no API key the semantic checker
+abstains, so `avg_full` collapses onto `exec_only` (mechanical evidence only)
+and `exec_free` abstains everywhere; the semantic arms require `--use-llm` to
+separate. See [`docs/experiment-plan.md`](docs/experiment-plan.md) for the full
+experiment suite (SA-1…SA-6).
+
 ## Development
 
 ```bash

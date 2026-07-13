@@ -55,16 +55,35 @@ from htir.adapters.base import (
 _EDIT_TOOLS = frozenset({
     "write", "edit", "multiedit", "create", "create_file", "str_replace",
     "str_replace_editor", "apply_patch", "patch", "notebookedit", "insert",
+    # broader agent tool vocabularies (Terminal-Bench trace corpora)
+    "write_file", "edit_file", "replace_file", "replace", "file_editor",
+    "text_editor", "editor",
 })
 _READ_TOOLS = frozenset({
     "read", "cat", "view", "open", "grep", "glob", "ls", "find", "search",
     "readfile", "read_file",
+    # broader agent tool vocabularies
+    "list_directory", "image_read", "view_image", "open_image", "bashoutput",
+    "taskoutput",
 })
 _SHELL_TOOLS = frozenset({
     "bash", "shell", "sh", "run", "exec", "execute", "terminal", "command",
     "run_command", "run_terminal_cmd", "run_shell_command",
+    # broader agent tool vocabularies
+    "bash_command", "execute_bash", "execute_ipython_cell", "run_ipython",
+    "python", "ipython", "run_python",
 })
-_PLAN_TOOLS = frozenset({"todowrite", "todo", "plan", "think", "thinking"})
+_PLAN_TOOLS = frozenset({
+    "todowrite", "todo", "plan", "think", "thinking",
+    # broader agent tool vocabularies
+    "task_tracker", "update_plan", "save_plan", "task",
+})
+# Tools that explicitly signal the agent has finished, i.e. a final submission
+# operation (S_d final_submission). Their presence types the step as FINAL.
+_COMPLETE_TOOLS = frozenset({
+    "mark_task_complete", "task_complete", "complete", "finish", "submit",
+    "end_execution", "done",
+})
 
 # terminal_swe operation-type names (kept in sync with domains/terminal_swe.yaml).
 ROLE_EDIT = "edit_file"
@@ -111,6 +130,8 @@ def _turns(data: Any) -> list[dict] | None:
 def _tool_role(fn: str, cmd: str) -> str:
     """Map a single (tool name, command/path) to a terminal_swe operation type."""
     f = (fn or "").strip().lower()
+    if f in _COMPLETE_TOOLS:
+        return ROLE_FINAL
     if f in _EDIT_TOOLS:
         return ROLE_EDIT
     if f in _SHELL_TOOLS:
@@ -126,7 +147,7 @@ def _tool_role(fn: str, cmd: str) -> str:
 # the most verification-relevant, then an edit, then a command, then a read,
 # then planning. Higher wins.
 _ROLE_PRECEDENCE = {
-    ROLE_TEST: 5, ROLE_EDIT: 4, ROLE_RUN: 3, ROLE_READ: 2, ROLE_PLAN: 1, ROLE_OTHER: 0,
+    ROLE_FINAL: 6, ROLE_TEST: 5, ROLE_EDIT: 4, ROLE_RUN: 3, ROLE_READ: 2, ROLE_PLAN: 1, ROLE_OTHER: 0,
 }
 
 

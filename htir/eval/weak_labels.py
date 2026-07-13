@@ -124,6 +124,12 @@ class VerifierMetrics(BaseModel):
     valid_recall: float = Field(
         0.0, description="Of truly valid traces, fraction predicted 'valid'",
     )
+    failure_flag_precision: float = Field(
+        0.0, description="Of traces predicted 'invalid' (failure-flagged), fraction truly invalid",
+    )
+    failure_flag_recall: float = Field(
+        0.0, description="Of truly invalid traces, fraction predicted 'invalid' (failure-flagged)",
+    )
     confusion: dict[str, int] = Field(
         default_factory=dict,
         description="'{predicted}|{label}' -> count over labeled traces",
@@ -167,6 +173,11 @@ def evaluate_predictions(
     predicted_valid = sum(1 for p, l in labeled_pairs if p == LABEL_VALID)
     true_valid_pred_valid = sum(1 for p, l in labeled_pairs if p == LABEL_VALID and l == LABEL_VALID)
 
+    predicted_invalid = sum(1 for p, l in labeled_pairs if p == LABEL_INVALID)
+    true_invalid_pred_invalid = sum(
+        1 for p, l in labeled_pairs if p == LABEL_INVALID and l == LABEL_INVALID
+    )
+
     return VerifierMetrics(
         n=n,
         n_labeled=n_labeled,
@@ -177,5 +188,7 @@ def evaluate_predictions(
         abstention_rate=_rate(abstain, n),
         valid_precision=_rate(true_valid_pred_valid, predicted_valid),
         valid_recall=_rate(true_valid_pred_valid, n_valid),
+        failure_flag_precision=_rate(true_invalid_pred_invalid, predicted_invalid),
+        failure_flag_recall=_rate(true_invalid_pred_invalid, n_invalid),
         confusion=confusion,
     )

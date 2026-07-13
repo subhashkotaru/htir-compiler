@@ -1,0 +1,19 @@
+# Omega_d weak-supervision artifact for the terminal_swe domain.
+#
+# A SCHEMA artifact (avg.tex Sec. 2 Omega_d = {schemas, ..., tests, ...}). Its
+# `identifier` matches the artifact-type name in terminal_swe.yaml that carries
+# a `schema_hint` (`test_report`), so build_claims_and_obligations resolves it
+# into SCHEMA evidence for produced test-report artifacts
+# (obligations._inject_omega_schema_evidence, work item A). Loaded by
+# `load_domain_artifacts("terminal_swe")` from this `<domain>.artifacts/`
+# directory. One DomainArtifact per file.
+artifact_kind: schema
+identifier: test_report
+content: |
+  A test report must record, at minimum:
+    - passed: integer count of passing tests (>= 0)
+    - failed: integer count of failing tests (>= 0)
+    - exit_code: process exit status (0 == success)
+  A run is conformant iff exit_code == 0 and failed == 0.
+metadata:
+  source: terminal_swe domain convention

@@ -1,0 +1,321 @@
+{
+  "experiment": "SA-2: Universal-only vs. Universal + Adapters (Q2)",
+  "n_traces": 3000,
+  "n_labeled": 3000,
+  "base_rate_valid": 0.5,
+  "long_horizon_steps": 20,
+  "n_long_horizon": 1548,
+  "use_llm": false,
+  "seconds": 57.83,
+  "arms": [
+    {
+      "arm": "universal_only",
+      "description": "default spec: universal templates only, generic vocabulary (zero adaptation)",
+      "budget": 0,
+      "n_omega_artifacts": 0,
+      "overall": {
+        "n": 3000,
+        "n_labeled": 3000,
+        "false_valid_rate": 0.0,
+        "false_invalid_rate": 0.0,
+        "resolved_accuracy": 0.0,
+        "resolved_fraction": 0.0,
+        "abstention_rate": 1.0,
+        "valid_precision": 0.0,
+        "valid_recall": 0.0,
+        "failure_flag_precision": 0.0,
+        "failure_flag_recall": 0.0,
+        "confusion": {
+          "uncertain|valid": 1500,
+          "uncertain|invalid": 1500
+        }
+      },
+      "long_horizon": {
+        "n": 1548,
+        "n_labeled": 1548,
+        "false_valid_rate": 0.0,
+        "false_invalid_rate": 0.0,
+        "resolved_accuracy": 0.0,
+        "resolved_fraction": 0.0,
+        "abstention_rate": 1.0,
+        "valid_precision": 0.0,
+        "valid_recall": 0.0,
+        "failure_flag_precision": 0.0,
+        "failure_flag_recall": 0.0,
+        "confusion": {
+          "uncertain|valid": 722,
+          "uncertain|invalid": 826
+        }
+      },
+      "mean_obligations": 38.745666666666665,
+      "mean_semantic_obligations": 1.2926666666666666,
+      "total_llm_calls": 3878,
+      "mean_llm_calls": 1.2926666666666666
+    },
+    {
+      "arm": "adapter_exec",
+      "description": "terminal vocab + execution-status obligations (command/test status)",
+      "budget": 1,
+      "n_omega_artifacts": 0,
+      "overall": {
+        "n": 3000,
+        "n_labeled": 3000,
+        "false_valid_rate": 0.18733333333333332,
+        "false_invalid_rate": 0.02,
+        "resolved_accuracy": 0.40307101727447214,
+        "resolved_fraction": 0.17366666666666666,
+        "abstention_rate": 0.8263333333333334,
+        "valid_precision": 0.3341232227488152,
+        "valid_recall": 0.094,
+        "failure_flag_precision": 0.696969696969697,
+        "failure_flag_recall": 0.046,
+        "confusion": {
+          "uncertain|valid": 1329,
+          "uncertain|invalid": 1150,
+          "valid|valid": 141,
+          "valid|invalid": 281,
+          "invalid|valid": 30,
+          "invalid|invalid": 69
+        }
+      },
+      "long_horizon": {
+        "n": 1548,
+        "n_labeled": 1548,
+        "false_valid_rate": 0.20702179176755447,
+        "false_invalid_rate": 0.0332409972299169,
+        "resolved_accuracy": 0.3709677419354839,
+        "resolved_fraction": 0.20025839793281655,
+        "abstention_rate": 0.7997416020671835,
+        "valid_precision": 0.2692307692307692,
+        "valid_recall": 0.08725761772853186,
+        "failure_flag_precision": 0.6842105263157895,
+        "failure_flag_recall": 0.06295399515738499,
+        "confusion": {
+          "uncertain|valid": 635,
+          "uncertain|invalid": 603,
+          "valid|valid": 63,
+          "valid|invalid": 171,
+          "invalid|valid": 24,
+          "invalid|invalid": 52
+        }
+      },
+      "mean_obligations": 33.870666666666665,
+      "mean_semantic_obligations": 0.0,
+      "total_llm_calls": 0,
+      "mean_llm_calls": 0.0
+    },
+    {
+      "arm": "adapter_prov",
+      "description": "+ artifact-provenance obligation on edits",
+      "budget": 2,
+      "n_omega_artifacts": 0,
+      "overall": {
+        "n": 3000,
+        "n_labeled": 3000,
+        "false_valid_rate": 0.18733333333333332,
+        "false_invalid_rate": 0.02,
+        "resolved_accuracy": 0.40307101727447214,
+        "resolved_fraction": 0.17366666666666666,
+        "abstention_rate": 0.8263333333333334,
+        "valid_precision": 0.3341232227488152,
+        "valid_recall": 0.094,
+        "failure_flag_precision": 0.696969696969697,
+        "failure_flag_recall": 0.046,
+        "confusion": {
+          "uncertain|valid": 1329,
+          "uncertain|invalid": 1150,
+          "valid|valid": 141,
+          "valid|invalid": 281,
+          "invalid|valid": 30,
+          "invalid|invalid": 69
+        }
+      },
+      "long_horizon": {
+        "n": 1548,
+        "n_labeled": 1548,
+        "false_valid_rate": 0.20702179176755447,
+        "false_invalid_rate": 0.0332409972299169,
+        "resolved_accuracy": 0.3709677419354839,
+        "resolved_fraction": 0.20025839793281655,
+        "abstention_rate": 0.7997416020671835,
+        "valid_precision": 0.2692307692307692,
+        "valid_recall": 0.08725761772853186,
+        "failure_flag_precision": 0.6842105263157895,
+        "failure_flag_recall": 0.06295399515738499,
+        "confusion": {
+          "uncertain|valid": 635,
+          "uncertain|invalid": 603,
+          "valid|valid": 63,
+          "valid|invalid": 171,
+          "invalid|valid": 24,
+          "invalid|invalid": 52
+        }
+      },
+      "mean_obligations": 36.80233333333333,
+      "mean_semantic_obligations": 0.0,
+      "total_llm_calls": 0,
+      "mean_llm_calls": 0.0
+    },
+    {
+      "arm": "adapter_postedit",
+      "description": "+ post-edit-validation obligation",
+      "budget": 3,
+      "n_omega_artifacts": 0,
+      "overall": {
+        "n": 3000,
+        "n_labeled": 3000,
+        "false_valid_rate": 0.18733333333333332,
+        "false_invalid_rate": 0.02,
+        "resolved_accuracy": 0.40307101727447214,
+        "resolved_fraction": 0.17366666666666666,
+        "abstention_rate": 0.8263333333333334,
+        "valid_precision": 0.3341232227488152,
+        "valid_recall": 0.094,
+        "failure_flag_precision": 0.696969696969697,
+        "failure_flag_recall": 0.046,
+        "confusion": {
+          "uncertain|valid": 1329,
+          "uncertain|invalid": 1150,
+          "valid|valid": 141,
+          "valid|invalid": 281,
+          "invalid|valid": 30,
+          "invalid|invalid": 69
+        }
+      },
+      "long_horizon": {
+        "n": 1548,
+        "n_labeled": 1548,
+        "false_valid_rate": 0.20702179176755447,
+        "false_invalid_rate": 0.0332409972299169,
+        "resolved_accuracy": 0.3709677419354839,
+        "resolved_fraction": 0.20025839793281655,
+        "abstention_rate": 0.7997416020671835,
+        "valid_precision": 0.2692307692307692,
+        "valid_recall": 0.08725761772853186,
+        "failure_flag_precision": 0.6842105263157895,
+        "failure_flag_recall": 0.06295399515738499,
+        "confusion": {
+          "uncertain|valid": 635,
+          "uncertain|invalid": 603,
+          "valid|valid": 63,
+          "valid|invalid": 171,
+          "invalid|valid": 24,
+          "invalid|invalid": 52
+        }
+      },
+      "mean_obligations": 39.734,
+      "mean_semantic_obligations": 0.0,
+      "total_llm_calls": 0,
+      "mean_llm_calls": 0.0
+    },
+    {
+      "arm": "adapter_full",
+      "description": "full terminal_swe adapter (all domain + universal-equivalent templates)",
+      "budget": 4,
+      "n_omega_artifacts": 0,
+      "overall": {
+        "n": 3000,
+        "n_labeled": 3000,
+        "false_valid_rate": 0.18666666666666668,
+        "false_invalid_rate": 0.02,
+        "resolved_accuracy": 0.4026974951830443,
+        "resolved_fraction": 0.173,
+        "abstention_rate": 0.827,
+        "valid_precision": 0.3333333333333333,
+        "valid_recall": 0.09333333333333334,
+        "failure_flag_precision": 0.696969696969697,
+        "failure_flag_recall": 0.046,
+        "confusion": {
+          "uncertain|valid": 1330,
+          "uncertain|invalid": 1151,
+          "valid|valid": 140,
+          "valid|invalid": 280,
+          "invalid|valid": 30,
+          "invalid|invalid": 69
+        }
+      },
+      "long_horizon": {
+        "n": 1548,
+        "n_labeled": 1548,
+        "false_valid_rate": 0.20702179176755447,
+        "false_invalid_rate": 0.0332409972299169,
+        "resolved_accuracy": 0.36893203883495146,
+        "resolved_fraction": 0.1996124031007752,
+        "abstention_rate": 0.8003875968992248,
+        "valid_precision": 0.26609442060085836,
+        "valid_recall": 0.08587257617728532,
+        "failure_flag_precision": 0.6842105263157895,
+        "failure_flag_recall": 0.06295399515738499,
+        "confusion": {
+          "uncertain|valid": 636,
+          "uncertain|invalid": 603,
+          "valid|valid": 62,
+          "valid|invalid": 171,
+          "invalid|valid": 24,
+          "invalid|invalid": 52
+        }
+      },
+      "mean_obligations": 43.958333333333336,
+      "mean_semantic_obligations": 1.2926666666666666,
+      "total_llm_calls": 3878,
+      "mean_llm_calls": 1.2926666666666666
+    },
+    {
+      "arm": "adapter_full_omega",
+      "description": "full adapter + Omega_d bundle (schema / policy / test)",
+      "budget": 7,
+      "n_omega_artifacts": 3,
+      "overall": {
+        "n": 3000,
+        "n_labeled": 3000,
+        "false_valid_rate": 0.18666666666666668,
+        "false_invalid_rate": 0.02,
+        "resolved_accuracy": 0.4026974951830443,
+        "resolved_fraction": 0.173,
+        "abstention_rate": 0.827,
+        "valid_precision": 0.3333333333333333,
+        "valid_recall": 0.09333333333333334,
+        "failure_flag_precision": 0.696969696969697,
+        "failure_flag_recall": 0.046,
+        "confusion": {
+          "uncertain|valid": 1330,
+          "uncertain|invalid": 1151,
+          "valid|valid": 140,
+          "valid|invalid": 280,
+          "invalid|valid": 30,
+          "invalid|invalid": 69
+        }
+      },
+      "long_horizon": {
+        "n": 1548,
+        "n_labeled": 1548,
+        "false_valid_rate": 0.20702179176755447,
+        "false_invalid_rate": 0.0332409972299169,
+        "resolved_accuracy": 0.36893203883495146,
+        "resolved_fraction": 0.1996124031007752,
+        "abstention_rate": 0.8003875968992248,
+        "valid_precision": 0.26609442060085836,
+        "valid_recall": 0.08587257617728532,
+        "failure_flag_precision": 0.6842105263157895,
+        "failure_flag_recall": 0.06295399515738499,
+        "confusion": {
+          "uncertain|valid": 636,
+          "uncertain|invalid": 603,
+          "valid|valid": 62,
+          "valid|invalid": 171,
+          "invalid|valid": 24,
+          "invalid|invalid": 52
+        }
+      },
+      "mean_obligations": 46.89,
+      "mean_semantic_obligations": 4.224333333333333,
+      "total_llm_calls": 12673,
+      "mean_llm_calls": 4.224333333333333
+    }
+  ],
+  "notes": [
+    "Q2 headline metric is resolved_fraction: a universal verifier that binds no obligation can only abstain (false_valid 0, but resolves nothing). Adding the domain adapter lets obligations bind to terminal operations and be discharged.",
+    "Offline run (no API key): the semantic checker abstains, so the adaptation gain seen here is the mechanical one (execution-status binding). Domain templates and Omega_d artifacts whose obligations route to the semantic checker (policy compliance, final-answer support) add obligation coverage (see mean_obligations / mean_semantic_obligations) but abstain, so they do not move offline verdicts. Separating them needs --use-llm (a key), as in SA-1.",
+    "Transfer matrix is future work: needs a second-domain trace loader. The swe_gym spec exists and is adapter-compatible, but the SWE-Gym HF trace schema is not yet wired into htir.eval.datasets, so this runs universal-vs-adapters within terminal."
+  ]
+}
