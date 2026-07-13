@@ -182,8 +182,7 @@ def test_run_sa1_end_to_end_offline():
     contrast: AVG's false-valid rate must not exceed the monolith's."""
     import json as _json
 
-    from htir.agents.baselines import VerifierArm
-    from htir.eval.experiment_sa1 import run_sa1
+    from htir.eval.experiment_sa1 import DEFAULT_ARMS, run_sa1
 
     files = sorted(DATA_DIR.glob("0*_*.json"))
     if not files:
@@ -201,7 +200,7 @@ def test_run_sa1_end_to_end_offline():
     assert result.n_traces == len(files)
     assert result.n_labeled >= 1
     arms = {a.arm: a for a in result.arms}
-    assert set(arms) == {a.value for a in VerifierArm}
+    assert set(arms) == {a.value for a in DEFAULT_ARMS}
     # exec_only never issues an LLM call; monolithic issues exactly one/trace.
     assert arms["exec_only"].total_llm_calls == 0
     assert arms["monolithic"].mean_llm_calls == 1.0
@@ -286,3 +285,145 @@ def test_run_sa2_end_to_end_offline():
         arms["adapter_full_omega"].mean_semantic_obligations
         >= arms["adapter_full"].mean_semantic_obligations
     )
+
+
+# ---------------------------------------------------------------------------
+# SA-3 calibration primitives (htir.eval.calibration)
+# ---------------------------------------------------------------------------
+
+def test_roc_auc_separation_and_ties():
+    from htir.eval.calibration import roc_auc
+
+    # Perfect separation (valid scored above invalid) -> 1.0; reversed -> 0.0.
+    assert roc_auc([0.9, 0.8, 0.2, 0.1], [1, 1, 0, 0]) == 1.0
+    assert roc_auc([0.1, 0.2, 0.8, 0.9], [1, 1, 0, 0]) == 0.0
+    # All-tied scores -> chance (tie-corrected).
+    assert roc_auc([0.5, 0.5, 0.5, 0.5], [1, 0, 1, 0]) == 0.5
+    # One class only -> undefined.
+    assert roc_auc([0.4, 0.6], [1, 1]) is None
+
+
+def test_expected_calibration_error_and_reliability():
+    from htir.eval.calibration import expected_calibration_error, reliability_bins
+
+    # Perfectly calibrated: mean score == empirical valid rate in each bin.
+    scores = [0.0, 1.0, 0.0, 1.0]
+    labels = [0, 1, 0, 1]
+    assert expected_calibration_error(scores, labels, n_bins=10) == 0.0
+    bins = reliability_bins(scores, labels, n_bins=10)
+    assert sum(b.count for b in bins) == 4
+    # A confidently-wrong verifier is badly calibrated (gap ~ 0.9).
+    bad = expected_calibration_error([0.95, 0.95], [0, 0], n_bins=10)
+    assert bad > 0.9
+
+
+def test_risk_coverage_improves_with_abstention_when_score_is_informative():
+    from htir.eval.calibration import risk_coverage_curve
+
+    # Confident predictions are correct; the near-boundary one is wrong. Abstaining
+    # on the least-confident trace should raise accuracy to 1.0.
+    scores = [0.95, 0.9, 0.05, 0.1, 0.51]  # last: confident-ish valid but wrong
+    labels = [1, 1, 0, 0, 0]
+    pts = {round(p.abstention_budget, 1): p for p in risk_coverage_curve(scores, labels, budgets=(0.0, 0.2))}
+    assert pts[0.0].accuracy == 0.8            # 4/5 correct at full coverage
+    assert pts[0.2].n_kept == 4 and pts[0.2].accuracy == 1.0  # drop the boundary miss
+
+
+def test_trajectory_valid_score_is_coverage_aware():
+    from htir.models.htir import CheckerResult, EvidenceType, Obligation, ObligationStatus, Severity
+    from htir.eval.calibration import trajectory_valid_score
+    from htir.models.htir import HTIR
+
+    def _ob(oid, p_pass, p_fail, p_abstain, status):
+        return Obligation(
+            obligation_id=oid, claim_id=oid, severity=Severity.MEDIUM,
+            result=CheckerResult(p_pass=p_pass, p_fail=p_fail, p_abstain=p_abstain),
+            status=status,
+        )
+
+    htir = HTIR(task_id="t")
+    # One pass (1.0) + one abstain (0.5) -> mean 0.75, not 1.0: abstention counts.
+    htir.obligations = [
+        _ob(1, 1.0, 0.0, 0.0, ObligationStatus.PASSED),
+        _ob(2, 0.0, 0.0, 1.0, ObligationStatus.ABSTAINED),
+    ]
+    assert trajectory_valid_score(htir) == 0.75
+    # No obligations with results -> None.
+    assert trajectory_valid_score(HTIR(task_id="t")) is None
+
+
+# ---------------------------------------------------------------------------
+# SA-3 no-abstention ablation (force_decision) in the checker layer
+# ---------------------------------------------------------------------------
+
+def test_force_decision_removes_abstention_but_keeps_real_fails():
+    """force_decision (ablation #3) must leave no obligation ABSTAINED: a
+    no-evidence abstain is credited PASSED on the optimistic prior, while a
+    genuine mechanical fail still FAILS."""
+    from htir.agents.baselines import VerifierArm, run_arm
+    from htir.agents.trace_abstraction import TraceAbstractionAgent
+    from htir.models.domain import get_domain_spec
+    from htir.models.htir import ObligationStatus
+
+    files = sorted(DATA_DIR.glob("0*_*.json"))
+    if not files:
+        pytest.skip("committed real traces not present")
+
+    spec = get_domain_spec("terminal_swe")
+    agent = TraceAbstractionAgent(domain_spec=spec)
+    raw = list(iter_local_traces([files[0]]))[0]
+    from htir.adapters import load_trace
+    htir = agent.compile(task_id="t", raw_steps=load_trace(raw, adapter="terminal"), harness_snippets={})
+
+    # No-abstention arm: forced graph has zero abstained obligations.
+    from htir.agents.checking import check_obligations
+    forced = htir.model_copy(deep=True)
+    check_obligations(forced, spec, force_decision=True)
+    assert forced.obligations  # the trace produced obligations
+    assert all(o.status != ObligationStatus.ABSTAINED for o in forced.obligations)
+
+    # The calibrated arm (no forcing) does abstain on the same graph.
+    calibrated = htir.model_copy(deep=True)
+    check_obligations(calibrated, spec)
+    assert any(o.status == ObligationStatus.ABSTAINED for o in calibrated.obligations)
+
+    # And the no-abstention aggregate never returns 'uncertain'.
+    assert run_arm(htir, spec, VerifierArm.NO_ABSTENTION).predicted_status in ("valid", "invalid")
+
+
+# ---------------------------------------------------------------------------
+# SA-3 experiment harness (run_sa3): calibrated abstention vs. no-abstention (Q3)
+# ---------------------------------------------------------------------------
+
+def test_run_sa3_end_to_end_offline():
+    """run_sa3 compiles + scores both arms offline and reports the Q3 headline:
+    calibrated abstention credits fewer failed trajectories as valid than the
+    no-abstention ablation, and abstains more."""
+    import json as _json
+
+    from htir.eval.experiment_sa3 import run_sa3
+
+    files = sorted(DATA_DIR.glob("0*_*.json"))
+    if not files:
+        pytest.skip("committed real traces not present")
+
+    traces = []
+    for f in files:
+        raw = dict(list(iter_local_traces([f]))[0])
+        raw["steps"] = _json.dumps(raw["steps"])  # exercise the HF-shape decode path
+        traces.append(raw)
+
+    result = run_sa3(traces, progress_every=0, log=None)
+    assert result.n_traces == len(files)
+    arms = {a.arm: a for a in result.arms}
+    assert set(arms) == {"avg_full", "no_abstention"}
+    avg, forced = arms["avg_full"], arms["no_abstention"]
+    # Q3: abstention does not increase false-valids and abstains at least as much.
+    assert avg.decision_metrics.false_valid_rate <= forced.decision_metrics.false_valid_rate
+    assert avg.decision_metrics.abstention_rate >= forced.decision_metrics.abstention_rate
+    # The no-abstention arm commits on strictly more traces (no 'uncertain').
+    assert forced.coverage >= avg.coverage
+    # Shared-score calibration fields are populated.
+    assert 0.0 <= result.ece_all <= 1.0
+    assert len(result.reliability) == 10
+    assert result.risk_coverage and result.risk_coverage[0].abstention_budget == 0.0

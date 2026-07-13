@@ -90,6 +90,7 @@ def check_obligations(
     *,
     use_semantic: bool = False,
     disable_mechanical: bool = False,
+    force_decision: bool = False,
     domain_artifacts: DomainArtifactBundle | None = None,
     model: str = DEFAULT_MODEL,
 ) -> HTIR:
@@ -110,6 +111,16 @@ def check_obligations(
     without running their checker (no execution evidence is consulted), which
     is exactly the execution-free ablation.
 
+    ``force_decision`` is the **no-abstention** ablation (avg.tex Sec. 4.6,
+    ablation #3): every checker must emit pass/fail, none may abstain. After
+    the routed checker runs, its abstain probability mass is redistributed onto
+    pass/fail (:func:`_force_decision`) so no obligation stays ABSTAINED. An
+    obligation the verifier had *no evidence* for (pure abstain) is pushed to
+    the optimistic prior -- it is credited PASSED rather than left unresolved --
+    which is exactly the over-crediting that calibrated abstention is meant to
+    prevent (Q3). Genuine mechanical fails still fail. This is off by default so
+    the calibrated-abstention path stays byte-for-byte reproducible.
+
     Idempotent: recomputes and overwrites every obligation's result/status
     (and every affected claim's status) rather than appending/skipping, so a
     second call yields identical output.
@@ -128,8 +139,10 @@ def check_obligations(
             use_semantic=use_semantic, disable_mechanical=disable_mechanical,
             domain_artifacts=domain_artifacts, model=model,
         )
+        if force_decision:
+            result = _force_decision(result)
         ob.result = result
-        ob.status = _status_from_result(result)
+        ob.status = _status_from_result(result, forced=force_decision)
         obligations_by_claim.setdefault(ob.claim_id, []).append(ob)
 
     # Claim status is derived once per claim from *all* of its obligations
@@ -147,18 +160,64 @@ def check_obligations(
 # Status derivation
 # ---------------------------------------------------------------------------
 
-def _status_from_result(result: CheckerResult) -> ObligationStatus:
+def _status_from_result(result: CheckerResult, *, forced: bool = False) -> ObligationStatus:
     """
     argmax(p_pass, p_fail, p_abstain) with a conservative tie-break: when two
     probabilities are equal, prefer abstain over fail over pass (checking a
     claim conservatively is safer than over-crediting it).
+
+    Under ``forced`` (the no-abstention ablation) abstention is not an allowed
+    outcome, so the candidate is dropped and the tie-break flips to the
+    optimistic pass > fail: a forced no-evidence obligation (p_pass == p_fail)
+    is credited PASSED rather than flagged, which is the over-crediting Q3
+    predicts when abstention is removed.
     """
+    if forced:
+        candidates = [
+            (result.p_pass, ObligationStatus.PASSED),
+            (result.p_fail, ObligationStatus.FAILED),
+        ]
+        return max(candidates, key=lambda pair: pair[0])[1]
     candidates = [
         (result.p_abstain, ObligationStatus.ABSTAINED),
         (result.p_fail, ObligationStatus.FAILED),
         (result.p_pass, ObligationStatus.PASSED),
     ]
     return max(candidates, key=lambda pair: pair[0])[1]
+
+
+# Prior credited to a forced obligation that had no evidence to decide on
+# (pure abstain): 0.5 leaves it exactly at the pass/invalid boundary, so it
+# contributes an uninformative-but-committed 0.5 to the trajectory score while
+# the status tie-break (pass > fail) credits it. Genuine mechanical pass/fail
+# results are untouched -- only the abstain mass is redistributed.
+_FORCED_PASS_PRIOR = 0.5
+
+
+def _force_decision(result: CheckerResult) -> CheckerResult:
+    """
+    No-abstention ablation (avg.tex Sec. 4.6 #3): redistribute a checker's
+    abstain mass onto pass/fail so the obligation must commit. Mass is split in
+    proportion to the existing pass/fail signal; a pure abstain (no signal at
+    all) is split by the optimistic ``_FORCED_PASS_PRIOR``. The score is
+    recomputed as ``p_pass - p_fail`` and ``evidence_used`` is preserved.
+    """
+    if result.p_abstain <= 0.0:
+        return result
+    signal = result.p_pass + result.p_fail
+    if signal > 0.0:
+        share_pass = result.p_pass / signal
+    else:
+        share_pass = _FORCED_PASS_PRIOR
+    p_pass = result.p_pass + result.p_abstain * share_pass
+    p_fail = result.p_fail + result.p_abstain * (1.0 - share_pass)
+    return CheckerResult(
+        p_pass=p_pass,
+        p_fail=p_fail,
+        p_abstain=0.0,
+        score=p_pass - p_fail,
+        evidence_used=list(result.evidence_used),
+    )
 
 
 def _aggregate_claim_status(obligations: list[Obligation], is_refuted_by_evidence: bool) -> ClaimStatus:

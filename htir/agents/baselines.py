@@ -10,6 +10,9 @@ configuration over the *same* compiled graph:
 * ``EXEC_ONLY`` -- graph obligations, mechanical checkers only (no semantic).
 * ``EXEC_FREE`` -- graph obligations, semantic checkers only (no execution/
   mechanical evidence): the execution-free ablation.
+* ``NO_ABSTENTION`` -- full-AVG graph + evidence, but every checker is forced
+  to emit pass/fail (``force_decision``): the no-abstention ablation (Sec. 4.6
+  #3) used by SA-3 to isolate the effect of calibrated abstention.
 * ``MONOLITHIC`` -- the anti-thesis baseline: a *single* scalar judge over the
   whole trajectory, with no obligation graph, no evidence localization, and no
   abstention. This is what \\AVG's factorization is meant to beat.
@@ -51,14 +54,18 @@ class VerifierArm(str, Enum):
     AVG_FULL = "avg_full"
     EXEC_ONLY = "exec_only"
     EXEC_FREE = "exec_free"
+    NO_ABSTENTION = "no_abstention"
     MONOLITHIC = "monolithic"
 
 
-# Flag configuration for the three graph-based arms.
+# Flag configuration for the graph-based arms. ``force_decision`` is the
+# no-abstention ablation (avg.tex Sec. 4.6 #3): the same graph + evidence as
+# full AVG, but every checker must commit to pass/fail instead of abstaining.
 _ARM_FLAGS: dict[VerifierArm, dict[str, bool]] = {
-    VerifierArm.AVG_FULL: {"use_semantic": True, "disable_mechanical": False},
-    VerifierArm.EXEC_ONLY: {"use_semantic": False, "disable_mechanical": False},
-    VerifierArm.EXEC_FREE: {"use_semantic": True, "disable_mechanical": True},
+    VerifierArm.AVG_FULL: {"use_semantic": True, "disable_mechanical": False, "force_decision": False},
+    VerifierArm.EXEC_ONLY: {"use_semantic": False, "disable_mechanical": False, "force_decision": False},
+    VerifierArm.EXEC_FREE: {"use_semantic": True, "disable_mechanical": True, "force_decision": False},
+    VerifierArm.NO_ABSTENTION: {"use_semantic": True, "disable_mechanical": False, "force_decision": True},
 }
 
 
@@ -92,6 +99,7 @@ def run_arm(
         graph, spec,
         use_semantic=flags["use_semantic"] and use_llm,
         disable_mechanical=flags["disable_mechanical"],
+        force_decision=flags["force_decision"],
         domain_artifacts=domain_artifacts,
         model=model,
     )
