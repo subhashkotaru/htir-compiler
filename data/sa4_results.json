@@ -1,0 +1,574 @@
+{
+  "experiment": "SA-4: Online Intervention, offline replay (Q4a)",
+  "n_traces": 3000,
+  "n_labeled": 3000,
+  "base_rate_invalid": 0.5,
+  "use_llm": false,
+  "domain_id": "terminal_swe",
+  "seconds": 374.58,
+  "classes": [
+    {
+      "name": "any_active",
+      "flagged": 1431,
+      "tp": 739,
+      "fp": 692,
+      "fn": 761,
+      "precision": 0.5164220824598184,
+      "recall": 0.49266666666666664,
+      "first_fire_frac_mean": 0.6812529014079783,
+      "first_fire_frac_median": 0.8333333333333334,
+      "steps_saved_mean": 24.286874154262517,
+      "steps_saved_median": 1.0,
+      "steps_saved_frac_mean": 0.3427611224016041,
+      "false_alarm_interruptions": 692
+    },
+    {
+      "name": "failed_obligation",
+      "flagged": 69,
+      "tp": 50,
+      "fp": 19,
+      "fn": 1450,
+      "precision": 0.7246376811594203,
+      "recall": 0.03333333333333333,
+      "first_fire_frac_mean": 0.5644952790464244,
+      "first_fire_frac_median": 0.5882352941176471,
+      "steps_saved_mean": 27.58,
+      "steps_saved_median": 18.0,
+      "steps_saved_frac_mean": 0.4157316834741222,
+      "false_alarm_interruptions": 19
+    }
+  ],
+  "position_profile": [
+    {
+      "bin_lo": 0.0,
+      "bin_hi": 0.1,
+      "active_obligations": 6630,
+      "steps": 10273,
+      "mean_active_per_step": 0.645
+    },
+    {
+      "bin_lo": 0.1,
+      "bin_hi": 0.2,
+      "active_obligations": 21950,
+      "steps": 9238,
+      "mean_active_per_step": 2.376
+    },
+    {
+      "bin_lo": 0.2,
+      "bin_hi": 0.3,
+      "active_obligations": 36384,
+      "steps": 9499,
+      "mean_active_per_step": 3.83
+    },
+    {
+      "bin_lo": 0.3,
+      "bin_hi": 0.4,
+      "active_obligations": 55245,
+      "steps": 9252,
+      "mean_active_per_step": 5.971
+    },
+    {
+      "bin_lo": 0.4,
+      "bin_hi": 0.5,
+      "active_obligations": 74789,
+      "steps": 9093,
+      "mean_active_per_step": 8.225
+    },
+    {
+      "bin_lo": 0.5,
+      "bin_hi": 0.6,
+      "active_obligations": 97468,
+      "steps": 9637,
+      "mean_active_per_step": 10.114
+    },
+    {
+      "bin_lo": 0.6,
+      "bin_hi": 0.7,
+      "active_obligations": 119583,
+      "steps": 9496,
+      "mean_active_per_step": 12.593
+    },
+    {
+      "bin_lo": 0.7,
+      "bin_hi": 0.8,
+      "active_obligations": 138217,
+      "steps": 9255,
+      "mean_active_per_step": 14.934
+    },
+    {
+      "bin_lo": 0.8,
+      "bin_hi": 0.9,
+      "active_obligations": 162164,
+      "steps": 9482,
+      "mean_active_per_step": 17.102
+    },
+    {
+      "bin_lo": 0.9,
+      "bin_hi": 1.0,
+      "active_obligations": 175451,
+      "steps": 8489,
+      "mean_active_per_step": 20.668
+    }
+  ],
+  "template_fires": [
+    {
+      "template_id": "wellformedness:policy_action_unlinked",
+      "active_count": 431544,
+      "n_traces": 435,
+      "failed_count": 0,
+      "dominant_action": "escalate"
+    },
+    {
+      "template_id": "swe-edit-then-validate",
+      "active_count": 424870,
+      "n_traces": 435,
+      "failed_count": 13486,
+      "dominant_action": "repair"
+    },
+    {
+      "template_id": "swe-test-status",
+      "active_count": 14107,
+      "n_traces": 151,
+      "failed_count": 4757,
+      "dominant_action": "repair"
+    },
+    {
+      "template_id": "uni-final-answer-supported",
+      "active_count": 5624,
+      "n_traces": 1331,
+      "failed_count": 0,
+      "dominant_action": "escalate"
+    },
+    {
+      "template_id": "wellformedness:integrity_untraceable_final_claim",
+      "active_count": 5624,
+      "n_traces": 1331,
+      "failed_count": 0,
+      "dominant_action": "veto"
+    },
+    {
+      "template_id": "wellformedness:integrity_test_modified",
+      "active_count": 3152,
+      "n_traces": 19,
+      "failed_count": 0,
+      "dominant_action": "veto"
+    },
+    {
+      "template_id": "wellformedness:final_success_without_evidence",
+      "active_count": 2960,
+      "n_traces": 695,
+      "failed_count": 0,
+      "dominant_action": "escalate"
+    }
+  ],
+  "walkthrough": {
+    "task_id": "build-cython-ext",
+    "label": "invalid",
+    "n_steps": 13,
+    "first_failed_step": 2,
+    "steps_saved": 11,
+    "steps": [
+      {
+        "step": 1,
+        "role": "other",
+        "request_preview": "(no prior context)",
+        "active": []
+      },
+      {
+        "step": 2,
+        "role": "run_test",
+        "request_preview": "[USER] $32",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 3,
+        "role": "run_command",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 4,
+        "role": "run_test",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 5,
+        "role": "run_test",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 6,
+        "role": "run_command",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 7,
+        "role": "run_test",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 8,
+        "role": "run_test",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "role": "run_command",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "role": "run_test",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 11,
+        "role": "run_test",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 12,
+        "role": "run_test",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      },
+      {
+        "step": 13,
+        "role": "run_command",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "swe-test-status",
+            "status": "abstained",
+            "severity": "high",
+            "action": "repair"
+          }
+        ]
+      }
+    ]
+  },
+  "notes": [
+    "Offline run (no API key): semantic + integrity checkers abstain, so the confident 'failed_obligation' signal is mechanical only (exit codes / test reports). 'any_active' is abstention-dominated -> near-base-rate precision. Enable --use-llm (with a key) to turn those abstentions into confident catches.",
+    "Intervention is recommendation-only (htir.agents.intervention): the replay never drives an agent. Precision/recall are vs. the weak trajectory reward label (invalid = 'should have intervened'); steps-saved is the counterfactual T - t* on invalid flagged traces (stopping the doomed run at the first flag).",
+    "'failed_obligation' fires only when a mechanical check reported failure, so it is rarer but precise and timely; 'any_active' includes edit-not-yet-validated / unlinked-policy / untraceable-final-claim abstentions, which mostly land near the trace end (see position_profile)."
+  ]
+}

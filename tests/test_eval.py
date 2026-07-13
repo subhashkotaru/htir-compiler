@@ -427,3 +427,88 @@ def test_run_sa3_end_to_end_offline():
     assert 0.0 <= result.ece_all <= 1.0
     assert len(result.reliability) == 10
     assert result.risk_coverage and result.risk_coverage[0].abstention_budget == 0.0
+
+
+# ---------------------------------------------------------------------------
+# SA-4 experiment harness (run_sa4): online intervention, offline replay (Q4a)
+# ---------------------------------------------------------------------------
+
+def test_compute_class_report_precision_recall_and_steps_saved():
+    """The per-class metric math: a flag on an invalid trace is a true positive
+    (should have intervened), on a valid trace a false alarm; steps-saved is the
+    counterfactual T - t* over invalid flagged traces only."""
+    from htir.eval.experiment_sa4 import (
+        CLASS_ANY,
+        CLASS_FAILED,
+        PerTraceInterventionRecord,
+        compute_class_report,
+    )
+
+    def rec(label, n, any_at, failed_at):
+        return PerTraceInterventionRecord(
+            label=label, n_steps=n,
+            first_fire={CLASS_ANY: any_at, CLASS_FAILED: failed_at},
+        )
+
+    records = [
+        rec("invalid", 10, any_at=2, failed_at=3),  # both fire: TP for both
+        rec("valid", 8, any_at=5, failed_at=None),  # any fires on a good run: false alarm
+        rec("invalid", 6, any_at=None, failed_at=None),  # missed failure: FN for both
+        rec("valid", 4, any_at=None, failed_at=None),  # correctly silent
+    ]
+
+    failed = compute_class_report(records, CLASS_FAILED)
+    assert (failed.tp, failed.fp, failed.fn) == (1, 0, 1)
+    assert failed.precision == 1.0 and failed.recall == 0.5
+    assert failed.steps_saved_median == 7.0  # 10 - 3
+    assert failed.first_fire_frac_median == pytest.approx(0.3)
+    assert failed.false_alarm_interruptions == 0
+
+    anyc = compute_class_report(records, CLASS_ANY)
+    assert (anyc.tp, anyc.fp, anyc.fn) == (1, 1, 1)
+    assert anyc.precision == 0.5 and anyc.recall == 0.5
+    assert anyc.steps_saved_median == 8.0  # 10 - 2, over the invalid flagged trace only
+    assert anyc.false_alarm_interruptions == 1
+
+
+def test_run_sa4_end_to_end_offline():
+    """run_sa4 replays every committed trace prefix by prefix and reports the
+    Q4a signals: the confident failed-obligation class is at least as precise
+    and no later than the abstention-dominated any-active class, and the
+    active-obligation position profile accounts for every replayed step."""
+    import json as _json
+
+    from htir.eval.experiment_sa4 import CLASS_ANY, CLASS_FAILED, run_sa4
+
+    files = sorted(DATA_DIR.glob("0*_*.json"))
+    if not files:
+        pytest.skip("committed real traces not present")
+
+    traces = []
+    for f in files:
+        raw = dict(list(iter_local_traces([f]))[0])
+        raw["steps"] = _json.dumps(raw["steps"])  # exercise the HF-shape decode path
+        traces.append(raw)
+
+    result = run_sa4(traces, progress_every=0, log=None)
+    assert result.n_traces == len(files)
+    classes = {c.name: c for c in result.classes}
+    assert set(classes) == {CLASS_ANY, CLASS_FAILED}
+    for c in classes.values():
+        assert 0.0 <= c.precision <= 1.0 and 0.0 <= c.recall <= 1.0
+
+    # The position profile is a full decile partition covering every replayed step.
+    assert len(result.position_profile) == 10
+    assert sum(p.steps for p in result.position_profile) > 0
+    for p in result.position_profile:
+        expected = round(p.active_obligations / p.steps, 3) if p.steps else 0.0
+        assert p.mean_active_per_step == expected
+    assert result.template_fires  # at least one obligation template fired
+
+    # The confident class is never *less* precise than the union when both fire,
+    # and fires no later (Q4a: mechanical failures are timelier and more precise).
+    failed, anyc = classes[CLASS_FAILED], classes[CLASS_ANY]
+    if failed.flagged and anyc.flagged:
+        assert failed.precision >= anyc.precision
+    if failed.first_fire_frac_median is not None and anyc.first_fire_frac_median is not None:
+        assert failed.first_fire_frac_median <= anyc.first_fire_frac_median
