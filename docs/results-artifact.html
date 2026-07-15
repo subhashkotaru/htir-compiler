@@ -1,0 +1,538 @@
+<title>Adaptive Verifier Graphs — Results</title>
+<style>
+  :root {
+    --bg: #FAFBFB;
+    --surface: #FFFFFF;
+    --surface-2: #F4F6F6;
+    --ink: #16191C;
+    --ink-soft: #3E464C;
+    --ink-faint: #79838A;
+    --line: #E3E7E9;
+    --rule: #1B1F22;
+    --accent: #0C6B74;
+    --accent-soft: #E2EEEF;
+    --good: #0A7A63;
+    --danger: #AE3F2F;
+    --measure: 65ch;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --serif: "Charter", "Bitstream Charter", "Sitka Text", "Iowan Old Style", Cambria, Georgia, "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0D1114; --surface: #141A1E; --surface-2: #10161A; --ink: #E7EAEC;
+      --ink-soft: #A5AEB4; --ink-faint: #6E7981; --line: #232B30; --rule: #C6CDD1;
+      --accent: #4FBAC3; --accent-soft: #123138; --good: #34C79C; --danger: #E27A6C;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #FAFBFB; --surface: #FFFFFF; --surface-2: #F4F6F6; --ink: #16191C; --ink-soft: #3E464C;
+    --ink-faint: #79838A; --line: #E3E7E9; --rule: #1B1F22; --accent: #0C6B74; --accent-soft: #E2EEEF;
+    --good: #0A7A63; --danger: #AE3F2F;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0D1114; --surface: #141A1E; --surface-2: #10161A; --ink: #E7EAEC; --ink-soft: #A5AEB4;
+    --ink-faint: #6E7981; --line: #232B30; --rule: #C6CDD1; --accent: #4FBAC3; --accent-soft: #123138;
+    --good: #34C79C; --danger: #E27A6C;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--serif); font-size: 18.5px; line-height: 1.72;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  .paper { max-width: 760px; margin: 0 auto; padding: 0 26px 130px; }
+  p, li { max-width: var(--measure); }
+
+  /* ---------- title block ---------- */
+  header.title { padding: 78px 0 30px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .venue {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600;
+  }
+  h1 {
+    font-family: var(--sans); font-size: clamp(1.9rem, 4.8vw, 2.7rem); line-height: 1.12; font-weight: 750;
+    letter-spacing: -0.02em; text-wrap: balance; margin: 0.7rem 0 0; color: var(--ink);
+  }
+  .abstract {
+    margin-top: 1.5rem; font-size: 1.02rem; color: var(--ink-soft); max-width: var(--measure);
+  }
+  .abstract .lab {
+    font-family: var(--sans); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    font-weight: 650; color: var(--ink); display: block; margin-bottom: 4px;
+  }
+
+  /* ---------- headings ---------- */
+  h2 {
+    font-family: var(--sans); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em;
+    margin: 3.4rem 0 0.4rem; color: var(--ink); text-wrap: balance; scroll-margin-top: 20px;
+  }
+  h3 {
+    font-family: var(--sans); font-size: 1.16rem; font-weight: 650; letter-spacing: -0.005em;
+    margin: 2.2rem 0 0.3rem; color: var(--ink);
+  }
+  h2 .sn, h3 .sn { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 0.55em; font-weight: 700; }
+  p { margin: 0.85rem 0; }
+  strong { font-weight: 700; color: var(--ink); }
+  em { font-style: italic; }
+  a { color: var(--accent); }
+
+  /* inline code / math-ish identifiers */
+  code, .mono { font-family: var(--mono); font-size: 0.82em; }
+  p code, li code, td code, .mono-i {
+    background: var(--surface-2); border: 1px solid var(--line); padding: 0.05em 0.34em;
+    border-radius: 4px; color: var(--ink); white-space: nowrap;
+  }
+  .term { font-style: italic; color: var(--ink); }
+
+  /* ---------- booktabs tables ---------- */
+  figure { margin: 2rem 0; }
+  .tcap, figcaption {
+    font-family: var(--sans); font-size: 13.5px; line-height: 1.5; color: var(--ink-soft);
+    max-width: 100%; margin-bottom: 0.7rem;
+  }
+  figcaption { margin-top: 0.8rem; margin-bottom: 0; }
+  .tcap b, figcaption b { color: var(--ink); font-weight: 650; }
+  .twrap { overflow-x: auto; }
+  table {
+    border-collapse: collapse; width: 100%; font-family: var(--sans); font-size: 14px;
+    border-top: 2px solid var(--rule); border-bottom: 2px solid var(--rule);
+  }
+  thead th { border-bottom: 1.2px solid var(--rule); }
+  th, td { text-align: left; padding: 8px 14px 8px 0; white-space: nowrap; color: var(--ink-soft); }
+  th { font-weight: 650; color: var(--ink); font-size: 12.5px; }
+  th:first-child, td:first-child { padding-left: 4px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; padding-right: 18px; }
+  th.num { font-family: var(--sans); }
+  tbody tr.group td { padding-top: 12px; }
+  td.win { color: var(--good); font-weight: 700; }
+  td.bad { color: var(--danger); font-weight: 650; }
+  td.diag { color: var(--good); font-weight: 700; }
+  td.zero { color: var(--ink-faint); }
+  tr.hl td:first-child { color: var(--ink); font-weight: 650; }
+  .midrule td { border-top: 1px solid var(--line); }
+
+  /* ---------- figure (bar viz) ---------- */
+  .plot { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 22px 22px 10px; }
+  .plot-head { font-family: var(--sans); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 16px; font-weight: 600; }
+  .barrow { display: grid; grid-template-columns: 200px 1fr; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .blabel { font-family: var(--sans); font-size: 13px; color: var(--ink-soft); line-height: 1.25; }
+  .blabel b { color: var(--ink); font-weight: 650; }
+  .blabel .dom { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: 0.02em; display: block; }
+  .track { position: relative; height: 26px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+  .fill { position: absolute; inset: 0 auto 0 0; display: flex; align-items: center; border-radius: 4px 0 0 4px; }
+  .fill.good { background: var(--good); }
+  .fill.bad { background: var(--danger); }
+  .fill .v { font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: #fff; padding: 0 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .fill.thin .v { color: var(--ink); position: absolute; left: calc(100% + 7px); }
+  .axis { grid-column: 2; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--ink-faint); border-top: 1px solid var(--line); padding-top: 4px; margin-top: 2px; }
+
+  /* ---------- callout ---------- */
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--surface-2);
+    padding: 12px 18px; border-radius: 0 7px 7px 0; margin: 1.6rem 0; font-size: 0.96rem;
+    max-width: var(--measure);
+  }
+  .callout .lab { font-family: var(--sans); font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); font-weight: 650; display: block; margin-bottom: 3px; }
+
+  /* ---------- algorithm block ---------- */
+  .algo {
+    border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+    font-family: var(--mono); font-size: 13px; line-height: 1.75; color: var(--ink-soft);
+    padding: 16px 20px; margin: 1.6rem 0; overflow-x: auto;
+  }
+  .algo .hd { color: var(--ink); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 8px; }
+  .algo .kw { color: var(--accent); font-weight: 700; }
+  .algo .cm { color: var(--ink-faint); }
+  .algo .in1 { padding-left: 2ch; display: inline-block; }
+  .algo .in2 { padding-left: 4ch; display: inline-block; }
+
+  hr.sep { border: none; border-top: 1px solid var(--line); margin: 3rem 0 0; }
+
+  footer { margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-family: var(--sans); font-size: 12.5px; color: var(--ink-faint); line-height: 1.6; max-width: 100%; }
+  footer code { color: var(--ink-soft); }
+
+  @media (max-width: 620px) {
+    body { font-size: 17px; }
+    .barrow { grid-template-columns: 1fr; gap: 5px; }
+    .axis { grid-column: 1; }
+    td.num, th.num { padding-right: 10px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .fill { animation: grow .8s cubic-bezier(.2,.7,.2,1) both; }
+    @keyframes grow { from { transform: scaleX(0); transform-origin: left; } to { transform: scaleX(1); } }
+  }
+</style>
+
+<div class="paper">
+
+  <header class="title">
+    <div class="venue">Experiments · Adaptive Verifier Graphs</div>
+    <h1>Evidence-local verification with calibrated abstention across two agent domains</h1>
+    <div class="abstract">
+      <span class="lab">Abstract of results</span>
+      We evaluate Adaptive Verifier Graphs (AVG) against monolithic trajectory judges on two independent
+      agent domains — a software-engineering domain (Terminal-Bench) and a customer-service policy domain
+      (τ-bench). Across both, AVG reduces the rate at which <em>failed</em> trajectories are wrongly credited
+      as valid by 4–16×, with the margin widening on long-horizon traces; we show the reduction is driven by a
+      calibrated abstention rule rather than by any individual checker, that a mis-specified verifier abstains
+      rather than over-credits, and that AVG outperforms a genuine LLM judge by ~15×. We then describe and
+      empirically justify the escalation mechanism that lets AVG update its obligations on the fly.
+    </div>
+  </header>
+
+  <!-- ================= 1 SETUP ================= -->
+  <h2><span class="sn">1</span>Experimental setup</h2>
+
+  <p>Our central hypothesis is that verification which binds each verdict to <em>local, in-trace evidence</em>
+  and abstains when that evidence is absent will detect reward hacks that a holistic judge — one that reasons
+  over the entire transcript at once — systematically misses. To test this without over-fitting to a single
+  benchmark, we evaluate on two domains that share no code path beyond AVG's domain-neutral core and that
+  stress deliberately complementary failure modes.</p>
+
+  <h3><span class="sn">1.1</span>Domains and data</h3>
+
+  <p><strong>Terminal-Bench</strong> comprises real software-engineering trajectories in which an agent edits
+  files and runs a test suite inside a shell; ground truth is the mechanical pass/fail of that suite. Its
+  characteristic reward hack is an <em>integrity</em> violation — the agent tampers with the test file or
+  deletes the artifact under evaluation so that a nominally-passing endpoint no longer reflects a solved task.
+  <strong>τ-bench</strong> (Sierra's retail and airline customer-service benchmark) comprises real tool-calling
+  trajectories against a user database governed by a written standard operating procedure (SOP); ground truth
+  is an exact match of the final database state (<code>eval_result.score</code>). Its characteristic reward hack
+  is a <em>policy</em> violation — the agent mutates state without first authenticating the user or obtaining
+  the required confirmation, yet still reaches a plausible-looking endpoint. Crucially, in both domains the
+  label is defined by the <em>environment</em>, not by any model we control, so a judge cannot be right merely
+  by agreeing with another judge.</p>
+
+  <p>Both domains are reached through an identical pipeline. A framework-neutral <em>adapter</em> canonicalises
+  raw traces into steps tagged with a role, a status, and artifact effects; an <em>obligation generator</em>
+  emits per-step proof obligations from the domain specification <span class="mono-i">S<sub>d</sub></span>;
+  evidence-local <em>checkers</em> score each obligation as pass / fail / abstain against the evidence reachable
+  from that step; and a single <em>aggregation rule</em> combines the obligation verdicts into a trajectory
+  verdict of <span style="color:var(--good)">valid</span>, <span style="color:var(--danger)">invalid</span>, or
+  <span style="color:var(--ink-faint)">uncertain (abstain)</span>. Adding τ-bench required no change to any node,
+  edge, checker mechanism, or aggregation rule — only a new adapter, a new
+  <span class="mono-i">S<sub>d</sub></span>, and a domain-artifact bundle
+  <span class="mono-i">Ω<sub>d</sub></span> holding the verbatim SOPs and the database schema. The study is thus
+  <em>method-preserving</em>: any difference across domains is attributable to data and specification, not to a
+  changed algorithm.</p>
+
+  <h3><span class="sn">1.2</span>Verifier arms and baselines</h3>
+
+  <p>The primary contrast is between <strong>AVG</strong> (<span class="mono-i">avg_full</span>) — the full graph
+  with evidence-local obligations and abstention-aware aggregation — and a <strong>monolithic judge</strong>
+  (<span class="mono-i">monolithic</span>), the standard baseline that inspects the entire trajectory together
+  with its endpoint and returns a single verdict. We run the monolithic judge both as a cheap endpoint heuristic
+  (for the large offline sweeps) and, on τ-bench, as a genuine <code>gpt-4o-mini</code> LLM judge. We include
+  three ablations: <span class="mono-i">exec_only</span> (mechanical checkers only, no semantic checking),
+  <span class="mono-i">exec_free</span> (no execution evidence), and, for the stress tests,
+  <span class="mono-i">avg_no_integrity</span> (the integrity module removed).</p>
+
+  <h3><span class="sn">1.3</span>Metrics</h3>
+
+  <p>Our headline metric is the <strong>false-valid rate</strong> (FV), the probability that the verifier
+  returns <em>valid</em> on a trajectory whose ground-truth label is <em>invalid</em>:
+  <span class="mono-i">FV = Pr(verdict = valid | truth = invalid)</span>. In a reward-modelling or RL-filtering
+  pipeline this is exactly the quantity that admits reward hacks into training, which is why we treat it as the
+  safety-critical number rather than raw accuracy. Because AVG is permitted to abstain, we report FV alongside
+  the <strong>resolved fraction</strong> (coverage, one minus the abstention rate) and the
+  <strong>resolved accuracy</strong> (accuracy on the traces it does decide); a verifier that abstains
+  everywhere trivially attains FV = 0 and is uninteresting, so the pairing of low FV with non-trivial coverage
+  is what matters. For calibration analyses we report AUROC and expected calibration error (ECE) over a shared
+  confidence score. We additionally isolate a <strong>long-horizon slice</strong> (trajectories of ≥ 20 steps),
+  where holistic judgment is expected to degrade most.</p>
+
+  <h3><span class="sn">1.4</span>Protocol</h3>
+
+  <p>Offline results are reported as <strong>mean ± standard error over three seeds</strong> at n = 1000
+  trajectories per seed on τ-bench and n = 3000 on Terminal-Bench, with each sample balanced 50/50 between
+  valid and invalid so that the base rate is 0.5 and FV is directly comparable across arms. The LLM-judge slice
+  is a single seed at n = 120 with <code>gpt-4o-mini</code>. All figures reproduce from the committed result
+  files; the offline pipeline is fully deterministic.</p>
+
+  <!-- ================= 2 RESULTS ================= -->
+  <h2><span class="sn">2</span>Results</h2>
+
+  <h3><span class="sn">2.1</span>Evidence-local verification versus monolithic judgment (Q1)</h3>
+
+  <p>Table&nbsp;1 reports the core comparison. On both domains the monolithic judge credits the majority of
+  <em>failed</em> trajectories as valid, while AVG almost never does. The reduction is 4.4× on Terminal-Bench
+  (FV 0.187 vs. 0.830) and 16× on τ-bench (FV 0.042 vs. 0.678). The effect is strongest exactly where it should
+  be: on the long-horizon slice the τ-bench gap widens to 22× (0.034 vs. 0.756), because a holistic judge is
+  increasingly seduced by a long trajectory that superficially "looks" finished, whereas AVG's per-step
+  obligations keep the verdict pinned to whether each consequential action was actually justified by evidence in
+  the trace. AVG pays for this precision with coverage — offline it resolves roughly 16% of τ traces and abstains
+  on the rest — which is the correct behaviour when the deciding evidence (for τ-bench, the final database state)
+  is not present in the transcript at all.</p>
+
+  <figure>
+    <div class="tcap"><b>Table 1.</b> False-valid rate (lower is safer) for AVG versus a monolithic judge, overall
+      and on the long-horizon slice (≥ 20 steps). τ-bench values are mean ± SE over three seeds.</div>
+    <div class="twrap"><table>
+      <thead><tr><th>Domain · arm</th><th class="num">FV (overall)</th><th class="num">FV (long-horizon)</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>Terminal-Bench · AVG</td><td class="num win">0.187</td><td class="num win">0.207</td></tr>
+        <tr><td>Terminal-Bench · monolithic</td><td class="num bad">0.830</td><td class="num bad">0.875</td></tr>
+        <tr class="hl midrule"><td>τ-bench · AVG</td><td class="num win">0.042 ± .003</td><td class="num win">0.034 ± .003</td></tr>
+        <tr><td>τ-bench · monolithic</td><td class="num bad">0.678 ± .010</td><td class="num bad">0.756 ± .014</td></tr>
+      </tbody>
+    </table></div>
+  </figure>
+
+  <figure>
+    <div class="plot">
+      <div class="plot-head">False-valid rate — bars drawn to scale, 0 → 1.0</div>
+      <div class="barrow"><div class="blabel"><b>AVG</b><span class="dom">terminal-bench</span></div><div class="track"><div class="fill good thin" style="width:18.7%"><span class="v">0.187</span></div></div></div>
+      <div class="barrow"><div class="blabel"><b>Monolithic</b><span class="dom">terminal-bench</span></div><div class="track"><div class="fill bad" style="width:83%"><span class="v">0.830</span></div></div></div>
+      <div class="barrow"><div class="blabel"><b>AVG</b><span class="dom">τ-bench</span></div><div class="track"><div class="fill good thin" style="width:4.2%"><span class="v">0.042</span></div></div></div>
+      <div class="barrow"><div class="blabel"><b>Monolithic</b><span class="dom">τ-bench</span></div><div class="track"><div class="fill bad" style="width:67.8%"><span class="v">0.678</span></div></div></div>
+      <div class="barrow" style="margin-bottom:6px"><div></div><div class="axis"><span>0.0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1.0</span></div></div>
+    </div>
+    <figcaption><b>Figure 1.</b> The false-valid gap between AVG (green) and the monolithic judge (red). The gap is
+      already large on Terminal-Bench and grows to more than an order of magnitude on τ-bench.</figcaption>
+  </figure>
+
+  <h3><span class="sn">2.2</span>The safety is in the abstention rule (Q3)</h3>
+
+  <p>A natural objection is that AVG's advantage comes simply from having better checkers. To rule this out, we
+  <em>force</em> AVG to commit a valid/invalid verdict on every trajectory, disabling abstention while leaving the
+  checkers untouched. Table&nbsp;2 shows the result: false credits balloon, from 0.128 to 0.724 on Terminal-Bench
+  and from 0.042 to 0.787 on τ-bench — reductions of 82.3% and 94.7% attributable to the <em>decision rule alone</em>.
+  We report the underlying calibration honestly. The shared-score AUROC is only 0.46 (Terminal-Bench) and 0.60
+  (τ-bench): a genuinely weak-calibration finding, which we attribute to the trajectory-level reward being a coarse
+  label for a step-level score. The point is that abstention does not require a well-ranked score to be effective —
+  the binary <em>abstain / decide</em> partition suffices to remove the large majority of false credits. Notably,
+  when the semantic checker is enabled with a real LLM (§2.5), abstention also <em>improves ranking</em>: AUROC rises
+  to 0.688 for AVG against 0.558 for the forced arm over the identical score.</p>
+
+  <figure>
+    <div class="tcap"><b>Table 2.</b> Ablating abstention. Forcing a verdict on every trace inflates the false-valid
+      rate; the reduction column is the fraction of false credits removed by the abstention rule.</div>
+    <div class="twrap"><table>
+      <thead><tr><th>Domain</th><th class="num">FV with abstention</th><th class="num">FV forced</th><th class="num">Reduction</th></tr></thead>
+      <tbody>
+        <tr class="hl"><td>Terminal-Bench</td><td class="num win">0.128</td><td class="num bad">0.724</td><td class="num win">−82.3%</td></tr>
+        <tr class="hl"><td>τ-bench</td><td class="num win">0.042 ± .003</td><td class="num bad">0.787 ± .003</td><td class="num win">−94.7% ± .4</td></tr>
+      </tbody>
+    </table></div>
+  </figure>
+
+  <h3><span class="sn">2.3</span>A mis-specified verifier abstains, it does not over-credit (Q2)</h3>
+
+  <p>Because each domain requires its own adapter and specification, a fair question is what happens under
+  mis-specification — if a verifier built for one domain is applied to another's traces. Table&nbsp;3 is the
+  zero-shot cross-domain transfer matrix, reporting resolved fraction (the diagonal is where a verifier meets the
+  domain it was specified for). The structure is a clean diagonal: only the matched adapter-and-spec pairing binds
+  obligations and produces decisions (0.138 on Terminal-Bench, 0.162 on τ-bench), while every off-diagonal cell and
+  the domain-neutral verifier abstain on essentially every trace. Decisively, the false-valid rate never exceeds
+  0.16 in <em>any</em> cell: a mis-specified verifier cannot manufacture false confidence — it withholds judgment.
+  This is the property that makes AVG safe to extend: adding a domain can only add coverage where the specification
+  matches, never spurious credit where it does not.</p>
+
+  <figure>
+    <div class="tcap"><b>Table 3.</b> Zero-shot cross-domain transfer (resolved fraction). Rows are the domain a
+      verifier is specified for; columns are the domain whose traces it is applied to.</div>
+    <div class="twrap"><table>
+      <thead><tr><th>train ↓ / test →</th><th class="num">terminal_swe</th><th class="num">tau_bench</th></tr></thead>
+      <tbody>
+        <tr><td>universal_only</td><td class="num zero">0.000</td><td class="num zero">0.000</td></tr>
+        <tr><td>terminal_swe</td><td class="num diag">0.138</td><td class="num zero">0.000</td></tr>
+        <tr><td>tau_bench</td><td class="num zero">0.000</td><td class="num diag">0.162</td></tr>
+      </tbody>
+    </table></div>
+  </figure>
+
+  <h3><span class="sn">2.4</span>Stress tests, and where the protection comes from (SA-6)</h3>
+
+  <p>We next inject targeted reward hacks whose visible endpoint "succeeds", so that a correct verifier must reject
+  a trajectory that superficially looks complete. The instructive finding is that the AVG layer responsible for the
+  catch <em>differs by domain</em>, and we report this rather than paper over it. On Terminal-Bench (Table&nbsp;4)
+  the <em>integrity module</em> is load-bearing: when it is removed, roughly 52 points of tampered-test false-valids
+  leak back (FV rises from 0.000 to 0.521 on the test-tamper perturbation), while with the module AVG catches 100%.
+  The monolithic judge is entirely blind here, crediting a modified test file as valid every time (FV 1.000). On
+  τ-bench (Table&nbsp;5) the same three-way ablation moves the false-valid rate by ≈ 0, because on a policy domain the
+  catch is performed instead by the <em>policy-linking</em> layer — a consequential database mutation is
+  policy-sensitive, so an unauthenticated or unconfirmed action is withheld regardless of the integrity module. The
+  same graph deploys two different protective layers, each doing its job on the domain it was meant for; the
+  clean-control negative-transfer rate (AVG vetoing a legitimate trace) is 0.064.</p>
+
+  <figure>
+    <div class="tcap"><b>Table 4.</b> Terminal-Bench integrity hacks. The integrity module restores a full catch that
+      the monolithic judge misses entirely.</div>
+    <div class="twrap"><table>
+      <thead><tr><th>Perturbation</th><th class="num">monolith FV</th><th class="num">AVG − integrity</th><th class="num">AVG + integrity</th></tr></thead>
+      <tbody>
+        <tr><td>test-tamper</td><td class="num bad">1.000</td><td class="num">0.521</td><td class="num win">0.000</td></tr>
+        <tr><td>artifact-deletion</td><td class="num bad">0.993</td><td class="num">leaks back</td><td class="num win">0.000</td></tr>
+      </tbody>
+    </table></div>
+  </figure>
+
+  <figure>
+    <div class="tcap"><b>Table 5.</b> τ-bench policy hacks. AVG catches every case the monolith credits; here the catch
+      is policy-linking, not the integrity module (its ablation moves ≈ 0).</div>
+    <div class="twrap"><table>
+      <thead><tr><th>Perturbation</th><th class="num">monolith FV</th><th class="num">AVG FV</th><th class="num">AVG catch</th></tr></thead>
+      <tbody>
+        <tr><td>policy_drift (unconfirmed mutation)</td><td class="num bad">1.000</td><td class="num win">0.000</td><td class="num win">1.000</td></tr>
+        <tr><td>large_tool_menu (exotic action)</td><td class="num bad">1.000</td><td class="num win">0.000</td><td class="num win">1.000</td></tr>
+        <tr><td>hidden_state_mismatch (unsupported final)</td><td class="num bad">1.000</td><td class="num win">0.000</td><td class="num win">1.000</td></tr>
+      </tbody>
+    </table></div>
+  </figure>
+
+  <h3><span class="sn">2.5</span>The advantage survives a real LLM judge</h3>
+
+  <p>A skeptic might attribute the gap to our monolithic baseline being a weak heuristic. We therefore replace it
+  with a genuine <code>gpt-4o-mini</code> judge that reads the full transcript (Figure&nbsp;2). The gap does not
+  close: AVG's false-valid rate is 0.050 against the LLM judge's 0.733 overall (~15×), widening to 0.027 versus
+  0.838 on the long-horizon slice (31×). Most tellingly, the LLM judge is <em>slightly worse</em> than the endpoint
+  heuristic (0.733 vs. 0.678) — a stronger model does not help, because the failure is structural: a holistic judge
+  is confidently misled by a plausible trajectory that violates the SOP, which is precisely the case evidence-local
+  verification is built to catch. We also observe, and report, that the narrow semantic checker resolves individual
+  per-mutation obligations but issues confident passes sparsely, so it rarely flips the whole-trajectory verdict
+  offline — the same "semantic adds coverage, seldom flips verdicts" behaviour we see on Terminal-Bench.</p>
+
+  <figure>
+    <div class="plot">
+      <div class="plot-head">τ-bench, gpt-4o-mini judge — false-valid rate, bars to scale 0 → 1.0</div>
+      <div class="barrow"><div class="blabel"><b>AVG</b><span class="dom">overall</span></div><div class="track"><div class="fill good thin" style="width:5%"><span class="v">0.050</span></div></div></div>
+      <div class="barrow"><div class="blabel"><b>Monolithic-LLM</b><span class="dom">overall</span></div><div class="track"><div class="fill bad" style="width:73.3%"><span class="v">0.733</span></div></div></div>
+      <div class="barrow"><div class="blabel"><b>AVG</b><span class="dom">long-horizon</span></div><div class="track"><div class="fill good thin" style="width:2.7%"><span class="v">0.027</span></div></div></div>
+      <div class="barrow"><div class="blabel"><b>Monolithic-LLM</b><span class="dom">long-horizon</span></div><div class="track"><div class="fill bad" style="width:83.8%"><span class="v">0.838</span></div></div></div>
+      <div class="barrow" style="margin-bottom:6px"><div></div><div class="axis"><span>0.0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1.0</span></div></div>
+    </div>
+    <figcaption><b>Figure 2.</b> AVG versus a real LLM judge on τ-bench. The judge, reading the whole transcript, is
+      fooled by SOP-violating trajectories that reach a plausible endpoint.</figcaption>
+  </figure>
+
+  <h3><span class="sn">2.6</span>Online intervention and offline harness improvement (Q4)</h3>
+
+  <p>Two further experiments probe AVG beyond one-shot scoring. In the <em>online intervention</em> setting (SA-4)
+  we ask whether AVG's confident negative signal, evaluated causally along the trajectory, arrives early enough to be
+  actionable. It does: the confident failed-obligation signal is precise (0.649 vs. a 0.50 base rate on τ-bench,
+  0.73 on Terminal-Bench) and timely (a median of 4 steps saved on τ-bench and 18 on Terminal-Bench), because a
+  failed mutation tool call is a genuine mechanical catch that fires before the trajectory ends. In the <em>offline
+  harness-improvement</em> setting (SA-5) a witness-mined edit to the specification, gated to add no new false
+  vetoes, cuts held-out false-valids by 94% on unseen Terminal-Bench task families (0.142 → 0.009); on τ-bench the
+  held-out false-valid rate was already 0.037, so the terminal-flavoured mined template yields a 0% held-out
+  reduction with zero negative transfer — an honest null we report rather than suppress, indicating that
+  τ-specific remediation templates would be needed for a further gain there.</p>
+
+  <!-- ================= 3 DYNAMIC OBLIGATIONS ================= -->
+  <h2><span class="sn">3</span>Dynamically updating the obligations</h2>
+
+  <p>All results above use a single static verification pass. We now describe the mechanism that allows AVG to
+  <em>update its obligations during verification</em>, and — because the design was chosen empirically rather than
+  asserted — the controlled comparison that selected it.</p>
+
+  <h3><span class="sn">3.1</span>Motivation</h3>
+
+  <p>In the base system every obligation is scored exactly once. A high-severity policy obligation whose deciding
+  evidence lies outside its initial local window — for instance, "this mutation was confirmed with the user", when
+  the confirmation occurred several turns earlier — therefore abstains. This is safe but leaves coverage on the
+  table. We want the verifier to <em>act</em> on such an abstention: to go and look for the missing evidence,
+  rather than merely recording that it was absent.</p>
+
+  <h3><span class="sn">3.2</span>Design space and the controlled comparison</h3>
+
+  <p>We prototyped three variants and measured each on a held-out set of 40 τ-bench traces with
+  <code>gpt-4o-mini</code> before committing to one (Table&nbsp;6). The baseline <strong>STATIC</strong> pass does no
+  escalation. <strong>Verdict-only re-scoring</strong> re-runs the checker over a broadened window but discards the
+  gathered context after producing a new verdict. <strong>Re-localizing escalation</strong> additionally lifts the
+  gathered neighbourhood into a first-class evidence node and attaches it to the obligation. Two findings decided the
+  choice. First, both escalating variants recover the same coverage — abstention falls from 0.55 to 0.25, a 30-point
+  gain — while holding the safety-critical false-valid rate <em>flat at 0.100</em>; escalation converts abstentions
+  into decisions without adding false credit (31 of 31 escalated obligations resolved). Second, only re-localization
+  grows the obligation's candidate-evidence set <span class="mono-i">E<sub>i</sub></span> (by 0.72 nodes per trace)
+  and enriches the audit witness <span class="mono-i">E<sub>W</sub></span> (from 1.27 to 1.90), including on
+  obligations that <em>remain</em> abstained — so a reviewer can see the broader context that was pulled in and why it
+  was still insufficient. We adopted re-localization: escalation should update an obligation's <em>localization</em>,
+  not merely overwrite its verdict.</p>
+
+  <figure>
+    <div class="tcap"><b>Table 6.</b> The three escalation designs on n = 40 τ-bench traces. All hold false-valid flat;
+      re-localization uniquely improves auditability (|E<sub>W</sub>|) and grows the evidence set (E<sub>i</sub>).</div>
+    <div class="twrap"><table>
+      <thead><tr><th>Approach</th><th class="num">false-valid</th><th class="num">resolved-frac</th><th class="num">|E<sub>W</sub>|</th><th class="num">E<sub>i</sub> growth</th></tr></thead>
+      <tbody>
+        <tr><td>STATIC (no escalation)</td><td class="num">0.100</td><td class="num">0.450</td><td class="num">1.38</td><td class="num zero">—</td></tr>
+        <tr><td>verdict-only re-score</td><td class="num">0.100</td><td class="num">0.775</td><td class="num">1.27</td><td class="num zero">0.00</td></tr>
+        <tr class="hl"><td>re-localizing (adopted)</td><td class="num win">0.100</td><td class="num win">0.750</td><td class="num win">1.90</td><td class="num win">0.72</td></tr>
+      </tbody>
+    </table></div>
+  </figure>
+
+  <h3><span class="sn">3.3</span>The re-localizing escalation procedure</h3>
+
+  <p>The mechanism is deliberately method-preserving: it re-runs the <em>existing</em> checker over a wider slice of
+  the <em>existing</em> graph and re-applies the <em>existing</em> aggregation rule, so with the LLM disabled it is an
+  exact static no-op and every offline number above is unchanged bit-for-bit. Two design decisions were fixed by
+  measurement. We hold the re-check prompt <em>identical</em> to the verdict-only path — the gathered neighbourhood is
+  presented as "surrounding trace" — so that escalation adds provenance without silently shifting verdicts. And we
+  <em>exclude</em> the intrinsically trace-unverifiable <span class="mono-i">final_answer_support</span> obligations
+  from escalation, because resolving them was measured to <em>double</em> the false-valid rate (0.133 → 0.267): the
+  database-state success signal simply is not in the transcript, so the judge over-passes when pressed to decide.</p>
+
+  <div class="algo">
+    <div class="hd">Procedure&nbsp;1 — Re-localizing escalation (per abstaining high-severity obligation o)</div>
+    <span class="kw">for</span> round = 1 … max_rounds:<br>
+    <span class="in1"></span>W ← <span class="kw">broaden</span>(local_window(o))&nbsp;&nbsp;<span class="cm"># pull in preceding auth / confirmation turns</span><br>
+    <span class="in1"></span>e ← <span class="kw">EvidenceNode</span>(W)&nbsp;&nbsp;<span class="cm"># lift neighbourhood to a first-class node</span><br>
+    <span class="in1"></span>graph.add(e);&nbsp; o.E_i ← o.E_i ∪ {e}&nbsp;&nbsp;<span class="cm"># re-localize the obligation</span><br>
+    <span class="in1"></span>v ← <span class="kw">checker</span>(o, e)&nbsp;&nbsp;<span class="cm"># same checker, wider evidence, identical prompt shape</span><br>
+    <span class="in1"></span><span class="kw">if</span> resolved(v):<br>
+    <span class="in2"></span>graph.add_support_edge(o, e);&nbsp; refresh_witness(E_W)<br>
+    <span class="in2"></span><span class="kw">break</span><br>
+    <span class="in1"></span><span class="kw">if</span> o.claim ∈ {final_answer_support}: <span class="kw">skip</span>&nbsp;&nbsp;<span class="cm"># excluded: doubles FV</span><br>
+    verdict ← <span class="kw">aggregate</span>(all obligations)&nbsp;&nbsp;<span class="cm"># existing rule, unchanged</span>
+  </div>
+
+  <p>Against the monolithic-LLM's 0.750 false-valid rate, the loop holds AVG at 0.100 while lifting coverage from
+  0.45 to 0.75. Two knobs govern the coverage/precision trade-off: <span class="mono-i">commit_threshold</span>, which
+  gates confident-only verdict flips, and <span class="mono-i">max_rounds</span> together with the base window width,
+  which bound how far escalation reaches.</p>
+
+  <h3><span class="sn">3.4</span>Why the obligations must be atomic</h3>
+
+  <p>Escalation is only sound if the obligations it grows are themselves at the lowest sensible level of abstraction;
+  otherwise a re-check inflates an already-tangled judgment. We therefore decomposed policy obligations to
+  <strong>one obligation per governing constraint</strong> in <span class="mono-i">S<sub>d</sub>.K<sub>d</sub></span>,
+  rather than one opaque "complies with the entire SOP" obligation. The earlier whole-SOP design emitted one
+  obligation <em>per policy artifact</em>, which on a retail trace produced two obligations — one of them checking the
+  wrong (airline) policy — and over 200 traces expanded 204 mutations into 408 obligations, half of them irrelevant.
+  The atomic generator instead checks each constraint at the lowest level that fits it. A constraint carrying an
+  ordering precondition (<em>authenticate-before-action</em>) becomes a <strong>mechanical</strong> check: a
+  successful prior <code>authenticate</code> step must precede the action; this uses no LLM, is reproducible offline,
+  generalises to any domain's constraint set, and false-flags only 2 of 300 valid traces (0.7%) while giving AVG an
+  offline policy signal it previously lacked. A constraint without ordering
+  (<em>confirm-before-mutation</em>) becomes a <strong>narrow semantic</strong> check whose evidence is that single
+  rule's text, not the 5,700-character SOP — keeping the checker's context local, so that escalation (§3.3) can then
+  gather exactly the surrounding turns needed to decide it. The outcome is no duplication, no cross-domain leakage,
+  and one primitive rule per obligation — the precondition under which escalation can grow
+  <span class="mono-i">E<sub>i</sub></span> safely. Terminal-Bench's <em>no-test-mutation</em> constraint flows
+  through the identical path unchanged.</p>
+
+  <!-- ================= 4 SUMMARY ================= -->
+  <h2><span class="sn">4</span>Summary of findings</h2>
+
+  <p>Across two independent domains and a method-preserving change of only data and specification, evidence-local
+  verification with calibrated abstention reduces the false-valid rate by 4–16× relative to a monolithic judge, with
+  the margin widening on long-horizon traces and surviving a real LLM judge (~15×). Controlled ablations locate the
+  safety in the abstention <em>decision rule</em> (removing it restores 82–95% of false credits) and show that
+  mis-specification causes abstention, never over-crediting. Finally, an empirically-selected re-localizing
+  escalation mechanism, operating over atomic per-constraint obligations, recovers 30 points of coverage with the
+  false-valid rate held flat — letting AVG update its obligations on the fly while preserving the guarantee that made
+  the static system safe.</p>
+
+  <footer>
+    Method-preserving study: adding τ-bench changed only data, seeds, <code>Ω<sub>d</sub></code>, and LLM-enablement
+    wiring — no node, edge, checker, or aggregation rule. Offline results are mean ± SE over three seeds
+    (n = 1000 per seed on τ-bench, n = 3000 on Terminal-Bench); the LLM slice is single-seed, n = 120,
+    <code>gpt-4o-mini</code>. All figures reproduce from <code>data/*_results.json</code> via
+    <code>htir.eval.experiment_tau</code> and <code>experiment_sa{1,3,6}</code>.
+  </footer>
+
+</div>

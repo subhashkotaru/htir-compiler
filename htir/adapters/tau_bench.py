@@ -57,6 +57,7 @@ from htir.adapters.base import (
 )
 
 # tau_bench operation-type names (kept in sync with domains/tau_bench.yaml).
+ROLE_AUTH = "authenticate"
 ROLE_READ = "read_info"
 ROLE_MUTATE = "mutate_state"
 ROLE_TRANSFER = "transfer_to_human"
@@ -64,6 +65,14 @@ ROLE_PLAN = "orchestration_decision"
 ROLE_RESPOND = "respond"
 ROLE_FINAL = "final_submission"
 ROLE_OTHER = "other"
+
+# Identity-verification reads -- the primitive `authenticate` operation, split
+# out from generic reads so the authenticate-before-action precondition is a
+# structural (mechanical) check. Matched as leading stems of the tool name.
+_AUTH_TOOL_STEMS = (
+    "find_user_id", "get_user_details", "get_user_profile", "get_user",
+    "authenticate", "verify_identity", "lookup_user",
+)
 
 # Tool-name -> operation-type classification. τ-bench tool names are verb-
 # prefixed and stable across the retail/airline suites, so a small verb
@@ -163,6 +172,10 @@ def _tool_role(name: str) -> str:
         return ROLE_TRANSFER
     if n in _PLAN_TOOLS:
         return ROLE_PLAN
+    # Identity-verification reads are the `authenticate` primitive (checked
+    # before the generic read mapping, since they are ``get_``/``find_`` reads).
+    if any(n.startswith(stem) for stem in _AUTH_TOOL_STEMS):
+        return ROLE_AUTH
     head = n.split("_", 1)[0]
     # A leading mutation verb wins over a read verb (``send_certificate`` etc.).
     if head in _MUTATE_VERBS or any(n.startswith(v + "_") for v in _MUTATE_VERBS):
@@ -173,9 +186,9 @@ def _tool_role(name: str) -> str:
 
 
 # Precedence when a step carries several tool calls: a state mutation is the
-# most verification-relevant, then a transfer, then a read, then planning.
+# most verification-relevant, then a transfer, then authentication, then a read.
 _ROLE_PRECEDENCE = {
-    ROLE_MUTATE: 5, ROLE_TRANSFER: 4, ROLE_READ: 3, ROLE_PLAN: 2,
+    ROLE_MUTATE: 6, ROLE_TRANSFER: 5, ROLE_AUTH: 4, ROLE_READ: 3, ROLE_PLAN: 2,
     ROLE_RESPOND: 1, ROLE_OTHER: 0,
 }
 

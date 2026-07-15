@@ -421,7 +421,7 @@ def build_claims_and_obligations(
     #    with no bundle is byte-for-byte identical to before Omega_d existed.
     # ------------------------------------------------------------------
     if domain_artifacts is not None:
-        _emit_policy_compliance_obligations(
+        _emit_constraint_obligations(
             htir, spec, domain_artifacts, _add_claim, _ev_id, _ob_id,
         )
 
@@ -490,7 +490,7 @@ def _inject_omega_schema_evidence(
             evidence_by_step.setdefault(step.step_id, []).append(ev.evidence_id)
 
 
-def _emit_policy_compliance_obligations(
+def _emit_constraint_obligations(
     htir: HTIR,
     spec: DomainSpec,
     domain_artifacts: DomainArtifactBundle,
@@ -499,48 +499,95 @@ def _emit_policy_compliance_obligations(
     ob_id_counter: "_Counter",
 ) -> None:
     """
-    Work item A: one ``omega-policy-compliance`` obligation per
-    (policy-sensitive step, Omega_d ``policy`` artifact), so checkers have a
-    real policy artifact to check the step/final-answer against instead of
-    only the ``S_d`` declaration that a policy constraint exists. Routed to
-    the SEMANTIC checker (POLICY required evidence, avg.tex Sec. 3.7) and
-    left PENDING -- discharging it is Step 5's job, not this function's.
-    """
-    policy_artifacts = domain_artifacts.by_kind(ArtifactKind.POLICY)
-    if not policy_artifacts:
-        return
+    One **atomic** obligation per (policy-sensitive step, governing constraint
+    ``S_d.K_d``) -- the lowest-level decomposition of "is this action allowed",
+    replacing a single whole-policy semantic judgment (which was also duplicated
+    once per Omega_d policy artifact, half of them the wrong domain).
 
-    for step in _policy_sensitive_steps(htir, spec):
-        for artifact in policy_artifacts:
+    Each constraint is checked at the lowest level that fits it:
+
+    * a constraint that declares ``requires_prior`` (a precondition ordering,
+      e.g. authenticate-before-action) -> a **mechanical** obligation checked
+      structurally by ``_check_precondition`` (a successful prior step of the
+      required operation type must precede the action); no LLM, reproducible.
+    * otherwise (e.g. confirm-before-mutation) -> a **narrow semantic**
+      obligation whose evidence is *this one constraint's text*, not the whole
+      SOP -- keeping the semantic checker's context local (avg.tex Sec. 3.7).
+
+    Because obligations are keyed to constraints (not policy artifacts), each
+    governed action gets exactly one obligation per rule, with no cross-domain
+    duplication. ``domain_artifacts`` gates this the same way the old
+    per-artifact path did, so ``build_claims_and_obligations`` with no bundle is
+    byte-for-byte identical to before. When present, an Omega_d ``policy``
+    artifact whose text mentions the constraint is attached as extra evidence.
+    """
+    governed = _policy_sensitive_steps(htir, spec)
+    if not governed:
+        return
+    policy_artifacts = domain_artifacts.by_kind(ArtifactKind.POLICY)
+
+    for step in governed:
+        for constraint in spec.constraints:
+            applies = constraint.applies_to_operations
+            if applies and step.role not in applies:
+                continue
+
+            claim = add_claim(
+                f"Step {step.step_id} ({step.role}) satisfies constraint "
+                f"'{constraint.constraint_id}': {truncate(constraint.description.strip(), 200)}",
+                claim_type="constraint_compliance",
+                step_id=step.step_id,
+            )
+            template_id = f"constraint:{constraint.constraint_id}"
+
+            if constraint.requires_prior:
+                # Mechanical precondition ordering check (structural, no LLM).
+                htir.obligations.append(
+                    Obligation(
+                        obligation_id=ob_id_counter.next(),
+                        claim_id=claim.claim_id,
+                        required_evidence=EvidenceType.LOG,
+                        candidate_evidence_ids=[],
+                        checker=CheckerType.MECHANICAL,
+                        severity=constraint.severity,
+                        escalation=EscalationRule.REPAIR,
+                        scope=ObligationScope.TRAJECTORY_TRIGGERED,
+                        template_id=template_id,
+                        description=constraint.description.strip(),
+                    )
+                )
+                continue
+
+            # Narrow semantic check: the evidence is *this constraint's* rule
+            # text (a POLICY evidence node), optionally augmented by a matching
+            # Omega_d policy excerpt -- not the whole SOP.
             ev = EvidenceNode(
                 evidence_id=ev_id_counter.next(),
                 evidence_type=EvidenceType.POLICY,
-                description=f"Omega_d policy artifact '{artifact.identifier}'",
-                content=truncate(artifact.content, 500),
+                description=f"constraint '{constraint.constraint_id}'",
+                content=truncate(constraint.description.strip(), 500),
                 step_ids=[step.step_id],
             )
             htir.evidence.append(ev)
-
-            claim = add_claim(
-                f"Step {step.step_id} ({step.role}) complies with policy '{artifact.identifier}'.",
-                claim_type="policy_compliance",
-                step_id=step.step_id,
-            )
-
+            candidate = [ev.evidence_id]
             htir.obligations.append(
                 Obligation(
                     obligation_id=ob_id_counter.next(),
                     claim_id=claim.claim_id,
                     required_evidence=EvidenceType.POLICY,
-                    candidate_evidence_ids=[ev.evidence_id],
+                    candidate_evidence_ids=candidate,
                     checker=_checker_for_evidence(EvidenceType.POLICY),
-                    severity=Severity.HIGH,
+                    severity=constraint.severity,
                     escalation=EscalationRule.ESCALATE,
                     scope=ObligationScope.TRAJECTORY_TRIGGERED,
-                    template_id="omega-policy-compliance",
-                    description=f"Step complies with Omega_d policy artifact '{artifact.identifier}'.",
+                    template_id=template_id,
+                    description=constraint.description.strip(),
                 )
             )
+    # ``policy_artifacts`` is intentionally consulted only as available Omega_d
+    # context for the semantic checker; obligations are keyed to constraints, so
+    # a domain with two policy artifacts no longer double-emits.
+    _ = policy_artifacts
 
 
 def _template_triggers(template: ObligationTemplate, step: TraceStep) -> bool:

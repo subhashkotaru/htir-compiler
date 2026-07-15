@@ -105,6 +105,38 @@ closing the "Q4 is single-domain" gap (`data/sa4_tau_results.json`,
   layer, not a hidden-test obligation, so τ-specific remediation templates would
   be needed for a held-out gain.
 
+## Obligation design — atomic, per-constraint (lowest level)
+
+Policy obligations are **decomposed to the lowest level**: one atomic obligation
+per governing `S_d.K_d` constraint, not one whole-SOP judgment. This replaced an
+earlier design that emitted a single "step complies with the entire policy"
+semantic obligation *per Ω_d policy artifact* — which on a retail trace produced
+**two** obligations, one checking the wrong (airline) policy (over 200 traces:
+204 mutations → 408 obligations, half irrelevant), each bundling every SOP rule
+into one opaque LLM call.
+
+The current generator (`obligations._emit_constraint_obligations`) instead emits,
+per policy-sensitive step, one obligation **per constraint**, checked at the
+lowest level that fits:
+
+- a constraint with a `requires_prior` ordering (**authenticate-before-action**)
+  → a **mechanical** precondition check (`checking._check_precondition`): a
+  *successful* prior `authenticate` step must precede the action. No LLM,
+  reproducible offline, and general to any domain's `K_d`. Over 300 τ traces it
+  flags only 2 valid traces (0.7% false-invalid) while giving AVG a real
+  **offline** policy signal it previously lacked.
+- a constraint without ordering (**confirm-before-mutation**) → a **narrow
+  semantic** check whose evidence is *that one constraint's rule text*, not the
+  5,700-char SOP — keeping the checker's context local (the escalation loop then
+  gathers the surrounding turns to judge whether confirmation occurred).
+
+This required a small, general `S_d` extension (`Constraint.requires_prior`) and
+a new primitive `authenticate` operation type (identity lookups split out from
+generic reads). The result: no duplication, no cross-domain leakage, each
+obligation is a single primitive rule, and the ordering rule is now mechanical.
+`terminal_swe`'s `no-test-mutation` constraint flows through the same path
+unchanged (semantic, no `requires_prior`).
+
 ## Reproduce
 
 ```bash
@@ -146,6 +178,34 @@ newly-resolved cases include a few *false-invalids* — the cheap judge over-fla
 some compliant actions. That is a coverage/precision tradeoff, tunable via
 `commit_threshold` (only commit confident flips) and `max_rounds` / `base_window`,
 and it would tighten with a stronger judge model and larger n.
+
+### Dynamic obligation *update* — re-localizing escalation
+
+Escalation does not just re-score an obligation; it **updates the obligation
+itself**. The gathered neighbourhood is lifted into a first-class `EvidenceNode`,
+appended to the graph and to the obligation's candidate-evidence set `E_i`, with
+a new `E_sup` support edge on resolution — so the obligation's *localization*
+(not just its verdict) reflects the evidence the re-check used, and the witness
+`E_W` surfaces it. This was **chosen by measurement**, comparing three designs on
+n=40 τ traces (`gpt-4o-mini`):
+
+| approach | false-valid | resolved-frac | \|E_W\| | E_i growth |
+|---|---|---|---|---|
+| STATIC (no escalation) | 0.100 | 0.450 | 1.38 | — |
+| verdict-only re-score (`relocalize=False`) | 0.100 | 0.775 | 1.27 | 0.00 |
+| **re-localizing (`relocalize=True`, default)** | **0.100** | **0.750** | **1.90** | **0.72** |
+
+Re-localizing matches verdict-only on the safety-critical false-valid rate (flat
+0.100) and on coverage (0.75), but additionally grows `E_i` (0.72 evidence
+nodes/trace) and enriches the witness (`|E_W|` 1.27 → 1.90) — including gathered
+context on obligations that *stay* abstained, so a reviewer sees "here's the
+broader trace we pulled in and it was still insufficient." Two measured design
+decisions were baked in: (1) the re-check prompt is held **identical** to the
+verdict-only path (neighbourhood shown as "surrounding trace"), so the update
+adds provenance without changing verdicts; and (2) the intrinsically
+trace-unverifiable `final_answer_support` obligations are **excluded** — resolving
+them was measured to *double* false-valid (0.133 → 0.267), because the DB-reward
+success signal is not in the trace, so the LLM over-passes them.
 
 ## LLM slice (E1) — the monolithic-LLM baseline that "never ran"
 

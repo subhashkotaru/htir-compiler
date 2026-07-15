@@ -346,6 +346,55 @@ def _mech_provenance(ctx: CheckerContext) -> CheckerResult:
     return _check_provenance(ctx.htir, ctx.claim)
 
 
+@register_checker(claim_type="constraint_compliance")
+def _mech_constraint(ctx: CheckerContext) -> CheckerResult:
+    return _check_precondition(ctx.htir, ctx.spec, ctx.obligation, ctx.claim)
+
+
+# Obligation template-id prefix for per-constraint obligations (see
+# ``htir.agents.obligations._emit_constraint_obligations``).
+_CONSTRAINT_TEMPLATE_PREFIX = "constraint:"
+
+
+def _check_precondition(htir: HTIR, spec: DomainSpec, ob: Obligation, claim: ClaimNode) -> CheckerResult:
+    """
+    Mechanical precondition-ordering check for a ``requires_prior`` constraint
+    (e.g. authenticate-before-action): the governed step must be preceded by a
+    *successful* step of a required operation type. Structural, no LLM.
+
+    * a successful prior step of a required op type  -> PASS;
+    * such steps exist but none succeeded (ambiguous) -> ABSTAIN (conservative);
+    * no prior step of the required op type at all    -> FAIL (clear violation).
+
+    Abstains (never fabricates) when the obligation is not a ``requires_prior``
+    constraint obligation, so this checker is a safe default for the
+    ``constraint_compliance`` claim type shared with the semantic path.
+    """
+    tid = ob.template_id or ""
+    if not tid.startswith(_CONSTRAINT_TEMPLATE_PREFIX):
+        return _abstain()
+    constraint_id = tid[len(_CONSTRAINT_TEMPLATE_PREFIX):]
+    constraint = next((c for c in spec.constraints if c.constraint_id == constraint_id), None)
+    if constraint is None or not constraint.requires_prior:
+        return _abstain()
+    if claim.source_step_id is None:
+        return _abstain()
+
+    required_roles = set(constraint.requires_prior)
+    prior = [
+        s for s in htir.steps_in_order()
+        if s.step_id < claim.source_step_id and s.role in required_roles
+    ]
+    if any(s.execution_status == ExecutionStatus.SUCCESS for s in prior):
+        return _decide(evidence_used=[], passed=True)
+    if prior:
+        # A required op was attempted but not observed to succeed -- stay
+        # conservative rather than vetoing a possibly-fine trajectory.
+        return _decide(evidence_used=[], passed=None)
+    # The governed action ran with no prior required operation at all.
+    return _decide(evidence_used=[], passed=False)
+
+
 def _check_execution_status(htir: HTIR, claim: ClaimNode, candidate_evidence_ids: list[int]) -> CheckerResult:
     """Pass iff the claim's step reported SUCCESS; fail on FAILURE/TIMEOUT/BLOCKED."""
     step = htir.get_step(claim.source_step_id) if claim.source_step_id is not None else None

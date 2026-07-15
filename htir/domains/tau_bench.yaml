@@ -17,7 +17,8 @@ domain_id: tau_bench
 description: Sierra τ-bench retail/airline customer-service tasks; policy-governed DB mutations.
 
 operation_types:
-  - {name: read_info,          description: Retrieve customer/order/reservation/product info (get/find/search/list/calculate)}
+  - {name: authenticate,       description: Locate/verify the customer's identity (find_user_id_by_email/name_zip, get_user_details/profile)}
+  - {name: read_info,          description: Retrieve order/reservation/product info (get/find/search/list/calculate) — non-identity reads}
   - {name: mutate_state,       description: A consequential action that updates the database (cancel/modify/book/return/exchange/update/send)}
   - {name: transfer_to_human,  description: Escalate the conversation to a human agent}
   - {name: orchestration_decision, description: Internal planning/reasoning (the think tool)}
@@ -36,17 +37,19 @@ artifact_types:
     schema_hint: A record keyed by its id (order_id / reservation_id / user_id) with typed fields
 
 constraints:
-  # K_d: the two SOP invariants that make τ-bench a policy domain. Both name the
+  # K_d: the two SOP invariants that make τ-bench a policy domain. Each names the
   # `mutate_state` role, so every account-modifying action is policy-sensitive
-  # (obligations._policy_sensitive_steps) -> an un-policy-linked mutation is
-  # withheld (analysis.policy_action_unlinked, HIGH) and seeds one
-  # omega-policy-compliance obligation per Omega_d policy artifact.
+  # and gets ONE atomic obligation per constraint (obligations._emit_constraint_
+  # obligations) -- decomposed to the lowest level, not one whole-SOP judgment.
   - constraint_id: authenticate-before-action
     description: >
       The customer's identity must be authenticated (user id located via email
       or name+zip) before any account-modifying action is taken.
     severity: critical
     applies_to_operations: [mutate_state]
+    # A precondition ordering -> checked MECHANICALLY (a successful `authenticate`
+    # step must precede the mutation); no LLM, reproducible offline.
+    requires_prior: [authenticate]
 
   - constraint_id: confirm-before-mutation
     description: >
@@ -55,6 +58,8 @@ constraints:
       user confirmation ("yes") to proceed.
     severity: critical
     applies_to_operations: [mutate_state]
+    # No requires_prior -> a NARROW semantic check of the mutation against this
+    # single constraint's text (not the whole SOP).
 
 obligation_templates:
   # -- domain (S_d.B_d): the τ-bench process ------------------------------

@@ -10,7 +10,7 @@
     "tau_bench"
   ],
   "use_llm": false,
-  "seconds": 16.15,
+  "seconds": 62.91,
   "cells": [
     {
       "train_spec": "universal_only",
@@ -133,22 +133,22 @@
       "metrics": {
         "n": 1000,
         "n_labeled": 1000,
-        "false_valid_rate": 0.044,
-        "false_invalid_rate": 0.064,
-        "resolved_accuracy": 0.6666666666666666,
-        "resolved_fraction": 0.162,
-        "abstention_rate": 0.838,
-        "valid_precision": 0.6986301369863014,
-        "valid_recall": 0.102,
-        "failure_flag_precision": 0.6404494382022472,
-        "failure_flag_recall": 0.114,
+        "false_valid_rate": 0.038,
+        "false_invalid_rate": 0.08,
+        "resolved_accuracy": 0.6569767441860465,
+        "resolved_fraction": 0.172,
+        "abstention_rate": 0.828,
+        "valid_precision": 0.7246376811594203,
+        "valid_recall": 0.1,
+        "failure_flag_precision": 0.6116504854368932,
+        "failure_flag_recall": 0.126,
         "confusion": {
-          "uncertain|invalid": 421,
-          "uncertain|valid": 417,
-          "invalid|invalid": 57,
-          "valid|invalid": 22,
-          "valid|valid": 51,
-          "invalid|valid": 32
+          "uncertain|invalid": 418,
+          "uncertain|valid": 410,
+          "invalid|invalid": 63,
+          "valid|invalid": 19,
+          "valid|valid": 50,
+          "invalid|valid": 40
         }
       }
     }

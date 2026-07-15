@@ -5,7 +5,7 @@
   "base_rate_invalid": 0.5,
   "use_llm": false,
   "domain_id": "tau_bench",
-  "seconds": 4.25,
+  "seconds": 18.47,
   "classes": [
     {
       "name": "any_active",

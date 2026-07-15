@@ -213,12 +213,12 @@
   },
   "per_seed": [
     {
-      "experiment": "SA-6: Stress Tests + Integrity ablation (Sec. 4.5 / 4.6 #4)",
+      "experiment": "SA-6: Stress Tests + Integrity ablation (Sec. 4.6 / 4.5 #4)",
       "n_traces": 1000,
       "n_base": 500,
       "use_llm": false,
       "domain_id": "tau_bench",
-      "seconds": 8.61,
+      "seconds": 42.74,
       "clean_control": [
         {
           "perturbation": "clean",
@@ -239,28 +239,28 @@
           "arm": "avg_no_integrity",
           "truth": "valid",
           "n": 500,
-          "valid": 51,
-          "uncertain": 417,
-          "invalid": 32,
-          "false_valid_rate": 0.102,
-          "false_invalid_rate": 0.064,
-          "shortcut_catch_rate": 0.898,
-          "catch_via_abstain": 0.834,
-          "catch_via_veto": 0.064
+          "valid": 50,
+          "uncertain": 410,
+          "invalid": 40,
+          "false_valid_rate": 0.1,
+          "false_invalid_rate": 0.08,
+          "shortcut_catch_rate": 0.9,
+          "catch_via_abstain": 0.82,
+          "catch_via_veto": 0.08
         },
         {
           "perturbation": "clean",
           "arm": "avg_integrity",
           "truth": "valid",
           "n": 500,
-          "valid": 51,
-          "uncertain": 417,
-          "invalid": 32,
-          "false_valid_rate": 0.102,
-          "false_invalid_rate": 0.064,
-          "shortcut_catch_rate": 0.898,
-          "catch_via_abstain": 0.834,
-          "catch_via_veto": 0.064
+          "valid": 50,
+          "uncertain": 410,
+          "invalid": 40,
+          "false_valid_rate": 0.1,
+          "false_invalid_rate": 0.08,
+          "shortcut_catch_rate": 0.9,
+          "catch_via_abstain": 0.82,
+          "catch_via_veto": 0.08
         }
       ],
       "perturbations": [
@@ -289,13 +289,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 468,
-              "invalid": 32,
+              "uncertain": 433,
+              "invalid": 67,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.064,
+              "false_invalid_rate": 0.134,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.936,
-              "catch_via_veto": 0.064
+              "catch_via_abstain": 0.866,
+              "catch_via_veto": 0.134
             },
             {
               "perturbation": "policy_drift",
@@ -303,13 +303,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 468,
-              "invalid": 32,
+              "uncertain": 433,
+              "invalid": 67,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.064,
+              "false_invalid_rate": 0.134,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.936,
-              "catch_via_veto": 0.064
+              "catch_via_abstain": 0.866,
+              "catch_via_veto": 0.134
             }
           ],
           "ablation_false_valid_drop": 0.0,
@@ -340,13 +340,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 468,
-              "invalid": 32,
+              "uncertain": 433,
+              "invalid": 67,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.064,
+              "false_invalid_rate": 0.134,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.936,
-              "catch_via_veto": 0.064
+              "catch_via_abstain": 0.866,
+              "catch_via_veto": 0.134
             },
             {
               "perturbation": "large_tool_menu",
@@ -354,13 +354,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 468,
-              "invalid": 32,
+              "uncertain": 433,
+              "invalid": 67,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.064,
+              "false_invalid_rate": 0.134,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.936,
-              "catch_via_veto": 0.064
+              "catch_via_abstain": 0.866,
+              "catch_via_veto": 0.134
             }
           ],
           "ablation_false_valid_drop": 0.0,
@@ -391,13 +391,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 468,
-              "invalid": 32,
+              "uncertain": 460,
+              "invalid": 40,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.064,
+              "false_invalid_rate": 0.08,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.936,
-              "catch_via_veto": 0.064
+              "catch_via_abstain": 0.92,
+              "catch_via_veto": 0.08
             },
             {
               "perturbation": "hidden_state_mismatch",
@@ -405,13 +405,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 468,
-              "invalid": 32,
+              "uncertain": 460,
+              "invalid": 40,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.064,
+              "false_invalid_rate": 0.08,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.936,
-              "catch_via_veto": 0.064
+              "catch_via_abstain": 0.92,
+              "catch_via_veto": 0.08
             }
           ],
           "ablation_false_valid_drop": 0.0,
@@ -428,12 +428,12 @@
       ]
     },
     {
-      "experiment": "SA-6: Stress Tests + Integrity ablation (Sec. 4.5 / 4.6 #4)",
+      "experiment": "SA-6: Stress Tests + Integrity ablation (Sec. 4.6 / 4.5 #4)",
       "n_traces": 1000,
       "n_base": 500,
       "use_llm": false,
       "domain_id": "tau_bench",
-      "seconds": 8.32,
+      "seconds": 35.08,
       "clean_control": [
         {
           "perturbation": "clean",
@@ -454,28 +454,28 @@
           "arm": "avg_no_integrity",
           "truth": "valid",
           "n": 500,
-          "valid": 52,
-          "uncertain": 421,
-          "invalid": 27,
-          "false_valid_rate": 0.104,
-          "false_invalid_rate": 0.054,
-          "shortcut_catch_rate": 0.896,
-          "catch_via_abstain": 0.842,
-          "catch_via_veto": 0.054
+          "valid": 51,
+          "uncertain": 415,
+          "invalid": 34,
+          "false_valid_rate": 0.102,
+          "false_invalid_rate": 0.068,
+          "shortcut_catch_rate": 0.898,
+          "catch_via_abstain": 0.83,
+          "catch_via_veto": 0.068
         },
         {
           "perturbation": "clean",
           "arm": "avg_integrity",
           "truth": "valid",
           "n": 500,
-          "valid": 52,
-          "uncertain": 421,
-          "invalid": 27,
-          "false_valid_rate": 0.104,
-          "false_invalid_rate": 0.054,
-          "shortcut_catch_rate": 0.896,
-          "catch_via_abstain": 0.842,
-          "catch_via_veto": 0.054
+          "valid": 51,
+          "uncertain": 415,
+          "invalid": 34,
+          "false_valid_rate": 0.102,
+          "false_invalid_rate": 0.068,
+          "shortcut_catch_rate": 0.898,
+          "catch_via_abstain": 0.83,
+          "catch_via_veto": 0.068
         }
       ],
       "perturbations": [
@@ -504,13 +504,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 473,
-              "invalid": 27,
+              "uncertain": 438,
+              "invalid": 62,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.054,
+              "false_invalid_rate": 0.124,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.946,
-              "catch_via_veto": 0.054
+              "catch_via_abstain": 0.876,
+              "catch_via_veto": 0.124
             },
             {
               "perturbation": "policy_drift",
@@ -518,13 +518,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 473,
-              "invalid": 27,
+              "uncertain": 438,
+              "invalid": 62,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.054,
+              "false_invalid_rate": 0.124,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.946,
-              "catch_via_veto": 0.054
+              "catch_via_abstain": 0.876,
+              "catch_via_veto": 0.124
             }
           ],
           "ablation_false_valid_drop": 0.0,
@@ -555,13 +555,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 473,
-              "invalid": 27,
+              "uncertain": 438,
+              "invalid": 62,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.054,
+              "false_invalid_rate": 0.124,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.946,
-              "catch_via_veto": 0.054
+              "catch_via_abstain": 0.876,
+              "catch_via_veto": 0.124
             },
             {
               "perturbation": "large_tool_menu",
@@ -569,13 +569,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 473,
-              "invalid": 27,
+              "uncertain": 438,
+              "invalid": 62,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.054,
+              "false_invalid_rate": 0.124,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.946,
-              "catch_via_veto": 0.054
+              "catch_via_abstain": 0.876,
+              "catch_via_veto": 0.124
             }
           ],
           "ablation_false_valid_drop": 0.0,
@@ -606,13 +606,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 473,
-              "invalid": 27,
+              "uncertain": 466,
+              "invalid": 34,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.054,
+              "false_invalid_rate": 0.068,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.946,
-              "catch_via_veto": 0.054
+              "catch_via_abstain": 0.932,
+              "catch_via_veto": 0.068
             },
             {
               "perturbation": "hidden_state_mismatch",
@@ -620,13 +620,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 473,
-              "invalid": 27,
+              "uncertain": 466,
+              "invalid": 34,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.054,
+              "false_invalid_rate": 0.068,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.946,
-              "catch_via_veto": 0.054
+              "catch_via_abstain": 0.932,
+              "catch_via_veto": 0.068
             }
           ],
           "ablation_false_valid_drop": 0.0,
@@ -643,12 +643,12 @@
       ]
     },
     {
-      "experiment": "SA-6: Stress Tests + Integrity ablation (Sec. 4.5 / 4.6 #4)",
+      "experiment": "SA-6: Stress Tests + Integrity ablation (Sec. 4.6 / 4.5 #4)",
       "n_traces": 1000,
       "n_base": 500,
       "use_llm": false,
       "domain_id": "tau_bench",
-      "seconds": 8.68,
+      "seconds": 32.38,
       "clean_control": [
         {
           "perturbation": "clean",
@@ -669,28 +669,28 @@
           "arm": "avg_no_integrity",
           "truth": "valid",
           "n": 500,
-          "valid": 47,
-          "uncertain": 417,
-          "invalid": 36,
-          "false_valid_rate": 0.094,
-          "false_invalid_rate": 0.072,
-          "shortcut_catch_rate": 0.906,
-          "catch_via_abstain": 0.834,
-          "catch_via_veto": 0.072
+          "valid": 44,
+          "uncertain": 413,
+          "invalid": 43,
+          "false_valid_rate": 0.088,
+          "false_invalid_rate": 0.086,
+          "shortcut_catch_rate": 0.912,
+          "catch_via_abstain": 0.826,
+          "catch_via_veto": 0.086
         },
         {
           "perturbation": "clean",
           "arm": "avg_integrity",
           "truth": "valid",
           "n": 500,
-          "valid": 47,
-          "uncertain": 417,
-          "invalid": 36,
-          "false_valid_rate": 0.094,
-          "false_invalid_rate": 0.072,
-          "shortcut_catch_rate": 0.906,
-          "catch_via_abstain": 0.834,
-          "catch_via_veto": 0.072
+          "valid": 44,
+          "uncertain": 413,
+          "invalid": 43,
+          "false_valid_rate": 0.088,
+          "false_invalid_rate": 0.086,
+          "shortcut_catch_rate": 0.912,
+          "catch_via_abstain": 0.826,
+          "catch_via_veto": 0.086
         }
       ],
       "perturbations": [
@@ -719,13 +719,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 464,
-              "invalid": 36,
+              "uncertain": 432,
+              "invalid": 68,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.072,
+              "false_invalid_rate": 0.136,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.928,
-              "catch_via_veto": 0.072
+              "catch_via_abstain": 0.864,
+              "catch_via_veto": 0.136
             },
             {
               "perturbation": "policy_drift",
@@ -733,13 +733,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 464,
-              "invalid": 36,
+              "uncertain": 432,
+              "invalid": 68,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.072,
+              "false_invalid_rate": 0.136,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.928,
-              "catch_via_veto": 0.072
+              "catch_via_abstain": 0.864,
+              "catch_via_veto": 0.136
             }
           ],
           "ablation_false_valid_drop": 0.0,
@@ -770,13 +770,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 464,
-              "invalid": 36,
+              "uncertain": 432,
+              "invalid": 68,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.072,
+              "false_invalid_rate": 0.136,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.928,
-              "catch_via_veto": 0.072
+              "catch_via_abstain": 0.864,
+              "catch_via_veto": 0.136
             },
             {
               "perturbation": "large_tool_menu",
@@ -784,13 +784,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 464,
-              "invalid": 36,
+              "uncertain": 432,
+              "invalid": 68,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.072,
+              "false_invalid_rate": 0.136,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.928,
-              "catch_via_veto": 0.072
+              "catch_via_abstain": 0.864,
+              "catch_via_veto": 0.136
             }
           ],
           "ablation_false_valid_drop": 0.0,
@@ -821,13 +821,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 464,
-              "invalid": 36,
+              "uncertain": 457,
+              "invalid": 43,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.072,
+              "false_invalid_rate": 0.086,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.928,
-              "catch_via_veto": 0.072
+              "catch_via_abstain": 0.914,
+              "catch_via_veto": 0.086
             },
             {
               "perturbation": "hidden_state_mismatch",
@@ -835,13 +835,13 @@
               "truth": "invalid",
               "n": 500,
               "valid": 0,
-              "uncertain": 464,
-              "invalid": 36,
+              "uncertain": 457,
+              "invalid": 43,
               "false_valid_rate": 0.0,
-              "false_invalid_rate": 0.072,
+              "false_invalid_rate": 0.086,
               "shortcut_catch_rate": 1.0,
-              "catch_via_abstain": 0.928,
-              "catch_via_veto": 0.072
+              "catch_via_abstain": 0.914,
+              "catch_via_veto": 0.086
             }
           ],
           "ablation_false_valid_drop": 0.0,

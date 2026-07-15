@@ -790,12 +790,12 @@ def _policy_governed_spec() -> DomainSpec:
     )
 
 
-def test_omega_bundle_produces_policy_compliance_obligation_with_candidate_evidence():
+def test_constraint_bundle_produces_atomic_constraint_obligation_with_candidate_evidence():
     """
-    Work item A: with a loaded Omega_d policy artifact, a policy-sensitive
-    step gets a real omega-policy-compliance obligation whose candidate
-    evidence points at that artifact's content, still PENDING (Step 5's job
-    to discharge).
+    With a loaded Omega_d bundle, each governing S_d.K_d constraint yields ONE
+    atomic ``constraint:<id>`` obligation (not a whole-SOP judgment duplicated
+    per policy artifact). A constraint without ``requires_prior`` routes to the
+    SEMANTIC checker with its own rule text as candidate evidence, still PENDING.
     """
     spec = _policy_governed_spec()
     steps = [
@@ -804,7 +804,7 @@ def test_omega_bundle_produces_policy_compliance_obligation_with_candidate_evide
             role="final_submission", execution_status=ExecutionStatus.SUCCESS,
         ),
     ]
-    htir = HTIR(task_id="omega-policy-test", domain_id=spec.domain_id, steps=steps)
+    htir = HTIR(task_id="constraint-policy-test", domain_id=spec.domain_id, steps=steps)
     bundle = DomainArtifactBundle(
         domain_id=spec.domain_id,
         artifacts=[
@@ -819,21 +819,21 @@ def test_omega_bundle_produces_policy_compliance_obligation_with_candidate_evide
     enrich(htir, spec, domain_artifacts=bundle)
     build_claims_and_obligations(htir, spec, domain_artifacts=bundle)
 
-    omega_obs = [o for o in htir.obligations if o.template_id == "omega-policy-compliance"]
-    assert len(omega_obs) == 1
-    ob = omega_obs[0]
+    constraint_obs = [o for o in htir.obligations if o.template_id == "constraint:policy-required"]
+    assert len(constraint_obs) == 1, "exactly one atomic obligation per governing constraint"
+    ob = constraint_obs[0]
     assert ob.status == ObligationStatus.PENDING
-    assert ob.checker == CheckerType.SEMANTIC
-    assert ob.candidate_evidence_ids, "expected E_i to point at the Omega_d policy artifact"
+    assert ob.checker == CheckerType.SEMANTIC       # no requires_prior -> semantic
+    assert ob.candidate_evidence_ids, "expected E_i to point at the constraint's rule text"
 
     evidence_by_id = {e.evidence_id for e in htir.evidence}
     assert set(ob.candidate_evidence_ids) <= evidence_by_id
     pointed_evidence = next(e for e in htir.evidence if e.evidence_id in ob.candidate_evidence_ids)
-    assert "no-fabrication-policy" in pointed_evidence.description
-    assert "fabricate" in pointed_evidence.content
+    assert "policy-required" in pointed_evidence.description          # scoped to THIS constraint
+    assert "cite an applicable policy" in pointed_evidence.content    # the narrow rule, not the SOP
 
     dep_reasons = [lk.reason for lk in htir.dependency_links if lk.source_step_id == 1]
-    assert any("no-fabrication-policy" in r for r in dep_reasons)
+    assert any("no-fabrication-policy" in r for r in dep_reasons)     # analysis link_policy unchanged
 
 
 def test_omega_bundle_absent_leaves_obligations_unchanged():

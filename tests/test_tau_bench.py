@@ -60,8 +60,9 @@ def test_tau_adapter_detected_over_openai():
 def test_tau_adapter_roles_status_effects():
     steps = load_trace(TAU_TRACE["messages"], adapter="tau_bench")
     roles = [s["role_hint"] for s in steps]
-    # find_user (read), get_order (read/failed), cancel (mutate), closing (final)
-    assert roles[0] == "read_info"
+    # find_user (authenticate), get_order (read/failed), cancel (mutate), closing (final)
+    assert roles[0] == "authenticate"
+    assert roles[1] == "read_info"
     assert roles[2] == "mutate_state"
     assert roles[-1] == "final_submission"
 
@@ -269,3 +270,153 @@ def test_escalation_offline_is_static_noop():
     assert res.rounds == 0 and res.n_escalated == 0 and res.n_resolved == 0
     assert res.llm_calls == 0
     assert res.aggregate.predicted_status == ref.predicted_status
+
+
+# ---------------------------------------------------------------------------
+# Dynamic obligation UPDATE (re-localizing escalation)
+# ---------------------------------------------------------------------------
+
+def _compiled_tau():
+    spec = get_domain_spec("tau_bench")
+    omega = load_domain_artifacts("tau_bench")
+    agent = TraceAbstractionAgent(domain_spec=spec, domain_artifacts=omega)
+    h = agent.compile(task_id="t", raw_steps=to_canonical_steps(TAU_TRACE), harness_snippets={},
+                      generate_obligations=True, run_checks=False, domain_artifacts=omega)
+    return spec, omega, h
+
+
+class _Stub:
+    """Stub LLM verdict object (chat_json returns a schema instance; downstream
+    only reads .verdict/.confidence/.rationale)."""
+    def __init__(self, verdict, confidence=0.9):
+        self.verdict, self.confidence, self.rationale = verdict, confidence, ""
+
+
+def test_gather_neighbourhood_evidence_creates_node():
+    from htir.agents.escalation import _gather_neighbourhood_evidence
+    from htir.models.htir import EvidenceType
+    _, _, h = _compiled_tau()
+    # the mutation claim (policy_compliance) anchors on the mutate step
+    claim = next(c for c in h.claims if c.claim_type == "constraint_compliance")
+    n_before = len(h.evidence)
+    ev = _gather_neighbourhood_evidence(h, claim, window=4)
+    assert ev is not None
+    assert ev.evidence_type == EvidenceType.SEMANTIC
+    assert claim.source_step_id in ev.step_ids          # includes the action step
+    assert len(ev.step_ids) >= 1
+    assert h.evidence[-1].evidence_id == ev.evidence_id  # appended to the graph
+    assert len(h.evidence) == n_before + 1
+    assert ev.evidence_id == max(e.evidence_id for e in h.evidence)  # fresh id
+
+
+def test_escalatable_claim_excludes_finals():
+    from htir.agents.escalation import _escalatable_claim
+    from htir.models.htir import ClaimNode
+    final = ClaimNode(claim_id=1, statement="x", claim_type="final_answer_support", source_step_id=1)
+    policy = ClaimNode(claim_id=2, statement="y", claim_type="policy_compliance", source_step_id=1)
+    assert _escalatable_claim(policy) is True
+    assert _escalatable_claim(final) is False
+    assert _escalatable_claim(None) is False
+
+
+def test_escalation_offline_adds_no_evidence():
+    from htir.agents.escalation import verify_with_escalation
+    spec, omega, h = _compiled_tau()
+    n_ev = len(h.evidence)
+    res = verify_with_escalation(h, spec, use_llm=False, domain_artifacts=omega)
+    assert res.n_evidence_added == 0
+    assert len(h.evidence) == n_ev            # E_i / evidence untouched offline
+
+
+def test_escalation_relocalizes_and_updates_obligation(monkeypatch):
+    """With the LLM stubbed (static abstains, escalation passes), the loop must
+    grow E_i, add a support edge, and surface the gathered evidence in E_W."""
+    from htir.agents import escalation as esc
+    from htir.models.htir import CheckerType, ObligationStatus
+    spec, omega, h = _compiled_tau()
+    # static semantic check abstains; escalation re-check passes confidently
+    monkeypatch.setattr("htir.agents.checking.chat_json", lambda *a, **k: _Stub("abstain", 0.0))
+    monkeypatch.setattr("htir.agents.escalation.chat_json", lambda *a, **k: _Stub("pass", 0.9))
+
+    pol = next(o for o in h.obligations if o.template_id == "constraint:confirm-before-mutation")
+    ei_before = list(pol.candidate_evidence_ids)
+    sup_before = len(h.support_links)
+
+    res = esc.verify_with_escalation(h, spec, use_llm=True, domain_artifacts=omega, relocalize=True)
+
+    pol = next(o for o in h.obligations if o.obligation_id == pol.obligation_id)
+    assert pol.status == ObligationStatus.PASSED               # abstain -> resolved
+    assert len(pol.candidate_evidence_ids) > len(ei_before)    # E_i GREW (updated)
+    assert res.n_evidence_added >= 1
+    assert res.n_resolved >= 1
+    # the gathered evidence is recorded on the obligation's result (evidence_used)
+    gathered = pol.candidate_evidence_ids[-1]
+    assert gathered in pol.result.evidence_used
+    # and wired into E_sup as a support edge from that evidence to the claim
+    assert len(h.support_links) > sup_before
+    assert any(lk.evidence_id == gathered and lk.claim_id == pol.claim_id for lk in h.support_links)
+    # the gathered evidence node exists in the graph and is anchored to the trace
+    ev = next(e for e in h.evidence if e.evidence_id == gathered)
+    assert ev.step_ids  # localized to the neighbourhood it gathered
+
+
+def test_escalation_verdict_only_leaves_ei_fixed(monkeypatch):
+    """relocalize=False re-scores but does NOT grow E_i (the ablation)."""
+    from htir.agents import escalation as esc
+    from htir.models.htir import ObligationStatus
+    spec, omega, h = _compiled_tau()
+    monkeypatch.setattr("htir.agents.checking.chat_json", lambda *a, **k: _Stub("abstain", 0.0))
+    monkeypatch.setattr("htir.agents.escalation.chat_json", lambda *a, **k: _Stub("pass", 0.9))
+    pol = next(o for o in h.obligations if o.template_id == "constraint:confirm-before-mutation")
+    ei_before = len(pol.candidate_evidence_ids)
+    res = esc.verify_with_escalation(h, spec, use_llm=True, domain_artifacts=omega, relocalize=False)
+    pol = next(o for o in h.obligations if o.obligation_id == pol.obligation_id)
+    assert pol.status == ObligationStatus.PASSED
+    assert len(pol.candidate_evidence_ids) == ei_before        # E_i unchanged
+    assert res.n_evidence_added == 0
+
+
+# ---------------------------------------------------------------------------
+# Atomic constraint obligations + mechanical precondition checker
+# ---------------------------------------------------------------------------
+
+def test_atomic_constraint_obligations_no_duplication():
+    """Each governing constraint yields exactly one obligation; no per-policy-
+    artifact duplication even though Ω_d carries two policy artifacts."""
+    spec, omega, h = _compiled_tau()
+    templates = [o.template_id for o in h.obligations]
+    assert templates.count("constraint:authenticate-before-action") == 1
+    assert templates.count("constraint:confirm-before-mutation") == 1
+    # the old whole-SOP, per-artifact obligation is gone
+    assert not any(t == "omega-policy-compliance" for t in templates)
+    # the ordering constraint is mechanical, the other semantic
+    by_t = {o.template_id: o for o in h.obligations}
+    assert by_t["constraint:authenticate-before-action"].checker == CheckerType.MECHANICAL
+    assert by_t["constraint:confirm-before-mutation"].checker == CheckerType.SEMANTIC
+
+
+def test_precondition_checker_authenticate_before_action():
+    """The requires_prior constraint is checked mechanically (offline, no LLM):
+    successful prior authenticate -> PASS; none -> FAIL; only-failed -> ABSTAIN."""
+    from htir.agents.checking import check_obligations
+    from htir.models.htir import ObligationStatus
+    spec = get_domain_spec("tau_bench")
+    omega = load_domain_artifacts("tau_bench")
+    agent = TraceAbstractionAgent(domain_spec=spec, domain_artifacts=omega)
+
+    def status_for(steps):
+        h = agent.compile(task_id="t", raw_steps=steps, harness_snippets={},
+                          generate_obligations=True, run_checks=False, domain_artifacts=omega)
+        check_obligations(h, spec, use_semantic=False, domain_artifacts=omega)
+        ob = next(o for o in h.obligations if o.template_id == "constraint:authenticate-before-action")
+        return ob.status
+
+    mutate = {"response": "cancel", "role_hint": "mutate_state", "status_hint": "success",
+              "artifact_effects": [{"effect_category": "artifact_change", "affected_resource": "order_id=O1",
+                                    "observed_change": "cancel O1"}]}
+    auth_ok = {"response": "lookup", "role_hint": "authenticate", "status_hint": "success"}
+    auth_bad = {"response": "lookup", "role_hint": "authenticate", "status_hint": "failure"}
+
+    assert status_for([auth_ok, mutate]) == ObligationStatus.PASSED      # authenticated then acted
+    assert status_for([mutate]) == ObligationStatus.FAILED               # acted with no authentication
+    assert status_for([auth_bad, mutate]) == ObligationStatus.ABSTAINED  # only a failed auth -> conservative
