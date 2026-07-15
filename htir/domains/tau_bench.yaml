@@ -1,0 +1,111 @@
+# τ-bench policy domain (S_d) — Sierra retail/airline customer-service agents.
+#
+# A genuinely distinct *policy-bearing* second domain for the transfer and
+# policy-drift experiments (avg.tex Sec. 4.1/4.2/4.6). Unlike terminal_swe
+# (executable, artifact-centric), τ-bench success is a *database-state* check
+# gated by a written SOP: authenticate the customer, obtain explicit
+# confirmation before any account-modifying action, act only within policy.
+# So the load-bearing obligations here are policy-compliance on state mutations,
+# not test execution.
+#
+# Ingested by the deterministic `tau_bench` adapter (OpenAI-messages ->
+# read_info / mutate_state / transfer_to_human / respond steps). Compile with
+# `--domain tau_bench`. The retail/airline SOPs live in tau_bench.artifacts/
+# (Omega_d POLICY artifacts).
+
+domain_id: tau_bench
+description: Sierra τ-bench retail/airline customer-service tasks; policy-governed DB mutations.
+
+operation_types:
+  - {name: read_info,          description: Retrieve customer/order/reservation/product info (get/find/search/list/calculate)}
+  - {name: mutate_state,       description: A consequential action that updates the database (cancel/modify/book/return/exchange/update/send)}
+  - {name: transfer_to_human,  description: Escalate the conversation to a human agent}
+  - {name: orchestration_decision, description: Internal planning/reasoning (the think tool)}
+  - {name: respond,            description: A conversational reply to the customer with no tool call}
+  - {name: final_submission,   description: The agent's closing reply that ends the task}
+  - {name: other,              description: Anything not covered above}
+
+artifact_types:
+  - {name: order,        description: A retail order record}
+  - {name: reservation,  description: An airline reservation record}
+  - {name: user,         description: A customer profile record}
+  - {name: product,      description: A product/item record}
+  - {name: payment,      description: A payment method record}
+  - name: db_record
+    description: A generic database record touched by a tool call
+    schema_hint: A record keyed by its id (order_id / reservation_id / user_id) with typed fields
+
+constraints:
+  # K_d: the two SOP invariants that make τ-bench a policy domain. Both name the
+  # `mutate_state` role, so every account-modifying action is policy-sensitive
+  # (obligations._policy_sensitive_steps) -> an un-policy-linked mutation is
+  # withheld (analysis.policy_action_unlinked, HIGH) and seeds one
+  # omega-policy-compliance obligation per Omega_d policy artifact.
+  - constraint_id: authenticate-before-action
+    description: >
+      The customer's identity must be authenticated (user id located via email
+      or name+zip) before any account-modifying action is taken.
+    severity: critical
+    applies_to_operations: [mutate_state]
+
+  - constraint_id: confirm-before-mutation
+    description: >
+      Before a consequential database update (cancel/modify/return/exchange/
+      book/update), the agent must list the action detail and obtain explicit
+      user confirmation ("yes") to proceed.
+    severity: critical
+    applies_to_operations: [mutate_state]
+
+obligation_templates:
+  # -- domain (S_d.B_d): the τ-bench process ------------------------------
+  # A state mutation must have recorded provenance (the DB record it touched).
+  # Routes to the mechanical provenance checker, so it PASSES on any mutation
+  # the adapter recorded a target for -- positive evidence that lets a clean,
+  # policy-compliant trajectory aggregate toward 'valid' rather than abstaining.
+  - template_id: tau-mutation-provenance
+    claim_template: A state-changing action has a recorded target DB record.
+    scope: domain
+    trigger: mutate_state
+    required_evidence: artifact
+    severity: medium
+    escalation: request-evidence
+    target_claim_type: artifact_provenance
+
+  # A state mutation's tool call must have succeeded (no error result).
+  - template_id: tau-mutation-status
+    claim_template: A state-changing action's tool call completed without error.
+    scope: domain
+    trigger: mutate_state
+    required_evidence: executable
+    severity: high
+    escalation: repair
+    target_claim_type: execution_status
+
+  # -- universal-equivalent (O_uni over the τ vocabulary) -----------------
+  - template_id: tau-read-status
+    claim_template: An information-retrieval tool call completed without error.
+    scope: universal
+    trigger: read_info
+    required_evidence: executable
+    severity: medium
+    escalation: request-evidence
+    target_claim_type: execution_status
+
+  - template_id: uni-final-answer-supported
+    claim_template: The agent's closing reply is supported by the actions/records it acted on.
+    scope: universal
+    trigger: final_submission
+    required_evidence: semantic
+    severity: high
+    escalation: escalate
+    target_claim_type: final_answer_support
+
+  # -- trajectory-triggered (O_trig) --------------------------------------
+  - template_id: trig-explain-failure
+    claim_template: A failed tool call is explained or addressed by a later step.
+    scope: trajectory_triggered
+    trigger: failed_step
+    required_evidence: log
+    severity: medium
+    escalation: repair
+    target_claim_type: execution_status

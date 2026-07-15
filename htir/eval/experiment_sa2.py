@@ -399,6 +399,165 @@ def _assemble(
 
 
 # ---------------------------------------------------------------------------
+# Cross-domain transfer matrix (Q2 / avg.tex Sec. 4.2 zero-shot transfer)
+# ---------------------------------------------------------------------------
+#
+# The within-domain sample-efficiency curve above answers "how much does the
+# adapter help *on its own domain*." The transfer matrix answers the sharper
+# Q2 question: apply the verifier *specced for domain A* to *traces from domain
+# B*. Because a trace is parsed by its own shape-detected adapter but the
+# compiler filters step roles against the active S_d vocabulary, an off-domain
+# spec collapses every operation to ``other`` -> no obligation binds -> the
+# verifier abstains (it never false-credits, but it resolves nothing). Only the
+# matched adapter+spec on the diagonal, and the universal spec as a floor, let
+# obligations bind. So the matrix makes the need for per-domain adapters
+# legible: high resolved-fraction on the diagonal, abstention off it.
+
+class TransferCell(BaseModel):
+    """One (train-spec x test-domain) cell of the transfer matrix."""
+    train_spec: str
+    test_domain: str
+    n: int = 0
+    metrics: VerifierMetrics
+
+
+class TransferResult(BaseModel):
+    """The full cross-domain transfer matrix (train-spec rows x test-domain cols)."""
+    experiment: str = "SA-2 transfer matrix: zero-shot cross-domain verification (Q2)"
+    train_specs: list[str] = Field(default_factory=list)
+    test_domains: list[str] = Field(default_factory=list)
+    use_llm: bool = False
+    seconds: float = 0.0
+    cells: list[TransferCell] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+    def cell(self, train_spec: str, test_domain: str) -> TransferCell | None:
+        return next(
+            (c for c in self.cells if c.train_spec == train_spec and c.test_domain == test_domain),
+            None,
+        )
+
+
+def evaluate_spec_on_traces(
+    spec: DomainSpec,
+    raw_traces: list[dict[str, Any]],
+    *,
+    omega: DomainArtifactBundle | None = None,
+    use_llm: bool = False,
+    model: str = "openai/gpt-4o",
+    log: Any = None,
+) -> VerifierMetrics:
+    """
+    Compile every trace under ``spec`` (its steps parsed by the shape-detected
+    adapter, roles filtered to ``spec``'s vocabulary) and score the deterministic
+    ``exec_only`` arm against the weak reward label. The unit cell of the
+    transfer matrix.
+    """
+    agent = TraceAbstractionAgent(model=model, domain_spec=spec, domain_artifacts=omega)
+    preds: list[str] = []
+    labels: list[Optional[str]] = []
+    for i, raw in enumerate(raw_traces):
+        label = label_from_reward(extract_reward(raw))
+        try:
+            steps = to_canonical_steps(raw)
+            htir = agent.compile(
+                task_id=str(raw.get("task_name", f"trace-{i}")),
+                raw_steps=steps, harness_snippets={},
+                generate_obligations=True, use_semantic_analysis=use_llm,
+                run_checks=False, domain_artifacts=omega,
+            )
+        except Exception as exc:
+            if log is not None:
+                print(f"[transfer] skip trace {i}: {exc!r}", file=log)
+            continue
+        agg = run_arm(htir, spec, VerifierArm.EXEC_ONLY, use_llm=use_llm, domain_artifacts=omega, model=model)
+        preds.append(agg.predicted_status)
+        labels.append(label)
+    return evaluate_predictions(preds, labels)
+
+
+def run_transfer_matrix(
+    domains: dict[str, dict[str, Any]],
+    *,
+    include_universal: bool = True,
+    use_llm: bool = False,
+    model: str = "openai/gpt-4o",
+    log: Any = sys.stderr,
+) -> TransferResult:
+    """
+    Build the cross-domain transfer matrix.
+
+    ``domains`` maps a domain id to ``{"spec": DomainSpec, "omega":
+    DomainArtifactBundle|None, "traces": list[raw]}``. Rows are the *train* spec
+    (each domain's spec, plus the universal ``default`` spec when
+    ``include_universal``); columns are the *test* domain's traces. Every
+    (train_spec, test_domain) cell scores ``exec_only`` against the weak label.
+    """
+    train_specs: dict[str, tuple[DomainSpec, Optional[DomainArtifactBundle]]] = {}
+    if include_universal:
+        train_specs["universal_only"] = (get_domain_spec("default"), None)
+    for dom_id, cfg in domains.items():
+        train_specs[dom_id] = (cfg["spec"], cfg.get("omega"))
+
+    t0 = time.time()
+    cells: list[TransferCell] = []
+    for train_name, (spec, omega) in train_specs.items():
+        for test_dom, cfg in domains.items():
+            traces = cfg["traces"]
+            if log is not None:
+                print(f"[transfer] train={train_name} test={test_dom} (n={len(traces)})", file=log)
+            metrics = evaluate_spec_on_traces(
+                spec, traces, omega=omega, use_llm=use_llm, model=model, log=log,
+            )
+            cells.append(TransferCell(
+                train_spec=train_name, test_domain=test_dom, n=len(traces), metrics=metrics,
+            ))
+
+    notes = [
+        "Transfer = apply the verifier specced for the ROW domain to the COLUMN domain's traces. "
+        "A trace is parsed by its own shape-detected adapter, but compile() filters step roles to "
+        "the active S_d vocabulary, so an off-domain spec collapses operations to 'other' -> no "
+        "obligation binds -> the verifier abstains (resolved_fraction ~ 0). The diagonal (matched "
+        "adapter+spec) is where obligations bind and the verifier resolves.",
+        "Headline: resolved_fraction on the diagonal vs off it shows adapters are necessary for "
+        "cross-domain transfer; false_valid stays low everywhere (abstention, not over-crediting, "
+        "is how a mis-specced verifier fails).",
+    ]
+    if not use_llm:
+        notes.append(
+            "Offline (no API key): only mechanical obligations discharge; policy/final-answer "
+            "(semantic) obligations abstain, as elsewhere in the SA series."
+        )
+    return TransferResult(
+        train_specs=list(train_specs.keys()),
+        test_domains=list(domains.keys()),
+        use_llm=use_llm,
+        seconds=round(time.time() - t0, 2),
+        cells=cells,
+        notes=notes,
+    )
+
+
+def format_transfer(result: TransferResult) -> str:
+    """A compact train x test matrix for the terminal / logs."""
+    lines = [f"SA-2 transfer matrix (exec_only)  |  use_llm={result.use_llm}"]
+    for metric_name, attr in (("resolved_fraction", "resolved_fraction"), ("false_valid", "false_valid_rate")):
+        lines.append(f"  [{metric_name}]  rows=train spec, cols=test domain")
+        header = "    " + f"{'train\\test':<18}" + "".join(f"{d:>14}" for d in result.test_domains)
+        lines.append(header)
+        for tr in result.train_specs:
+            row = f"    {tr:<18}"
+            for td in result.test_domains:
+                c = result.cell(tr, td)
+                val = getattr(c.metrics, attr) if c else 0.0
+                row += f"{val:>14.3f}"
+            lines.append(row)
+    for note in result.notes:
+        lines.append(f"  note: {note}")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Reporting
 # ---------------------------------------------------------------------------
 

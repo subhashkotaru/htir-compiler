@@ -25,7 +25,7 @@ Ranked by how much each distorts an experiment.
    `elif` is skipped → `valid`, regardless of coverage. `scratch_results.json`
    shows 56 obligations, all abstained, `coverage 0.0`, `uncertainty 1.0` →
    `"valid"`. Contradicts avg.tex Sec. 3.4 ("emits unresolved obligations
-   instead of assigning unsupported credit") and Sec. 3.9 ("...treated as
+   instead of assigning unsupported credit") and Sec. 3.8 ("...treated as
    uncertain rather than successful"). **Root cause of the prior 100%
    false-valid rate.** Fix: `coverage == 0` / all-abstained → `uncertain`;
    broad abstention (not only HIGH) must raise uncertainty.
@@ -103,7 +103,7 @@ Assign this first. Everything downstream depends on it.
 - **Data:** balanced 3k terminalbench sample.
 - **Metrics:** false-valid rate, resolved accuracy vs. 50% base rate,
   failure-flag precision/recall, abstention rate. Maps to Ablation #1.
-- **Deliverable:** results table + cost-normalized performance curve (Sec. 4.8).
+- **Deliverable:** results table + cost-normalized performance curve (Sec. 4.7).
 - **Feasibility:** fully runnable post-P0; (a),(c),(d) offline, (b) needs a key.
 
 ---
@@ -175,7 +175,7 @@ Assign this first. Everything downstream depends on it.
 
 ---
 
-### SA-6 — Stress Tests + Integrity (Sec. 4.5, 4.7)
+### SA-6 — Stress Tests + Integrity (Sec. 4.6, 4.7)
 
 - **Claim:** AVG improves reliability under enterprise-relevant failure modes,
   not just average benchmark score.
@@ -193,7 +193,7 @@ Assign this first. Everything downstream depends on it.
 
 ---
 
-## Cross-cutting reporting (Sec. 4.8)
+## Cross-cutting reporting (Sec. 4.7)
 
 For every package: mean ± standard error over seeds / task subsamples; matched
 model, tool, and budget conditions; cost-normalized curves in addition to

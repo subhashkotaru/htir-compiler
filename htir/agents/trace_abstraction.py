@@ -262,7 +262,7 @@ class TraceAbstractionAgent:
 
         ``run_integrity`` (default on) gates the Step-3.5 integrity analysis
         module; ``run_integrity=False`` is the no-integrity-verifier ablation
-        (avg.tex Sec. 4.6 #4) used by SA-6 to measure the shortcut-catch drop.
+        (avg.tex Sec. 4.5 #4) used by SA-6 to measure the shortcut-catch drop.
         """
         domain_artifacts = domain_artifacts if domain_artifacts is not None else self.domain_artifacts
         steps = self._build_steps(raw_steps)
@@ -314,7 +314,7 @@ class TraceAbstractionAgent:
             # it runs last rather than inside ``enrich``.
             compute_coverage(htir)
 
-            # AVG Steps 5-6 (avg.tex Sec. 3.8-3.10): check each obligation,
+            # AVG Steps 5-6 (avg.tex Sec. 3.7-3.9): check each obligation,
             # aggregate into a trajectory-level status, and build the
             # verification witness. Off by default; requires obligations.
             if run_checks:
@@ -340,7 +340,7 @@ class TraceAbstractionAgent:
         """
         Compile only the first ``prefix_len`` steps of ``raw_steps`` into an
         HTIR -- the partial graph G_{tau<=t} online intervention (AVG Step 7,
-        avg.tex Sec. 3.11) monitors. This is the "simplest" incremental-
+        avg.tex Sec. 3.10) monitors. This is the "simplest" incremental-
         compilation option noted in the Step-7 handoff: it re-runs the whole
         deterministic pipeline over a prefix rather than incrementally
         updating an existing ``HTIR``, which is fine for offline replay of a

@@ -126,7 +126,7 @@ class EscalationRule(str, Enum):
     part of the obligation tuple o_i = (c_i, r_i, E_i, q_i, rho_i, alpha_i).
 
     Intentionally shares its vocabulary with ``InterventionAction`` (the
-    online intervention iota_t, avg.tex Sec. 3.11), but the two are distinct
+    online intervention iota_t, avg.tex Sec. 3.10), but the two are distinct
     mechanisms: alpha_i is a static per-obligation escalation rule fixed at
     obligation-generation time, while iota_t is chosen online per step by
     monitoring active obligations. Do not conflate them when the online
@@ -143,7 +143,7 @@ class EscalationRule(str, Enum):
 
 class InterventionAction(str, Enum):
     """
-    Online intervention iota_t (avg.tex Sec. 3.11): the action the harness
+    Online intervention iota_t (avg.tex Sec. 3.10): the action the harness
     takes at step t in response to a failing/abstaining high-severity
     obligation in the partial graph G_{tau<=t}. Distinct from the per-
     obligation ``EscalationRule`` (alpha_i), which is fixed when the
@@ -531,13 +531,13 @@ class CoverageReport(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Aggregation + verification witness (avg.tex Sec. 3.9-3.10, AVG Step 6)
+# Aggregation + verification witness (avg.tex Sec. 3.8-3.9, AVG Step 6)
 # ---------------------------------------------------------------------------
 
 class AggregateResult(BaseModel):
     """
     z_tau = (y_hat, u_hat, c_hat, eta_hat): the trajectory-level status
-    aggregated from all checked obligations (avg.tex Sec. 3.9). Populated by
+    aggregated from all checked obligations (avg.tex Sec. 3.8). Populated by
     ``htir.agents.witness.aggregate``, which must run after
     ``htir.agents.checking.check_obligations``.
     """
@@ -552,7 +552,7 @@ class AggregateResult(BaseModel):
 class VerificationWitness(BaseModel):
     """
     W_tau = (O+, O-, O-empty, E_W, R_W): the stated output of AVG (avg.tex
-    Sec. 3.10). Populated by ``htir.agents.witness.build_witness``,
+    Sec. 3.9). Populated by ``htir.agents.witness.build_witness``,
     which must run after ``aggregate``.
     """
     passed_obligation_ids: list[int] = Field(default_factory=list, description="O+")
@@ -563,7 +563,7 @@ class VerificationWitness(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Online intervention log (avg.tex Sec. 3.11, AVG Step 7)
+# Online intervention log (avg.tex Sec. 3.10, AVG Step 7)
 # ---------------------------------------------------------------------------
 
 class InterventionLogEntry(BaseModel):
@@ -624,7 +624,7 @@ class HTIR(BaseModel):
     state_transitions: list[StateTransitionPattern] = Field(default_factory=list)
     coverage: CoverageReport = Field(default_factory=CoverageReport)
 
-    # AVG Step 6 outputs (avg.tex Sec. 3.9-3.10). Populated by
+    # AVG Step 6 outputs (avg.tex Sec. 3.8-3.9). Populated by
     # htir.agents.witness.aggregate() / build_witness(), which run
     # after htir.agents.checking.check_obligations(). Optional and
     # default None so existing serialized outputs (data/htir_outputs/*.json)
@@ -632,7 +632,7 @@ class HTIR(BaseModel):
     aggregate: Optional[AggregateResult] = None
     witness: Optional[VerificationWitness] = None
 
-    # AVG Step 7 output (avg.tex Sec. 3.11). Populated by
+    # AVG Step 7 output (avg.tex Sec. 3.10). Populated by
     # htir.agents.intervention.run_intervention_loop() over a *prefix*
     # replay of a recorded trace; empty by default so existing serialized
     # outputs (data/htir_outputs/*.json) stay backward compatible.

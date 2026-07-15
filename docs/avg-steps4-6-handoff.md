@@ -21,7 +21,7 @@ Obligations")**. Do NOT build checker execution (Step 5) or the witness
 Primary file: `htir/agents/obligations.py::build_claims_and_obligations`.
 Consumes enrichment from `htir/agents/analysis.py` (already run by
 `TraceAbstractionAgent.compile`). Ground truth: `avg.tex` Sec. 3.6, the
-obligation tuple in Sec. 2, and the checker-routing rules in Sec. 3.8.
+obligation tuple in Sec. 2, and the checker-routing rules in Sec. 3.7.
 
 Guardrail: the deterministic pipeline must stay reproducible. Run
 `python -m pytest tests/` (in `~/.venv`) after every change — all existing
@@ -41,7 +41,7 @@ step-local evidence node × every step-local claim, always
   (e.g. `ExecutionStatus.FAILURE` evidence → `REFUTES` a success claim).
 - Evidence is linked to *unrelated* claims at the same step (e.g. an
   execution-status evidence "supports" an artifact-provenance claim). This
-  destroys the evidence-localization the paper relies on (Sec. 3.9).
+  destroys the evidence-localization the paper relies on (Sec. 3.8).
 
 Fix: link evidence to a claim only when they concern the same thing (match on
 `claim.claim_type` ↔ evidence semantics, or on shared `artifact_ids` /
@@ -75,7 +75,7 @@ fallback path) with `claim_type = template.template_id`.
 `obligations.py:64-70` `_checker_for_evidence`: `LOG`, `MANUAL`, and `NONE`
 fall through to `UNASSIGNED`. So `trig-explain-failure` (r_i = `log`, see
 `domains/default.yaml`) is emitted with `checker=UNASSIGNED` and will never be
-picked up by Step 5. Decide routing per avg.tex Sec. 3.8: LOG is observability
+picked up by Step 5. Decide routing per avg.tex Sec. 3.7: LOG is observability
 evidence → route to `MECHANICAL` (or `SEMANTIC` if it needs judgement);
 `MANUAL` → `ABSTENTION` (needs a human). Only genuinely-no-evidence should
 stay `UNASSIGNED`/route to `ABSTENTION`.
@@ -177,7 +177,7 @@ cleanly (correct r_i-typed E_i, routed checker, right claim anchor) is what
 makes Step 5 tractable.
 
 Still out of scope for the whole handoff: online intervention `iota_t`
-(avg.tex Sec. 3.11) and offline harness improvement (Sec. 3.12). Leave
+(avg.tex Sec. 3.10) and offline harness improvement (Sec. 3.11). Leave
 `InterventionAction` as the defined-but-unwired enum it is.
 
 ---
@@ -218,7 +218,7 @@ cleanup, so the fixture-affecting change is isolated and reviewable.
 
 ---
 
-# Step 5 — Checking obligations (avg.tex Sec. 3.8)
+# Step 5 — Checking obligations (avg.tex Sec. 3.7)
 
 Goal: discharge each obligation by running the checker routed to it in Step 4,
 filling `Obligation.result` (a `CheckerResult`) and `Obligation.status`
@@ -236,7 +236,7 @@ its candidate evidence `E_i`, and the immediate neighbourhood — producing
 step, consumed/produced artifacts, validation/dependency edges touching it)
 and returns `CheckerResult(p_pass, p_fail, p_abstain, score, evidence_used)`
 with the three probabilities summing to 1. Keep context local (avg.tex Sec.
-3.8): pass only the claim + linked evidence, never the whole trace.
+3.7): pass only the claim + linked evidence, never the whole trace.
 
 ### Three checker classes (route by `Obligation.checker` from Step 4)
 1. **Mechanical (`CheckerType.MECHANICAL`)** — deterministic, no LLM. Examples
@@ -264,7 +264,7 @@ with the three probabilities summing to 1. Keep context local (avg.tex Sec.
 3. **Abstention (`CheckerType.ABSTENTION`)** — emits `p_abstain=1.0`. This is
    the normal outcome for well-formedness-seeded obligations and for any
    obligation with insufficient evidence. It is a first-class result, not a
-   failure (avg.tex Sec. 3.8).
+   failure (avg.tex Sec. 3.7).
 
 ### Effects to write back
 - Set `obligation.result` and derive `obligation.status` from the argmax of
@@ -295,7 +295,7 @@ with the three probabilities summing to 1. Keep context local (avg.tex Sec.
 
 ---
 
-# Step 6 — Aggregation + verification witness (avg.tex Sec. 3.9–3.10)
+# Step 6 — Aggregation + verification witness (avg.tex Sec. 3.8–3.9)
 
 Goal: collapse the checked obligations into a trajectory-level status and emit
 the verification witness `W_tau`, the stated output of AVG. Depends on Step 5.
@@ -320,7 +320,7 @@ the verification witness `W_tau`, the stated output of AVG. Depends on Step 5.
 Entry points: `aggregate(htir) -> AggregateResult` and
 `build_witness(htir) -> VerificationWitness`.
 
-### Aggregation rules (severity-aware — avg.tex Sec. 3.9)
+### Aggregation rules (severity-aware — avg.tex Sec. 3.8)
 - A **failed high/critical-severity** obligation vetoes success →
   `predicted_status = invalid`, even if many low-severity obligations pass
   (the paper's "modified tests but suite passes" example).
@@ -331,7 +331,7 @@ Entry points: `aggregate(htir) -> AggregateResult` and
 - Make the thresholds explicit constants at the top of the module so they are
   auditable and testable.
 
-### Witness (avg.tex Sec. 3.10)
+### Witness (avg.tex Sec. 3.9)
 - Partition obligations by `status` into O+/O-/O∅.
 - `E_W` = union of `result.evidence_used` across the failed + abstained
   obligations (the evidence a reviewer needs), plus the evidence behind any

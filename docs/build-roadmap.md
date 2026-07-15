@@ -114,7 +114,7 @@ Everything else hangs off B2.
   56 obligations, all abstained, coverage 0.0 → `"valid"`.
 - **Fix:** a trajectory with `evidence_coverage == 0` (or all obligations
   abstained) → `uncertain`; broad abstention across **all** severities (not
-  only HIGH) must raise uncertainty, per avg.tex §3.4 / §3.9.
+  only HIGH) must raise uncertainty, per avg.tex §3.4 / §3.8.
 - **Test:** regression from `scratch_results.json` real_traces[0] and
   controls[*] (controls already resolve to `uncertain` and must stay green).
 - **Unblocks:** trustworthy `predicted_status` on *every* arm and every SA

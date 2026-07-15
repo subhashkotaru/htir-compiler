@@ -105,7 +105,7 @@ def enrich(htir: HTIR, spec: DomainSpec, *, use_semantic: bool = False, domain_a
     ``run_integrity`` (default on) gates the integrity analysis module (Step
     3.5, ``check_integrity``): the shortcut/tamper detector that seeds HIGH-
     severity unresolved obligations. Pass ``run_integrity=False`` for the
-    no-integrity-verifier ablation (avg.tex Sec. 4.6 #4), which removes those
+    no-integrity-verifier ablation (avg.tex Sec. 4.5 #4), which removes those
     obligations so the trajectory can no longer have credit withheld on
     integrity grounds -- the exact reliability drop SA-6 measures.
     """

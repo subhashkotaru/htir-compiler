@@ -10,7 +10,7 @@ sample once per trace, then scores two arms over the *same* obligation graph:
   obligation with insufficient evidence ABSTAINS, and a trajectory with no
   positively discharged evidence aggregates to ``uncertain`` instead of being
   credited.
-* ``no_abstention`` -- the ablation (avg.tex Sec. 4.6 #3): the *same* graph and
+* ``no_abstention`` -- the ablation (avg.tex Sec. 4.5 #3): the *same* graph and
   evidence, but every checker is forced to emit pass/fail
   (``force_decision``). A no-evidence obligation is credited on the optimistic
   prior, so the trajectory is pushed to a valid/invalid verdict with no
@@ -84,7 +84,7 @@ from htir.eval.weak_labels import (
     extract_reward,
     label_from_reward,
 )
-from htir.models.domain import TERMINAL_DOMAIN_SPEC, DomainSpec
+from htir.models.domain import TERMINAL_DOMAIN_SPEC, DomainSpec, get_domain_spec
 
 # The two arms SA-3 contrasts, in table order: calibrated abstention (may
 # abstain -> 'uncertain') vs. the no-abstention ablation (force_decision -> must
@@ -374,12 +374,14 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--n", type=int, default=3000, help="target balanced sample size")
     src.add_argument("--seed", type=int, default=0)
     p.add_argument("--use-llm", action="store_true", help="enable the semantic checker")
+    p.add_argument("--domain", type=str, default="terminal_swe",
+                   help="domain spec S_d to verify under (e.g. terminal_swe, tau_bench)")
     p.add_argument("--model", type=str, default="openai/gpt-4o")
     p.add_argument("--out", type=str, default="", help="write SA3Result JSON here")
     args = p.parse_args(argv)
 
     traces = _load_traces(args)
-    result = run_sa3(traces, use_llm=args.use_llm, model=args.model)
+    result = run_sa3(traces, spec=get_domain_spec(args.domain), use_llm=args.use_llm, model=args.model)
     print(format_table(result))
     if args.out:
         Path(args.out).write_text(result.model_dump_json(indent=2), encoding="utf-8")

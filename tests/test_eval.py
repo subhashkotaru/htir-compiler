@@ -649,7 +649,7 @@ def test_run_sa5_end_to_end_offline():
 
 
 # ---------------------------------------------------------------------------
-# SA-6: stress tests + integrity ablation (Sec. 4.5 / 4.6 #4)
+# SA-6: stress tests + integrity ablation (Sec. 4.6 / 4.5 #4)
 # ---------------------------------------------------------------------------
 
 def test_sa6_perturbations_trigger_integrity_rules_and_are_ablatable():

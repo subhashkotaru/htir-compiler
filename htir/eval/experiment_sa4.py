@@ -1,6 +1,6 @@
 """
 SA-4 -- Q4a: Online Intervention, offline replay (avg.tex Sec. 4 question Q4;
-avg.tex Sec. 3.11 "Online Intervention").
+avg.tex Sec. 3.10 "Online Intervention").
 
 Q4a claims that *monitoring obligations on the partial graph* G_{tau<=t} lets
 the harness intervene **timely** (early, before the trajectory finishes) and
@@ -158,7 +158,7 @@ class WalkthroughActive(BaseModel):
 
 
 class WalkthroughStep(BaseModel):
-    """One step of the per-step obligation walkthrough (avg.tex Sec. 3.11 example)."""
+    """One step of the per-step obligation walkthrough (avg.tex Sec. 3.10 example)."""
     step: int
     role: str = ""
     request_preview: str = ""

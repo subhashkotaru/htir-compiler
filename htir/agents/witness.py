@@ -1,24 +1,24 @@
 """
 Aggregation z_tau + Verification witness W_tau (AVG Step 6, avg.tex Sec.
-3.9-3.10 "Aggregating Obligation Results" / "Verification Witness").
+3.8-3.9 "Aggregating Obligation Results" / "Verification Witness").
 
 This module collapses the checked obligation set (``htir.agents.
 checking.check_obligations`` must already have run) into a trajectory-level
 status and the verification witness that is AVG's stated output. It does not
 run any checkers itself and makes no LLM calls -- aggregation and the review
-recommendation are both mechanical and deterministic, per avg.tex Sec. 3.10
+recommendation are both mechanical and deterministic, per avg.tex Sec. 3.9
 ("Keep it mechanical (no LLM) so it is reproducible; a semantic prose upgrade
 can be gated behind use_semantic later").
 
-Entry points: ``aggregate`` (z_tau, avg.tex Sec. 3.9) and ``build_witness``
-(W_tau, avg.tex Sec. 3.10).
+Entry points: ``aggregate`` (z_tau, avg.tex Sec. 3.8) and ``build_witness``
+(W_tau, avg.tex Sec. 3.9).
 
-Aggregation is severity-aware (avg.tex Sec. 3.9). Crucially, ``"valid"``
+Aggregation is severity-aware (avg.tex Sec. 3.8). Crucially, ``"valid"``
 requires *positive* support: the absence of failures is necessary but not
 sufficient. A trajectory only earns ``"valid"`` if at least one obligation was
 actually discharged (PASSED); otherwise there is no evidence on which to grant
 credit and the status is ``"uncertain"`` (avg.tex Sec. 3.4: "emits unresolved
-obligations instead of assigning unsupported credit"; Sec. 3.9: "treated as
+obligations instead of assigning unsupported credit"; Sec. 3.8: "treated as
 uncertain rather than successful"). The decision order is:
 
 * A **failed** obligation whose severity is HIGH or CRITICAL vetoes the
@@ -89,7 +89,7 @@ STATUS_UNCERTAIN = "uncertain"
 
 
 # ---------------------------------------------------------------------------
-# z_tau: aggregation (avg.tex Sec. 3.9)
+# z_tau: aggregation (avg.tex Sec. 3.8)
 # ---------------------------------------------------------------------------
 
 def aggregate(htir: HTIR) -> AggregateResult:
@@ -115,7 +115,7 @@ def aggregate(htir: HTIR) -> AggregateResult:
         # No obligation was positively discharged -> no evidence supports
         # crediting the trajectory. Covers zero obligations, zero coverage,
         # and all-abstained traces (the over-crediting bug, avg.tex Sec.
-        # 3.4 / 3.9): these are uncertain, never valid.
+        # 3.4 / 3.8): these are uncertain, never valid.
         predicted_status = STATUS_UNCERTAIN
     elif high_severity and (
         len(abstained_high) >= UNCERTAIN_ABSTAIN_COUNT_THRESHOLD
@@ -166,7 +166,7 @@ def _evidence_coverage(htir: HTIR) -> float:
 
 
 # ---------------------------------------------------------------------------
-# W_tau: verification witness (avg.tex Sec. 3.10)
+# W_tau: verification witness (avg.tex Sec. 3.9)
 # ---------------------------------------------------------------------------
 
 def build_witness(htir: HTIR) -> VerificationWitness:

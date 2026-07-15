@@ -32,7 +32,7 @@ Cost. Because the offline run issues zero real LLM calls, we report a
 semantic checker ran: 0 for ``exec_only``; one narrow claim-evidence call per
 SEMANTIC-routed obligation for ``avg_full`` / ``exec_free``; and one
 full-trace judge call for ``monolithic``. This is the compute axis for the
-cost-normalized performance curve (avg.tex Sec. 4.8).
+cost-normalized performance curve (avg.tex Sec. 4.7).
 
 CLI::
 
@@ -61,7 +61,7 @@ from htir.eval.weak_labels import (
     extract_reward,
     label_from_reward,
 )
-from htir.models.domain import TERMINAL_DOMAIN_SPEC, DomainSpec
+from htir.models.domain import TERMINAL_DOMAIN_SPEC, DomainSpec, get_domain_spec
 from htir.models.htir import CheckerType, HTIR
 
 # Arms reported, in the order they appear in the results table.
@@ -251,7 +251,7 @@ def _assemble(
         )
     notes.append(
         "llm_calls are a would-issue cost proxy (0 real calls offline): the compute "
-        "axis for the cost-normalized curve (avg.tex Sec. 4.8)."
+        "axis for the cost-normalized curve (avg.tex Sec. 4.7)."
     )
 
     return SA1Result(
@@ -332,6 +332,8 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--n", type=int, default=3000, help="target balanced sample size")
     src.add_argument("--seed", type=int, default=0)
     p.add_argument("--use-llm", action="store_true", help="enable LLM monolith + semantic checker")
+    p.add_argument("--domain", type=str, default="terminal_swe",
+                   help="domain spec S_d to verify under (e.g. terminal_swe, tau_bench)")
     p.add_argument("--long-horizon-steps", type=int, default=DEFAULT_LONG_HORIZON_STEPS)
     p.add_argument("--model", type=str, default="openai/gpt-4o")
     p.add_argument("--out", type=str, default="", help="write SA1Result JSON here")
@@ -340,6 +342,7 @@ def main(argv: list[str] | None = None) -> int:
     traces = _load_traces(args)
     result = run_sa1(
         traces,
+        spec=get_domain_spec(args.domain),
         use_llm=args.use_llm,
         use_semantic=args.use_llm,
         long_horizon_steps=args.long_horizon_steps,

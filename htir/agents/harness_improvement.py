@@ -1,5 +1,5 @@
 """
-Offline harness improvement (AVG Step 8, avg.tex Sec. 3.12 "Offline Harness
+Offline harness improvement (AVG Step 8, avg.tex Sec. 3.11 "Offline Harness
 Improvement").
 
 Verification witnesses accumulated across many traces (Step 6 output) also
@@ -20,7 +20,7 @@ the harness itself) and scores/gates them. Applying a proposal is a separate,
 explicit call (``apply_domain_spec_edit``); nothing here mutates a
 ``DomainSpec`` in place.
 
-Two edit targets exist per avg.tex Sec. 3.12's examples ("agents frequently
+Two edit targets exist per avg.tex Sec. 3.11's examples ("agents frequently
 pass a narrow test but fail hidden tests" / "produce CSV without checking
 headers"): (i) the domain spec ``S_d`` (add obligation templates -- cheapest,
 self-contained, and what this module implements end-to-end) and (ii) the
@@ -57,7 +57,7 @@ from htir.models.htir import (
 class HarnessConfig(BaseModel):
     """
     h = (p, s, m, r): prompts, skills, memory policies, and runtime rules
-    (avg.tex Sec. 3.12). The harness itself is out of this repo's scope (it
+    (avg.tex Sec. 3.11). The harness itself is out of this repo's scope (it
     lives wherever the agent harness runs), so this is an opaque, descriptive
     snapshot -- nothing here executes prompts/skills/rules.
 
@@ -76,7 +76,7 @@ class HarnessConfig(BaseModel):
 class WitnessRecord(BaseModel):
     """
     One (trace_id, VerificationWitness, task_outcome) entry (avg.tex Sec.
-    3.12), extended with the small amount of extra digest information
+    3.11), extended with the small amount of extra digest information
     ``score_config`` needs that a bare witness doesn't carry on its own
     (severity/coverage/cost/policy signal, and mined recurring-failure tags).
     """
@@ -124,7 +124,7 @@ class ProposedEdit(BaseModel):
 
 
 # Recognised recurring-failure tags -> the domain-spec template that guards
-# against them, per avg.tex Sec. 3.12's two named examples. Unrecognised tags
+# against them, per avg.tex Sec. 3.11's two named examples. Unrecognised tags
 # propose nothing -- mining never invents an obligation out of thin air.
 _KNOWN_FAILURE_TEMPLATES: dict[str, ObligationTemplate] = {
     "hidden_test_failure": ObligationTemplate(
@@ -163,7 +163,7 @@ def mine_recurring_failures(
     """
     Scan ``corpus.records[*].failure_tags`` for tags recurring in at least
     ``min_fraction`` of the traces, and propose a stronger domain-spec
-    obligation template for each recognised one (avg.tex Sec. 3.12: "agents
+    obligation template for each recognised one (avg.tex Sec. 3.11: "agents
     frequently pass a narrow test but fail hidden tests" -> a stronger
     validation obligation; "produce CSV without checking headers" -> a
     CSV-schema obligation). A tag with no known template mapping, or that
@@ -231,7 +231,7 @@ def apply_domain_spec_edit(spec: DomainSpec, edit: ProposedEdit) -> DomainSpec:
 # Score J_hat and the acceptance gate
 # ---------------------------------------------------------------------------
 
-# Explicit, auditable weights for J_hat (avg.tex Sec. 3.12: "task success,
+# Explicit, auditable weights for J_hat (avg.tex Sec. 3.11: "task success,
 # failed obligations, unresolved high-severity obligations, evidence
 # coverage, cost, and policy violations").
 W_TASK_SUCCESS = 1.0
@@ -258,7 +258,7 @@ def score_config(
     known_templates: dict[str, ObligationTemplate] | None = None,
 ) -> float:
     """
-    J_hat(h) (avg.tex Sec. 3.12): task success, failed obligations,
+    J_hat(h) (avg.tex Sec. 3.11): task success, failed obligations,
     unresolved high-severity obligations, evidence coverage, cost, and
     policy violations, averaged over ``corpus``, plus a catch/miss term for
     recurring failure tags against ``config.active_obligation_template_ids``
@@ -312,7 +312,7 @@ def accept_edit(
 ) -> bool:
     """
     Accept(Delta h) = I[J_hat(h+Delta h) > J_hat(h) + epsilon AND Safe(Delta h) = 1]
-    (avg.tex Sec. 3.12). ``safe`` is the caller-supplied ``Safe(Delta h)``
+    (avg.tex Sec. 3.11). ``safe`` is the caller-supplied ``Safe(Delta h)``
     judgement (out of scope to compute here -- e.g. a held-out regression
     suite or a human sign-off); this function only implements the gate.
     """

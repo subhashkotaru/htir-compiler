@@ -1,6 +1,6 @@
 """
 SA-5 -- Q4b: Offline Harness Improvement Loop (avg.tex Sec. 4 question Q4;
-avg.tex Sec. 3.12 "Offline Harness Improvement").
+avg.tex Sec. 3.11 "Offline Harness Improvement").
 
 Q4b claims that **verification witnesses drive domain-spec edits that
 generalize to held-out traces without changing the base model**. This
@@ -12,12 +12,12 @@ primitives (:mod:`htir.agents.harness_improvement`):
 over a *recorded witness corpus* mined from Terminal-Bench traces.
 
 Witness-driven failure detection (the "repeated witness patterns identify
-missing domain obligations" claim of avg.tex Sec. 3.12). Each experience trace
+missing domain obligations" claim of avg.tex Sec. 3.11). Each experience trace
 is compiled under the *baseline* domain spec S_d^(0); a trace is tagged
 ``hidden_test_failure`` exactly when its verification witness credits it
 **valid** while the recorded reward says the run actually **failed** -- the
 "agents frequently pass a narrow test but fail hidden tests" blind spot named
-in avg.tex Sec. 3.12, and the same false-valid mode SA-1/SA-3 quantified. This
+in avg.tex Sec. 3.11, and the same false-valid mode SA-1/SA-3 quantified. This
 is a mechanical, auditable witness pattern, never a fabricated tag.
 
 The loop (three experience batches). After each batch its witness records are
@@ -27,7 +27,7 @@ stronger validation obligation template when the tag recurs above threshold;
 ``accept_edit`` gates the edit on J_hat improvement + safety. Accepted edits
 grow S_d via ``apply_domain_spec_edit``. We record, per batch, the J_hat
 trajectory for the **AVG offline loop** vs. a frozen **no-offline-loop**
-baseline (ablation #5, avg.tex Sec. 4.6), and the edit-acceptance rate.
+baseline (ablation #5, avg.tex Sec. 4.5), and the edit-acceptance rate.
 
 The mined remediation is terminal-bound (:data:`HIDDEN_TEST_TEMPLATE`): it
 fires on ``run_command`` operations and, via a registered mechanical checker
@@ -113,7 +113,7 @@ from htir.models.htir import (
 from htir.agents.witness import HIGH_SEVERITIES, STATUS_VALID
 
 # The recurring-failure tag the offline loop mines for: a witness credited the
-# trajectory valid, but the recorded reward says it failed (avg.tex Sec. 3.12,
+# trajectory valid, but the recorded reward says it failed (avg.tex Sec. 3.11,
 # "pass a narrow test but fail hidden tests"). Detected from witnesses only.
 HIDDEN_TEST_FAILURE_TAG = "hidden_test_failure"
 
@@ -615,7 +615,7 @@ def _notes(use_llm: bool) -> list[str]:
             "shortcut/overfit core the semantic/integrity checker (--use-llm) targets."
         )
     notes.append(
-        "Failure detection is witness-driven (avg.tex Sec. 3.12): a trace is tagged "
+        "Failure detection is witness-driven (avg.tex Sec. 3.11): a trace is tagged "
         "'hidden_test_failure' iff its verification witness credited it valid while the "
         "recorded reward says it failed. The remediation is mined + gated + applied through the "
         "Step-8 primitives (mine_recurring_failures / score_config / accept_edit / "
@@ -629,7 +629,7 @@ def _notes(use_llm: bool) -> list[str]:
     )
     notes.append(
         "J_hat trajectory contrasts the AVG offline loop vs. a frozen no-offline-loop config "
-        "(ablation #5, avg.tex Sec. 4.6). This whole experiment is the 'no online loop' mode "
+        "(ablation #5, avg.tex Sec. 4.5). This whole experiment is the 'no online loop' mode "
         "(ablation #6): the verifier is used purely as an outer-loop scoring function, the "
         "complement of SA-4's online intervention."
     )

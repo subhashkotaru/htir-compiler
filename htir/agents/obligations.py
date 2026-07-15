@@ -91,7 +91,7 @@ def _escalation_for_issue(issue: WellFormednessIssue) -> EscalationRule:
 def _checker_for_evidence(ev: EvidenceType) -> CheckerType:
     """
     Route an obligation to a checker class based on its required evidence
-    (avg.tex Sec. 3.8). LOG is observability evidence a mechanical checker can
+    (avg.tex Sec. 3.7). LOG is observability evidence a mechanical checker can
     read directly (e.g. exit codes / log excerpts); MANUAL evidence needs a
     human, so it abstains rather than staying unrouted. Only genuinely no
     evidence (NONE) stays UNASSIGNED.
@@ -118,7 +118,7 @@ def _evidence_supports(
 ) -> SupportPolarity | None:
     """
     Decide whether ``ev`` is related to ``claim`` at all and, if so, whether it
-    supports or refutes it (E_sup, avg.tex Sec. 3.6/3.9). Returns ``None`` when
+    supports or refutes it (E_sup, avg.tex Sec. 3.6/3.8). Returns ``None`` when
     the pair is unrelated (different step/artifact and no type match), so
     unrelated step-local evidence is not wired to a claim just because they
     happen to share a step.
@@ -503,7 +503,7 @@ def _emit_policy_compliance_obligations(
     (policy-sensitive step, Omega_d ``policy`` artifact), so checkers have a
     real policy artifact to check the step/final-answer against instead of
     only the ``S_d`` declaration that a policy constraint exists. Routed to
-    the SEMANTIC checker (POLICY required evidence, avg.tex Sec. 3.8) and
+    the SEMANTIC checker (POLICY required evidence, avg.tex Sec. 3.7) and
     left PENDING -- discharging it is Step 5's job, not this function's.
     """
     policy_artifacts = domain_artifacts.by_kind(ArtifactKind.POLICY)

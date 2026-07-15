@@ -9,7 +9,7 @@ against them.
 
 The headline number is the **false-valid rate**: the fraction of *failed*
 trajectories (reward = 0) a verifier nonetheless credits as ``valid``. Driving
-this to zero is the entire point of the aggregation fix (avg.tex Sec. 3.9) and
+this to zero is the entire point of the aggregation fix (avg.tex Sec. 3.8) and
 the reason abstention exists -- a verifier should say ``uncertain`` rather than
 hand out unsupported credit. ``resolved_accuracy`` then measures how often the
 verifier is *right* when it does commit to valid/invalid, and
@@ -61,16 +61,33 @@ def label_from_reward(reward: Any) -> Optional[str]:
 
 
 def extract_reward(raw_trace: Any) -> Optional[int]:
-    """Read the trajectory ``reward`` from a raw trace dict (turn schema)."""
-    if isinstance(raw_trace, dict):
-        r = raw_trace.get("reward")
-        if r is None:
-            return None
-        try:
-            return int(round(float(r)))
-        except (TypeError, ValueError):
-            return None
-    return None
+    """
+    Read the trajectory ``reward`` from a raw trace dict.
+
+    Prefers an explicit top-level ``reward`` (the turn-schema convention used by
+    Terminal-Bench and by normalized τ-bench records). Falls back to the raw
+    τ-bench supervision fields so an un-normalized τ-bench record still yields a
+    label: ``eval_result.score`` (the DB-match reward in {0, 1}) or
+    ``meta.is_correct`` (a bool).
+    """
+    if not isinstance(raw_trace, dict):
+        return None
+    r = raw_trace.get("reward")
+    if r is None:
+        # τ-bench raw supervision fallbacks.
+        er = raw_trace.get("eval_result")
+        if isinstance(er, dict) and er.get("score") is not None:
+            r = er.get("score")
+        else:
+            meta = raw_trace.get("meta")
+            if isinstance(meta, dict) and meta.get("is_correct") is not None:
+                r = 1 if meta.get("is_correct") else 0
+    if r is None:
+        return None
+    try:
+        return int(round(float(r)))
+    except (TypeError, ValueError):
+        return None
 
 
 def trace_label(raw_trace: Any, *, task_id: str = "") -> TraceLabel:

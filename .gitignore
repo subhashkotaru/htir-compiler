@@ -11,3 +11,7 @@ venv/
 .mypy_cache/
 .ruff_cache/
 .DS_Store
+
+# Large local trajectory caches (reproducible via load_tau_bench(hf=True) / load_terminalbench)
+data/tau_cache/
+scratch_results.json

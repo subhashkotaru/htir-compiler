@@ -1,0 +1,1201 @@
+{
+  "experiment": "SA-4: Online Intervention, offline replay (Q4a)",
+  "n_traces": 800,
+  "n_labeled": 800,
+  "base_rate_invalid": 0.5,
+  "use_llm": false,
+  "domain_id": "tau_bench",
+  "seconds": 4.25,
+  "classes": [
+    {
+      "name": "any_active",
+      "flagged": 669,
+      "tp": 320,
+      "fp": 349,
+      "fn": 80,
+      "precision": 0.47832585949177875,
+      "recall": 0.8,
+      "first_fire_frac_mean": 0.7986016792874246,
+      "first_fire_frac_median": 0.875,
+      "steps_saved_mean": 4.25625,
+      "steps_saved_median": 2.0,
+      "steps_saved_frac_mean": 0.22832362135309808,
+      "false_alarm_interruptions": 349
+    },
+    {
+      "name": "failed_obligation",
+      "flagged": 77,
+      "tp": 50,
+      "fp": 27,
+      "fn": 350,
+      "precision": 0.6493506493506493,
+      "recall": 0.125,
+      "first_fire_frac_mean": 0.7380529184805283,
+      "first_fire_frac_median": 0.75,
+      "steps_saved_mean": 5.52,
+      "steps_saved_median": 4.0,
+      "steps_saved_frac_mean": 0.269234362275843,
+      "false_alarm_interruptions": 27
+    }
+  ],
+  "position_profile": [
+    {
+      "bin_lo": 0.0,
+      "bin_hi": 0.1,
+      "active_obligations": 1,
+      "steps": 1442,
+      "mean_active_per_step": 0.001
+    },
+    {
+      "bin_lo": 0.1,
+      "bin_hi": 0.2,
+      "active_obligations": 3,
+      "steps": 1068,
+      "mean_active_per_step": 0.003
+    },
+    {
+      "bin_lo": 0.2,
+      "bin_hi": 0.3,
+      "active_obligations": 20,
+      "steps": 1146,
+      "mean_active_per_step": 0.017
+    },
+    {
+      "bin_lo": 0.3,
+      "bin_hi": 0.4,
+      "active_obligations": 84,
+      "steps": 1054,
+      "mean_active_per_step": 0.08
+    },
+    {
+      "bin_lo": 0.4,
+      "bin_hi": 0.5,
+      "active_obligations": 190,
+      "steps": 981,
+      "mean_active_per_step": 0.194
+    },
+    {
+      "bin_lo": 0.5,
+      "bin_hi": 0.6,
+      "active_obligations": 458,
+      "steps": 1222,
+      "mean_active_per_step": 0.375
+    },
+    {
+      "bin_lo": 0.6,
+      "bin_hi": 0.7,
+      "active_obligations": 735,
+      "steps": 1135,
+      "mean_active_per_step": 0.648
+    },
+    {
+      "bin_lo": 0.7,
+      "bin_hi": 0.8,
+      "active_obligations": 1140,
+      "steps": 1065,
+      "mean_active_per_step": 1.07
+    },
+    {
+      "bin_lo": 0.8,
+      "bin_hi": 0.9,
+      "active_obligations": 2139,
+      "steps": 1149,
+      "mean_active_per_step": 1.862
+    },
+    {
+      "bin_lo": 0.9,
+      "bin_hi": 1.0,
+      "active_obligations": 2801,
+      "steps": 747,
+      "mean_active_per_step": 3.75
+    }
+  ],
+  "template_fires": [
+    {
+      "template_id": "wellformedness:policy_action_unlinked",
+      "active_count": 4879,
+      "n_traces": 604,
+      "failed_count": 0,
+      "dominant_action": "escalate"
+    },
+    {
+      "template_id": "tau-mutation-status",
+      "active_count": 1428,
+      "n_traces": 175,
+      "failed_count": 589,
+      "dominant_action": "repair"
+    },
+    {
+      "template_id": "uni-final-answer-supported",
+      "active_count": 632,
+      "n_traces": 632,
+      "failed_count": 0,
+      "dominant_action": "escalate"
+    },
+    {
+      "template_id": "wellformedness:integrity_untraceable_final_claim",
+      "active_count": 632,
+      "n_traces": 632,
+      "failed_count": 0,
+      "dominant_action": "veto"
+    }
+  ],
+  "walkthrough": {
+    "task_id": "airline_13",
+    "label": "invalid",
+    "n_steps": 30,
+    "first_failed_step": 7,
+    "steps_saved": 23,
+    "steps": [
+      {
+        "step": 1,
+        "role": "respond",
+        "request_preview": "[SYSTEM] # Airline Agent Policy\n\nThe current time is 2024-05-15 15:00:00 EST.\n\nAs an airline agent, you can help users b",
+        "active": []
+      },
+      {
+        "step": 2,
+        "role": "read_info",
+        "request_preview": "[USER] Sure! My user ID is james_lee_6136, and the reservation ID is XEWRD9. I want to change my flight.",
+        "active": []
+      },
+      {
+        "step": 3,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": []
+      },
+      {
+        "step": 4,
+        "role": "read_info",
+        "request_preview": "[USER] I actually want to change my return flight from ATL to LAX to a nonstop flight from ATL to LAS. I'm okay with upg",
+        "active": []
+      },
+      {
+        "step": 5,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": []
+      },
+      {
+        "step": 6,
+        "role": "respond",
+        "request_preview": "[USER] I'd like to go with Flight HAT102, departing at 9:00 PM.",
+        "active": []
+      },
+      {
+        "step": 7,
+        "role": "mutate_state",
+        "request_preview": "[USER] Yes, please proceed with these changes.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 8,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "role": "respond",
+        "request_preview": "[USER] I actually just want to change the return flight for now. Can we proceed with that?",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "role": "mutate_state",
+        "request_preview": "[USER] Yes, please proceed with these changes.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 11,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 12,
+        "role": "respond",
+        "request_preview": "[USER] Let's go with the option to cancel and rebook the reservation.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 13,
+        "role": "mutate_state",
+        "request_preview": "[USER] Yes, please proceed with the cancellation.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 14,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 15,
+        "role": "mutate_state",
+        "request_preview": "[USER] Yes, please proceed with the new booking.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 16,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 17,
+        "role": "respond",
+        "request_preview": "[USER] Actually, I only want to change the return flight to LAS. Can we focus on that?",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 18,
+        "role": "read_info",
+        "request_preview": "[USER] I understand. Let's go ahead and search for alternative outbound flights.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 19,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 20,
+        "role": "read_info",
+        "request_preview": "[USER] Let's try searching for one-stop flights from LAX to ORD on May 13.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 21,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 22,
+        "role": "read_info",
+        "request_preview": "[USER] Let's check for flights into Chicago Midway (MDW) on May 13.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 23,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 24,
+        "role": "read_info",
+        "request_preview": "[USER] Let's try searching for one-stop flights to MDW on May 13.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 25,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 26,
+        "role": "read_info",
+        "request_preview": "[USER] Let's adjust the outbound date and check for flights to ORD on May 12.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 27,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 28,
+        "role": "read_info",
+        "request_preview": "[USER] Let's search for one-stop flights to ORD on May 12.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 29,
+        "role": "respond",
+        "request_preview": "(no prior context)",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      },
+      {
+        "step": 30,
+        "role": "read_info",
+        "request_preview": "[USER] Let's check for flights to ORD on May 14.",
+        "active": [
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "tau-mutation-status",
+            "status": "failed",
+            "severity": "high",
+            "action": "repair"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          },
+          {
+            "template_id": "wellformedness:policy_action_unlinked",
+            "status": "abstained",
+            "severity": "high",
+            "action": "escalate"
+          }
+        ]
+      }
+    ]
+  },
+  "notes": [
+    "Offline run (no API key): semantic + integrity checkers abstain, so the confident 'failed_obligation' signal is mechanical only (exit codes / test reports). 'any_active' is abstention-dominated -> near-base-rate precision. Enable --use-llm (with a key) to turn those abstentions into confident catches.",
+    "Intervention is recommendation-only (htir.agents.intervention): the replay never drives an agent. Precision/recall are vs. the weak trajectory reward label (invalid = 'should have intervened'); steps-saved is the counterfactual T - t* on invalid flagged traces (stopping the doomed run at the first flag).",
+    "'failed_obligation' fires only when a mechanical check reported failure, so it is rarer but precise and timely; 'any_active' includes edit-not-yet-validated / unlinked-policy / untraceable-final-claim abstentions, which mostly land near the trace end (see position_profile)."
+  ]
+}

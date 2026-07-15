@@ -1,5 +1,5 @@
 """
-Verifier baselines / arms (avg.tex Sec. 4.3, "Baselines"; Sec. 4.6 ablations
+Verifier baselines / arms (avg.tex Sec. 4.3, "Baselines"; Sec. 4.5 ablations
 1 and 3).
 
 The experiments compare full \\AVG against several reduced verifiers. Rather
@@ -11,7 +11,7 @@ configuration over the *same* compiled graph:
 * ``EXEC_FREE`` -- graph obligations, semantic checkers only (no execution/
   mechanical evidence): the execution-free ablation.
 * ``NO_ABSTENTION`` -- full-AVG graph + evidence, but every checker is forced
-  to emit pass/fail (``force_decision``): the no-abstention ablation (Sec. 4.6
+  to emit pass/fail (``force_decision``): the no-abstention ablation (Sec. 4.5
   #3) used by SA-3 to isolate the effect of calibrated abstention.
 * ``MONOLITHIC`` -- the anti-thesis baseline: a *single* scalar judge over the
   whole trajectory, with no obligation graph, no evidence localization, and no
@@ -59,7 +59,7 @@ class VerifierArm(str, Enum):
 
 
 # Flag configuration for the graph-based arms. ``force_decision`` is the
-# no-abstention ablation (avg.tex Sec. 4.6 #3): the same graph + evidence as
+# no-abstention ablation (avg.tex Sec. 4.5 #3): the same graph + evidence as
 # full AVG, but every checker must commit to pass/fail instead of abstaining.
 _ARM_FLAGS: dict[VerifierArm, dict[str, bool]] = {
     VerifierArm.AVG_FULL: {"use_semantic": True, "disable_mechanical": False, "force_decision": False},

@@ -1,5 +1,5 @@
 """
-Checker execution (AVG Step 5, avg.tex Sec. 3.8 "Checking Obligations").
+Checker execution (AVG Step 5, avg.tex Sec. 3.7 "Checking Obligations").
 
 This module discharges each ``Obligation`` produced by
 ``htir.agents.obligations.build_claims_and_obligations`` by running the
@@ -12,7 +12,7 @@ the finished obligation set.
 
 Entry point: ``check_obligations``.
 
-Checker contract (avg.tex Sec. 3.8): a checker consumes an obligation and its
+Checker contract (avg.tex Sec. 3.7): a checker consumes an obligation and its
 *local* graph context only -- the claim, its r_i-typed candidate evidence
 ``E_i``, and the immediate neighbourhood (producing step, consumed/produced
 artifacts, validation/dependency edges touching it). It is never handed the
@@ -111,7 +111,7 @@ def check_obligations(
     without running their checker (no execution evidence is consulted), which
     is exactly the execution-free ablation.
 
-    ``force_decision`` is the **no-abstention** ablation (avg.tex Sec. 4.6,
+    ``force_decision`` is the **no-abstention** ablation (avg.tex Sec. 4.5,
     ablation #3): every checker must emit pass/fail, none may abstain. After
     the routed checker runs, its abstain probability mass is redistributed onto
     pass/fail (:func:`_force_decision`) so no obligation stays ABSTAINED. An
@@ -196,7 +196,7 @@ _FORCED_PASS_PRIOR = 0.5
 
 def _force_decision(result: CheckerResult) -> CheckerResult:
     """
-    No-abstention ablation (avg.tex Sec. 4.6 #3): redistribute a checker's
+    No-abstention ablation (avg.tex Sec. 4.5 #3): redistribute a checker's
     abstain mass onto pass/fail so the obligation must commit. Mass is split in
     proportion to the existing pass/fail signal; a pure abstain (no signal at
     all) is split by the optimistic ``_FORCED_PASS_PRIOR``. The score is
@@ -279,7 +279,7 @@ def _run_checker(
             return _abstain()
         return _check_mechanical(htir, spec, ob, claim, evidence_by_id, domain_artifacts=domain_artifacts)
     if ob.checker == CheckerType.SEMANTIC:
-        return _check_semantic(ob, claim, evidence_by_id, use_semantic=use_semantic, model=model)
+        return _check_semantic(htir, ob, claim, evidence_by_id, use_semantic=use_semantic, model=model)
     # ABSTENTION and UNASSIGNED both abstain: UNASSIGNED means genuinely no
     # evidence type was ever routable, which is exactly the abstention case.
     return _abstain()
@@ -493,7 +493,36 @@ class _SemanticVerdict(BaseModel):
     rationale: str = ""
 
 
+def _producing_step_context(htir: HTIR, claim: ClaimNode) -> str:
+    """
+    The claim's producing step, rendered as the checker's *local neighbourhood*
+    (avg.tex Sec. 3.7: a checker sees the claim, its candidate evidence, and the
+    immediate neighbourhood incl. the producing step). This is the action a
+    policy/final-answer obligation is actually about -- without it the model has
+    the rulebook but not the move to judge. Empty string when there is no
+    producing step (nothing local to add).
+    """
+    if claim.source_step_id is None:
+        return ""
+    step = htir.get_step(claim.source_step_id)
+    if step is None:
+        return ""
+    tools = "; ".join(
+        f"{tc.name}({truncate(tc.arguments_text or '', 160)}) -> {truncate(tc.result or '', 160)}"
+        for tc in step.tool_calls
+    )
+    parts = [f"Step {step.step_id} — operation type: {step.role}; status: {step.execution_status.value}"]
+    if step.request_message:
+        parts.append(f"context/request: {truncate(step.request_message, 400)}")
+    if step.response_message:
+        parts.append(f"agent output: {truncate(step.response_message, 400)}")
+    if tools:
+        parts.append(f"tool calls: {tools}")
+    return "\n".join(parts)
+
+
 def _check_semantic(
+    htir: HTIR,
     ob: Obligation,
     claim: ClaimNode,
     evidence_by_id: dict[int, EvidenceNode],
@@ -502,9 +531,16 @@ def _check_semantic(
     model: str,
 ) -> CheckerResult:
     """
-    Narrow LLM judge over a single claim-evidence pair. With
-    ``use_semantic=False`` (the default), always abstains without calling the
-    model -- this keeps the deterministic path byte-for-byte reproducible.
+    Narrow LLM judge over a single claim, its candidate evidence, and its local
+    neighbourhood (the producing step). With ``use_semantic=False`` (the
+    default), always abstains without calling the model -- this keeps the
+    deterministic path byte-for-byte reproducible.
+
+    The producing-step context is what lets a policy-compliance obligation
+    ("step N complies with policy P") actually be judged: the candidate evidence
+    supplies the policy P (an Omega_d artifact), and the local neighbourhood
+    supplies the action step N to hold against it (avg.tex Sec. 3.7's checker
+    contract). Only consulted when the LLM is on, so no offline result changes.
     """
     if not use_semantic:
         return _abstain()
@@ -515,15 +551,19 @@ def _check_semantic(
         f"- {evidence_by_id[e].description}: {truncate(evidence_by_id[e].content, 500)}"
         for e in ob.candidate_evidence_ids if e in evidence_by_id
     )
+    step_context = _producing_step_context(htir, claim)
+    step_block = f"Action under review (the step this claim is about):\n{step_context}\n\n" if step_context else ""
     msgs = [
         system(
-            "You are a narrow claim-evidence checker. Given exactly one claim "
-            "and its candidate evidence, judge whether the evidence supports "
-            "(pass), contradicts (fail), or is insufficient to decide "
-            "(abstain) the claim. Never guess beyond the evidence given."
+            "You are a narrow claim-evidence checker. Given exactly one claim, "
+            "the action it is about, and its candidate evidence (e.g. a policy or "
+            "schema), judge whether the evidence supports (pass), contradicts "
+            "(fail), or is insufficient to decide (abstain) the claim. Judge the "
+            "action against the evidence; never guess beyond what is shown."
         ),
         user(
             f"Claim: {claim.statement}\n\n"
+            f"{step_block}"
             f"Candidate evidence:\n{evidence_desc}\n\n"
             "Return verdict (pass/fail/abstain), confidence (0-1), and a short rationale."
         ),
