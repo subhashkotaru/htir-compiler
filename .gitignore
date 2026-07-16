@@ -12,6 +12,11 @@ venv/
 .ruff_cache/
 .DS_Store
 
+# Editor / assistant local state (Claude Code sessions, worktrees, memory)
+.claude/
+.idea/
+.vscode/
+
 # Large local trajectory caches (reproducible via load_tau_bench(hf=True) / load_terminalbench)
 data/tau_cache/
 scratch_results.json

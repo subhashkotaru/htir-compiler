@@ -70,20 +70,77 @@ does.
 
 | domain | arm | false-valid (overall) | false-valid (long-horizon) |
 |---|---|---|---|
-| Terminal-Bench | `avg_full` | **0.187** | **0.207** |
-| Terminal-Bench | `monolithic` | 0.830 | 0.875 |
+| Terminal-Bench | `avg_full` | **0.158 ± 0.001** | **0.228 ± 0.003** |
+| Terminal-Bench | `monolithic` | 0.645 ± 0.005 | 0.864 ± 0.005 |
 | τ-bench | `avg_full` | **0.042 ± 0.003** | **0.034 ± 0.003** |
 | τ-bench | `monolithic` | 0.678 ± 0.010 | 0.756 ± 0.014 |
 
-AVG cuts the false-valid rate by **4.4×** on Terminal-Bench and **16×** on
-τ-bench (**22×** on long-horizon τ traces). The gap *widens* with horizon length
+(Terminal-Bench now reported as mean ± SE over 3 seeds, `n = 3000`/seed, matching
+the τ-bench rigor bar; see `data/sa1_results.json`.) AVG cuts the false-valid rate
+by **4.1×** on Terminal-Bench and **16×** on τ-bench (**22×** on long-horizon τ
+traces). The *absolute* gap widens with horizon length — on Terminal-Bench the
+monolith's false-valid climbs to 0.864 on long traces while AVG stays at 0.228 —
 for exactly the reason evidence-local verification exists: a holistic judge is
 increasingly fooled by a long trajectory that "looks" completed, whereas
 per-step obligations tie the verdict to whether the specific consequential action
 was actually justified by in-trace evidence. AVG pays for this with coverage —
-offline it resolves ~16 % of traces and abstains on the rest — which is the
+offline it resolves ~12 % of traces and abstains on the rest — which is the
 correct behaviour when the deciding evidence (e.g. a DB-state reward) is not in
 the transcript.
+
+### Competitive baselines: PRM and Agent-as-a-Judge (SA-8)
+
+A skeptic will object that a single scalar monolith is a strawman: the 2026 field
+compares against a **process reward model** (score each step, aggregate) and an
+**Agent-as-a-Judge** (gather evidence over the trace before ruling). We add both
+as arms over the *same* compiled graph. The offline realizations are
+byte-deterministic: `prm` is a step-heuristic reward model (score every step from
+its parsed execution signal, mean-threshold to a verdict); `agent_judge` degrades
+without an API key to a deterministic multi-hop scan of step outcomes that still
+commits (its full evidence-gathering, and an LLM step-critic PRM, are the
+`--use-llm` versions).
+
+| domain | arm | false-valid (overall) | false-valid (long-horizon) | resolved-frac |
+|---|---|---|---|---|
+| Terminal-Bench | `avg_full` | **0.158 ± 0.001** | **0.228 ± 0.003** | 0.12 |
+| Terminal-Bench | `monolithic` | 0.645 ± 0.005 | 0.864 ± 0.005 | 0.64 |
+| Terminal-Bench | `prm` | 0.698 ± 0.008 | 0.918 ± 0.008 | 0.67 |
+| Terminal-Bench | `agent_judge` | 0.652 ± 0.005 | 0.874 ± 0.004 | 0.64 |
+| τ-bench | `avg_full` | **0.042 ± 0.003** | **0.034 ± 0.003** | 0.16 |
+| τ-bench | `monolithic` | 0.678 ± 0.010 | 0.756 ± 0.014 | 0.78 |
+| τ-bench | `prm` | 0.855 ± 0.002 | 0.983 ± 0.004 | 0.96 |
+| τ-bench | `agent_judge` | 0.678 ± 0.010 | 0.756 ± 0.014 | 0.78 |
+
+Both categories fail, and for instructive reasons. The **PRM is the *worst* arm on
+both domains** (false-valid 0.698 on Terminal-Bench, **0.855** on τ-bench): by
+rewarding locally-plausible steps and aggregating, it over-credits even more than
+the endpoint monolith — a step that *ran successfully* (a passing edit, a
+consequential DB mutation that the tool accepted) scores high regardless of
+whether it was justified, so a trajectory of individually-plausible steps that
+collectively failed the task is credited valid. It never abstains on a scoreable
+trace (resolved-frac ≈ 0.67 / 0.96), which is precisely the over-commitment
+AVG's calibrated abstention avoids. The **Agent-as-a-Judge is fooled in the same
+way**: its multi-hop outcome scan catches an unresolved failure the monolith
+misses (its failure-flag precision is higher, 0.97 vs 0.77 on Terminal-Bench), but
+on the common failure mode — a structurally-clean trace whose visible steps all
+pass but whose task-level reward is 0 — it still commits `valid`, landing within
+noise of the monolith offline (0.652 / 0.678). Paired *t*-tests over the 3 seeds
+confirm every gap versus full AVG is significant: on Terminal-Bench `monolithic −
+avg_full = +0.487 ± 0.006` (t = 76.8, p = 2e-4), `prm − avg_full = +0.540 ± 0.009`
+(t = 58.0, p = 3e-4), `agent_judge − avg_full = +0.494 ± 0.006` (t = 76.1,
+p = 2e-4); the τ-bench gaps are larger still (`prm − avg_full = +0.813`,
+p < 1e-4).
+
+Honest caveats. (i) Offline, `agent_judge`'s real advantage over the monolith —
+reading artifacts/policies via multi-hop reasoning — cannot show; without a key it
+is a deterministic proxy that separates from the monolith only on unresolved-
+failure traces, so we report it as within-noise of the monolith rather than
+claiming a clean three-way separation. The `--use-llm` branch (LLM judge, LLM
+step-critic PRM) runs when a key is present and is the richer comparison. (ii) The
+budget is matched: `agent_judge` and `monolithic` each cost one full-trace judge
+pass, the PRM one narrow call per step (disclosed as `cost/tr`). (iii) τ-bench
+seeds draw from a pool of ~1000 balanced traces, so the τ SEs are small; the
+significance claim rests on the Terminal-Bench 3-seed test.
 
 ## Q3 — Calibrated abstention is where the safety comes from (SA-3)
 

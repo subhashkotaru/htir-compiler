@@ -55,6 +55,7 @@ from pydantic import BaseModel, Field
 from htir.agents.baselines import VerifierArm, run_arm
 from htir.agents.trace_abstraction import TraceAbstractionAgent
 from htir.eval.datasets import iter_local_traces, to_canonical_steps
+from htir.eval.seeds import PairedGap, format_aggregate, paired_t_test, run_multiseed
 from htir.eval.weak_labels import (
     VerifierMetrics,
     evaluate_predictions,
@@ -64,12 +65,17 @@ from htir.eval.weak_labels import (
 from htir.models.domain import TERMINAL_DOMAIN_SPEC, DomainSpec, get_domain_spec
 from htir.models.htir import CheckerType, HTIR
 
-# Arms reported, in the order they appear in the results table.
+# Arms reported, in the order they appear in the results table. SA-8 adds the
+# two competitive-baseline categories the 2026 field demands -- a process reward
+# model (``prm``) and an Agent-as-a-Judge (``agent_judge``) -- alongside the
+# strawman monolith.
 DEFAULT_ARMS: list[VerifierArm] = [
     VerifierArm.AVG_FULL,
     VerifierArm.EXEC_ONLY,
     VerifierArm.EXEC_FREE,
     VerifierArm.MONOLITHIC,
+    VerifierArm.PRM,
+    VerifierArm.AGENT_JUDGE,
 ]
 
 # A trajectory is "long-horizon" (Q1's stress regime) if it has at least this
@@ -120,17 +126,21 @@ def _semantic_obligation_count(htir: HTIR) -> int:
     return sum(1 for o in htir.obligations if o.checker == CheckerType.SEMANTIC)
 
 
-def _llm_calls_for_arm(arm: VerifierArm, n_semantic: int, use_llm: bool) -> int:
+def _llm_calls_for_arm(arm: VerifierArm, n_semantic: int, n_steps: int, use_llm: bool) -> int:
     """
     LLM invocations an arm would issue on one trace (see module docstring):
     exec_only 0; avg_full / exec_free one per SEMANTIC obligation; monolithic
-    one full-trace judge. Counted as the *would-issue* cost even when
-    ``use_llm`` is off (offline run), which is what the cost axis reports.
+    one full-trace judge. SA-8: ``agent_judge`` one full-trace judge pass
+    (token-budget-matched to the monolith and AVG's semantic checker), and
+    ``prm`` one narrow step-critic call per step. Counted as the *would-issue*
+    cost even when ``use_llm`` is off (offline run), which is the cost axis.
     """
     if arm == VerifierArm.EXEC_ONLY:
         return 0
-    if arm == VerifierArm.MONOLITHIC:
+    if arm in (VerifierArm.MONOLITHIC, VerifierArm.AGENT_JUDGE):
         return 1
+    if arm == VerifierArm.PRM:
+        return n_steps
     # avg_full / exec_free: one narrow call per semantic-routed obligation.
     return n_semantic
 
@@ -200,7 +210,7 @@ def run_sa1(
                 model=model,
             )
             rec.predicted[arm.value] = agg.predicted_status
-            rec.llm_calls[arm.value] = _llm_calls_for_arm(arm, n_semantic, use_llm)
+            rec.llm_calls[arm.value] = _llm_calls_for_arm(arm, n_semantic, len(htir.steps), use_llm)
 
         records.append(rec)
         if progress_every and log is not None and (i + 1) % progress_every == 0:
@@ -248,6 +258,17 @@ def _assemble(
             "collapses onto exec_only and exec_free abstains everywhere. The valid "
             "offline contrast is avg_full/exec_only (mechanical + abstention-aware "
             "aggregation) vs. monolithic (endpoint heuristic)."
+        )
+        notes.append(
+            "SA-8 baselines offline: prm is the deterministic step-heuristic process "
+            "reward model (score every step, mean-threshold); it abstains only on a "
+            "trace with no steps to score, so on any scoreable trace it commits -- "
+            "over-committing on weak-label steps and, by rewarding locally-plausible "
+            "steps, crediting even more failed traces than the endpoint monolith. "
+            "agent_judge falls back to a deterministic multi-hop step-outcome gather "
+            "that still commits -- an honest proxy for the LLM Agent-as-a-Judge, which "
+            "(like the semantic checker) needs a key to show its real evidence-gathering. "
+            "Both remain fooled by structurally-clean-but-failed traces; AVG abstains instead."
         )
     notes.append(
         "llm_calls are a would-issue cost proxy (0 real calls offline): the compute "
@@ -310,6 +331,119 @@ def format_table(result: SA1Result) -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Multi-seed sweep + significance (avg.tex Sec. 4.7 statistical reporting)
+# ---------------------------------------------------------------------------
+
+# Per-seed metrics aggregated to mean±SE (their raw per-seed values feed the
+# paired significance test). Iterates ``res.arms`` so any arm (incl. SA-8's
+# prm / agent_judge) flows through automatically.
+def sa1_seed_metrics(res: SA1Result) -> dict[str, float]:
+    out: dict[str, float] = {"base_rate_valid": res.base_rate_valid}
+    for a in res.arms:
+        out[f"{a.arm}.false_valid"] = a.overall.false_valid_rate
+        out[f"{a.arm}.false_valid.long"] = a.long_horizon.false_valid_rate
+        out[f"{a.arm}.resolved_frac"] = a.overall.resolved_fraction
+        out[f"{a.arm}.resolved_acc"] = a.overall.resolved_accuracy
+    return out
+
+
+# Key gaps whose significance we report: each weaker baseline's false-valid rate
+# vs. full AVG (the headline contrast). SA-8 adds prm and agent_judge.
+SIG_GAPS: list[tuple[str, str]] = [
+    ("monolithic", "avg_full"),
+    ("prm", "avg_full"),
+    ("agent_judge", "avg_full"),
+]
+
+
+def _significance(aggregate: dict[str, Any]) -> list[PairedGap]:
+    """Paired t-tests on the SIG_GAPS false-valid contrasts, using the raw
+    per-seed values that :func:`htir.eval.seeds.aggregate` retained."""
+    gaps: list[PairedGap] = []
+    for a_arm, b_arm in SIG_GAPS:
+        a_key, b_key = f"{a_arm}.false_valid", f"{b_arm}.false_valid"
+        if a_key not in aggregate or b_key not in aggregate:
+            continue
+        gaps.append(paired_t_test(
+            aggregate[a_key].values, aggregate[b_key].values,
+            label=f"{a_arm}_vs_{b_arm}.false_valid", a=a_arm, b=b_arm,
+        ))
+    return gaps
+
+
+def _sample_pool(args: argparse.Namespace) -> list[dict[str, Any]]:
+    """Load the trace pool that each seed draws a balanced subsample from."""
+    if args.hf:
+        from htir.eval.datasets import load_terminalbench
+        return list(load_terminalbench(limit=args.hf_limit, streaming=True))
+    if not args.cache:
+        raise SystemExit("provide --cache <jsonl> or --hf")
+    return list(iter_local_traces([args.cache]))
+
+
+def run_sa1_multiseed(
+    pool: list[dict[str, Any]], *, spec: DomainSpec, seeds: list[int], n: int,
+    long_horizon_steps: int, model: str, log: Any = sys.stderr,
+) -> dict[str, Any]:
+    """
+    Run SA-1 over ``len(seeds)`` independent balanced subsamples of ``pool`` and
+    package mean±SE + a paired-t significance statement on the key false-valid
+    gaps (avg.tex Sec. 4.7). Mirrors the τ-bench driver's multi-seed shape.
+    """
+    from htir.eval.datasets import balanced_sample
+
+    def sample_fn(seed: int) -> list[dict[str, Any]]:
+        return balanced_sample(pool, n, seed=seed)
+
+    def run_fn(sample: list[dict[str, Any]]) -> SA1Result:
+        return run_sa1(sample, spec=spec, long_horizon_steps=long_horizon_steps,
+                       model=model, progress_every=0, log=log)
+
+    summary, per_seed = run_multiseed(sample_fn, run_fn, seeds, extract=sa1_seed_metrics, log=log)
+    gaps = _significance(summary.aggregate)
+    return {
+        "experiment": "SA-1 + SA-8: Graph vs. Monolith + PRM / Agent-as-a-Judge (Q1)",
+        "domain": spec.domain_id,
+        "seeds": seeds,
+        "n_per_seed": summary.n_per_seed,
+        "use_llm": False,
+        "aggregate": {k: v.model_dump() for k, v in summary.aggregate.items()},
+        "significance": [g.model_dump() for g in gaps],
+        "per_seed": [r.model_dump() for r in per_seed],
+        "notes": per_seed[0].notes if per_seed else [],
+    }
+
+
+def format_multiseed(out: dict[str, Any]) -> str:
+    """Compact report of the multi-seed aggregate + significance statements."""
+    lines: list[str] = []
+    lines.append(
+        f"{out['experiment']}  |  domain={out['domain']}  "
+        f"seeds={out['seeds']}  n/seed={out['n_per_seed']}"
+    )
+    # False-valid mean±SE per arm (overall + long-horizon).
+    from htir.eval.seeds import MeanSE
+    agg = {k: MeanSE(**v) for k, v in out["aggregate"].items()}
+    lines.append("  [false_valid mean±SE over seeds]")
+    lines.append(f"    {'arm':<12} {'overall':>16} {'long_horizon':>16} {'res_frac':>16}")
+    for arm in [a.value for a in DEFAULT_ARMS]:
+        ov = agg.get(f"{arm}.false_valid")
+        lh = agg.get(f"{arm}.false_valid.long")
+        rf = agg.get(f"{arm}.resolved_frac")
+        if ov is None:
+            continue
+        lines.append(
+            f"    {arm:<12} {ov.as_str():>16} "
+            f"{(lh.as_str() if lh else '-'):>16} {(rf.as_str() if rf else '-'):>16}"
+        )
+    lines.append("  [significance -- paired t-test on false_valid gap vs full AVG]")
+    for g in out["significance"]:
+        gap = PairedGap(**g)
+        lines.append(f"    {gap.as_str()}")
+    return "\n".join(lines)
+
+
 def _load_traces(args: argparse.Namespace) -> list[dict[str, Any]]:
     if args.hf:
         from htir.eval.datasets import balanced_sample, load_terminalbench
@@ -329,20 +463,42 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--cache", type=str, default="", help="local JSON/JSONL sample (turn schema)")
     src.add_argument("--hf", action="store_true", help="pull from the HF terminalbench dataset")
     src.add_argument("--hf-limit", type=int, default=9000, help="records to stream when --hf")
-    src.add_argument("--n", type=int, default=3000, help="target balanced sample size")
-    src.add_argument("--seed", type=int, default=0)
+    src.add_argument("--n", type=int, default=3000, help="target balanced sample size (per seed)")
+    src.add_argument("--seed", type=int, default=0, help="seed for the single-seed path")
+    src.add_argument("--seeds", type=str, default="0,1,2",
+                     help="comma list of seeds for the multi-seed sweep (mean±SE + significance)")
+    p.add_argument("--single-seed", action="store_true",
+                   help="run one seed and write a flat SA1Result (legacy schema) instead of the sweep")
     p.add_argument("--use-llm", action="store_true", help="enable LLM monolith + semantic checker")
     p.add_argument("--domain", type=str, default="terminal_swe",
                    help="domain spec S_d to verify under (e.g. terminal_swe, tau_bench)")
     p.add_argument("--long-horizon-steps", type=int, default=DEFAULT_LONG_HORIZON_STEPS)
     p.add_argument("--model", type=str, default="openai/gpt-4o")
-    p.add_argument("--out", type=str, default="", help="write SA1Result JSON here")
+    p.add_argument("--out", type=str, default="", help="write result JSON here")
     args = p.parse_args(argv)
+
+    spec = get_domain_spec(args.domain)
+
+    # Multi-seed sweep (default): the rigor path -- mean±SE over >=3 seeds and a
+    # paired-t significance statement on the key false-valid gaps. Offline only
+    # (the sweep is byte-deterministic); use --single-seed --use-llm for an LLM run.
+    if not args.single_seed and not args.use_llm:
+        seeds = [int(s) for s in args.seeds.split(",") if s.strip() != ""]
+        pool = _sample_pool(args)
+        out = run_sa1_multiseed(
+            pool, spec=spec, seeds=seeds, n=args.n,
+            long_horizon_steps=args.long_horizon_steps, model=args.model,
+        )
+        print(format_multiseed(out))
+        if args.out:
+            Path(args.out).write_text(json.dumps(out, indent=2), encoding="utf-8")
+            print(f"\n[sa1] wrote {args.out}", file=sys.stderr)
+        return 0
 
     traces = _load_traces(args)
     result = run_sa1(
         traces,
-        spec=get_domain_spec(args.domain),
+        spec=spec,
         use_llm=args.use_llm,
         use_semantic=args.use_llm,
         long_horizon_steps=args.long_horizon_steps,

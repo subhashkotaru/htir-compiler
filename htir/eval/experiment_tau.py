@@ -180,6 +180,23 @@ def main(argv: list[str] | None = None) -> int:
                                        progress_every=0),
             _sa1_metrics, tau_traces, n=args.n, seeds=seeds, table_fn=sa1_table, log=log,
         )
+        # SA-8: paired-t significance on the false-valid gaps vs full AVG (incl.
+        # the prm / agent_judge competitive baselines now in DEFAULT_ARMS).
+        from htir.eval.experiment_sa1 import SIG_GAPS
+        from htir.eval.seeds import MeanSE, paired_t_test
+        agg_ms = {k: MeanSE(**v) for k, v in out["aggregate"].items()}
+        sig = []
+        for a_arm, b_arm in SIG_GAPS:
+            ak, bk = f"{a_arm}.false_valid", f"{b_arm}.false_valid"
+            if ak in agg_ms and bk in agg_ms:
+                sig.append(paired_t_test(agg_ms[ak].values, agg_ms[bk].values,
+                                         label=f"{a_arm}_vs_{b_arm}.false_valid",
+                                         a=a_arm, b=b_arm).model_dump())
+        out["significance"] = sig
+        print("\n----- SA-1 significance (false_valid gap vs full AVG) -----", file=log)
+        for g in sig:
+            print(f"  {g['a']} - {g['b']} = {g['mean_diff']:+.3f}±{g['se_diff']:.3f} "
+                  f"(t={g['t_stat']:.2f}, df={g['df']}, p={g['p_value']:.4f})", file=log)
         if args.use_llm:
             print("\n[tau] SA-1 LLM slice ...", file=log)
             llm_sample = balanced_sample(tau_traces, args.llm_n, seed=0)

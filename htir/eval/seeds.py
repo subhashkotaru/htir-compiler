@@ -124,3 +124,73 @@ def format_aggregate(agg: dict[str, MeanSE], *, digits: int = 3, title: str = ""
         vals = ", ".join(f"{v:.{digits}f}" for v in m.values)
         lines.append(f"  {name:<{width}}  {m.as_str(digits)}  (n={m.n}: {vals})")
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Significance testing on a key gap (avg.tex Sec. 4.7 statistical reporting)
+# ---------------------------------------------------------------------------
+
+class PairedGap(BaseModel):
+    """A paired significance test of ``a - b`` over per-seed metric values."""
+    label: str = ""
+    a: str = ""
+    b: str = ""
+    mean_a: float = 0.0
+    mean_b: float = 0.0
+    mean_diff: float = 0.0
+    se_diff: float = 0.0
+    t_stat: float = 0.0
+    df: int = 0
+    p_value: float = Field(1.0, description="Two-sided paired t-test p-value")
+    n_seeds: int = 0
+    diffs: list[float] = Field(default_factory=list)
+
+    def as_str(self, digits: int = 3) -> str:
+        return (
+            f"{self.a} - {self.b} = {self.mean_diff:+.{digits}f}"
+            f"±{self.se_diff:.{digits}f}  (t={self.t_stat:.2f}, df={self.df}, "
+            f"p={self.p_value:.4f}, n={self.n_seeds})"
+        )
+
+
+def paired_t_test(a_values: Sequence[float], b_values: Sequence[float], *, label: str = "",
+                  a: str = "a", b: str = "b") -> PairedGap:
+    """
+    Two-sided **paired t-test** of ``a - b`` over per-seed values (each seed is a
+    matched pair: same balanced subsample scored by both arms). With <2 seeds the
+    test is undefined and ``p_value`` stays 1.0. ``scipy`` is used for the exact
+    t-distribution p-value when available; otherwise a normal approximation.
+    """
+    va = [float(x) for x in a_values]
+    vb = [float(x) for x in b_values]
+    n = min(len(va), len(vb))
+    diffs = [va[i] - vb[i] for i in range(n)]
+    mean_a = statistics.fmean(va) if va else 0.0
+    mean_b = statistics.fmean(vb) if vb else 0.0
+    if n < 2:
+        return PairedGap(
+            label=label, a=a, b=b, mean_a=mean_a, mean_b=mean_b,
+            mean_diff=(mean_a - mean_b), n_seeds=n, diffs=diffs,
+        )
+    mean_d = statistics.fmean(diffs)
+    sd_d = statistics.stdev(diffs)
+    se_d = sd_d / math.sqrt(n) if sd_d > 0 else 0.0
+    df = n - 1
+    if se_d == 0.0:
+        # No within-pair variance: a nonzero constant gap is as significant as
+        # the data can express (p->0); a zero gap is not (p=1).
+        t_stat = math.inf if mean_d != 0.0 else 0.0
+        p_value = 0.0 if mean_d != 0.0 else 1.0
+    else:
+        t_stat = mean_d / se_d
+        try:
+            from scipy import stats  # exact Student-t
+            p_value = float(2.0 * stats.t.sf(abs(t_stat), df))
+        except Exception:
+            # Normal approximation fallback (no scipy).
+            p_value = float(math.erfc(abs(t_stat) / math.sqrt(2.0)))
+    return PairedGap(
+        label=label, a=a, b=b, mean_a=mean_a, mean_b=mean_b,
+        mean_diff=mean_d, se_diff=se_d, t_stat=t_stat, df=df,
+        p_value=p_value, n_seeds=n, diffs=diffs,
+    )
