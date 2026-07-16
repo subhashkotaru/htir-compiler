@@ -1,0 +1,456 @@
+<title>AVG — Path to an ICLR Spotlight Experiments Section</title>
+<style>
+  :root {
+    --bg: #f5f6f9;
+    --surface: #ffffff;
+    --surface-2: #eceff4;
+    --ink: #13161d;
+    --ink-soft: #474d5b;
+    --ink-faint: #767d8c;
+    --border: #e1e4ec;
+    --border-strong: #cfd4df;
+    --accent: #3a44ac;
+    --accent-ink: #2b3494;
+    --accent-tint: #e9ebf9;
+    --good: #1c7a4c;
+    --good-tint: #e2f2e9;
+    --p0: #b13a12;
+    --p0-tint: #f8e7df;
+    --p1: #9c6a0d;
+    --p1-tint: #f6ecd6;
+    --p2: #57607a;
+    --p2-tint: #e9ebf1;
+    --shadow: 0 1px 2px rgba(19,22,29,.04), 0 6px 20px rgba(19,22,29,.05);
+    --font-display: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1015;
+      --surface: #171a22;
+      --surface-2: #1f232d;
+      --ink: #e9ebf1;
+      --ink-soft: #aab0be;
+      --ink-faint: #767d8c;
+      --border: #282d38;
+      --border-strong: #353b48;
+      --accent: #838ef2;
+      --accent-ink: #9aa3f6;
+      --accent-tint: #1e2138;
+      --good: #4bbd82;
+      --good-tint: #14261d;
+      --p0: #ef8055;
+      --p0-tint: #2c1a12;
+      --p1: #e0a94f;
+      --p1-tint: #2a2213;
+      --p2: #9198ad;
+      --p2-tint: #1e222c;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f6f9; --surface: #ffffff; --surface-2: #eceff4; --ink: #13161d;
+    --ink-soft: #474d5b; --ink-faint: #767d8c; --border: #e1e4ec; --border-strong: #cfd4df;
+    --accent: #3a44ac; --accent-ink: #2b3494; --accent-tint: #e9ebf9;
+    --good: #1c7a4c; --good-tint: #e2f2e9; --p0: #b13a12; --p0-tint: #f8e7df;
+    --p1: #9c6a0d; --p1-tint: #f6ecd6; --p2: #57607a; --p2-tint: #e9ebf1;
+    --shadow: 0 1px 2px rgba(19,22,29,.04), 0 6px 20px rgba(19,22,29,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1015; --surface: #171a22; --surface-2: #1f232d; --ink: #e9ebf1;
+    --ink-soft: #aab0be; --ink-faint: #767d8c; --border: #282d38; --border-strong: #353b48;
+    --accent: #838ef2; --accent-ink: #9aa3f6; --accent-tint: #1e2138;
+    --good: #4bbd82; --good-tint: #14261d; --p0: #ef8055; --p0-tint: #2c1a12;
+    --p1: #e0a94f; --p1-tint: #2a2213; --p2: #9198ad; --p2-tint: #1e222c;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px 96px; }
+  .measure { max-width: 68ch; }
+
+  a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+  a:hover { border-bottom-color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  /* ---- header ---- */
+  header.masthead {
+    padding: 72px 0 40px; border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent-ink); font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--accent); display: inline-block; }
+  h1 {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -.01em;
+    font-size: clamp(2.1rem, 5vw, 3.2rem); line-height: 1.08; margin: 18px 0 0;
+    text-wrap: balance; max-width: 20ch;
+  }
+  .dek { font-size: 1.15rem; color: var(--ink-soft); margin: 20px 0 0; max-width: 60ch; }
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px;
+    font-family: var(--font-mono); font-size: 12.5px;
+  }
+  .meta {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+    padding: 5px 13px; color: var(--ink-soft); display: inline-flex; gap: 7px; align-items: center;
+  }
+  .meta b { color: var(--ink); font-weight: 600; }
+
+  /* ---- stat band ---- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--border); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; box-shadow: var(--shadow); }
+  .stat { background: var(--surface); padding: 20px 18px; }
+  .stat .num { font-family: var(--font-mono); font-size: clamp(1.5rem, 3.4vw, 2rem);
+    font-weight: 600; color: var(--accent-ink); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .stat .lbl { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; line-height: 1.35; }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ---- sections ---- */
+  section { margin-top: 64px; scroll-margin-top: 24px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
+  .sec-no { font-family: var(--font-mono); font-size: 13px; color: var(--accent-ink); font-weight: 600; }
+  h2 { font-family: var(--font-display); font-weight: 600; font-size: 1.72rem;
+    letter-spacing: -.01em; margin: 0; line-height: 1.15; text-wrap: balance; }
+  .lede { color: var(--ink-soft); margin: 6px 0 24px; }
+  h3 { font-size: 1.05rem; margin: 0 0 4px; letter-spacing: -.005em; }
+  p { margin: 0 0 14px; }
+
+  /* ---- callout / thesis ---- */
+  .thesis {
+    background: var(--accent-tint); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    border-left: 3px solid var(--accent); border-radius: 12px; padding: 24px 26px;
+  }
+  .thesis .tag { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: .12em; color: var(--accent-ink); font-weight: 600; }
+  .thesis p { font-family: var(--font-display); font-size: 1.2rem; line-height: 1.5; margin: 10px 0 0; color: var(--ink); }
+  .thesis em { color: var(--accent-ink); font-style: italic; }
+
+  /* ---- tables ---- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 560px; }
+  th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th { background: var(--surface-2); font-size: 12px; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--ink-soft); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  td .mono, .mono { font-family: var(--font-mono); font-size: 13px; }
+  td b { font-weight: 600; }
+  .num-cell { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* ---- landscape cards ---- */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 680px) { .grid2 { grid-template-columns: 1fr; } }
+  .paper {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .paper h4 { margin: 0 0 5px; font-size: .98rem; letter-spacing: -.005em; }
+  .paper p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+  .paper .arx { font-family: var(--font-mono); font-size: 11.5px; }
+
+  /* ---- gap → fix ---- */
+  .gaps { display: flex; flex-direction: column; gap: 14px; }
+  .gap { display: grid; grid-template-columns: 1.1fr auto 1fr; gap: 0;
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    background: var(--surface); box-shadow: var(--shadow); }
+  .gap > div { padding: 18px 20px; }
+  .gap .problem { background: var(--surface); }
+  .gap .arrow { display: flex; align-items: center; justify-content: center;
+    color: var(--accent); font-size: 20px; background: var(--surface-2); padding: 0 16px; }
+  .gap .fix { background: var(--accent-tint); }
+  .gap .k { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: .1em; font-weight: 600; margin-bottom: 6px; display: block; }
+  .gap .problem .k { color: var(--p0); }
+  .gap .fix .k { color: var(--accent-ink); }
+  .gap h4 { margin: 0 0 4px; font-size: .96rem; }
+  .gap p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+  @media (max-width: 680px) {
+    .gap { grid-template-columns: 1fr; }
+    .gap .arrow { padding: 8px; transform: rotate(90deg); }
+  }
+
+  /* ---- experiment cards ---- */
+  .exp { border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+    box-shadow: var(--shadow); padding: 18px 20px; display: flex; flex-direction: column; gap: 8px;
+    border-top: 3px solid var(--pri, var(--accent)); }
+  .exp-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pill { font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    padding: 3px 9px; border-radius: 999px; letter-spacing: .04em; }
+  .pill.p0 { background: var(--p0-tint); color: var(--p0); }
+  .pill.p1 { background: var(--p1-tint); color: var(--p1); }
+  .pill.p2 { background: var(--p2-tint); color: var(--p2); }
+  .pill.done { background: var(--good-tint); color: var(--good); }
+  .exp h3 { margin: 0; flex: 1; min-width: 200px; }
+  .exp p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .exp .why { font-size: 13px; color: var(--ink); background: var(--surface-2);
+    border-radius: 8px; padding: 8px 12px; }
+  .exp .why b { color: var(--accent-ink); }
+  .exp-stack { display: flex; flex-direction: column; gap: 12px; }
+
+  /* ---- list ---- */
+  ul.clean { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  ul.clean li { padding-left: 26px; position: relative; color: var(--ink-soft); }
+  ul.clean li::before { content: ""; position: absolute; left: 6px; top: 11px;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  ul.clean li b { color: var(--ink); font-weight: 600; }
+
+  /* ---- critical path ---- */
+  .crit { background: var(--ink); color: var(--bg); border-radius: 16px; padding: 36px 34px; margin-top: 24px; }
+  :root[data-theme="dark"] .crit, .crit { --bg: var(--surface); }
+  .crit { background: linear-gradient(135deg, var(--accent-ink), var(--accent)); color: #fff; }
+  .crit .tag { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: .14em; opacity: .85; font-weight: 600; }
+  .crit h2 { color: #fff; margin: 10px 0 18px; font-size: 1.5rem; }
+  .crit ol { margin: 0; padding-left: 0; counter-reset: c; list-style: none;
+    display: flex; flex-direction: column; gap: 12px; }
+  .crit li { counter-increment: c; padding-left: 44px; position: relative; line-height: 1.5; }
+  .crit li::before { content: counter(c); position: absolute; left: 0; top: 0;
+    width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,.16);
+    color: #fff; font-family: var(--font-mono); font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; }
+  .crit li b { color: #fff; }
+  .crit .close { margin-top: 20px; font-size: 15px; opacity: .92; max-width: 62ch; }
+
+  footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--ink-faint); font-family: var(--font-mono); }
+
+  .fade { opacity: 0; transform: translateY(10px); animation: rise .6s cubic-bezier(.2,.7,.3,1) forwards; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .fade { animation: none; opacity: 1; transform: none; } }
+</style>
+
+<div class="wrap">
+  <header class="masthead fade">
+    <span class="eyebrow">Experiments plan · Adaptive Verifier Graphs</span>
+    <h1>What the AVG experiments section needs to reach ICLR spotlight</h1>
+    <p class="dek">Six experiments are already run and the thesis is sharp. Three additions turn an honest framework paper into a spotlight-shaped one: a downstream payoff, real competitive baselines, and the abstention frontier.</p>
+    <div class="meta-row">
+      <span class="meta"><b>Target</b> ICLR spotlight</span>
+      <span class="meta"><b>Domains</b> Terminal-Bench · &tau;-bench</span>
+      <span class="meta"><b>Done</b> SA-1 → SA-6 + escalation</span>
+      <span class="meta"><b>Gap</b> downstream utility</span>
+    </div>
+  </header>
+
+  <div class="stats fade" style="animation-delay:.05s">
+    <div class="stat"><div class="num">4&ndash;16&times;</div><div class="lbl">Lower false-valid rate than a monolithic judge, across two domains</div></div>
+    <div class="stat"><div class="num">22&times;</div><div class="lbl">On the long-horizon slice &mdash; the gap widens with trace length</div></div>
+    <div class="stat"><div class="num">&minus;82…95%</div><div class="lbl">False-valids removed by the abstention rule alone (causal)</div></div>
+    <div class="stat"><div class="num">1</div><div class="lbl">Verifier mechanism &mdash; only the data adapter changes per domain</div></div>
+  </div>
+
+  <!-- 1 THESIS -->
+  <section id="thesis">
+    <div class="sec-head"><span class="sec-no">§1</span><h2>The spotlight thesis</h2></div>
+    <p class="lede measure">Spotlight papers win on one sharp claim, isolated by a causal ablation and cashed out in a downstream payoff. State it as one sentence and make every table serve it.</p>
+    <div class="thesis">
+      <span class="tag">One-sentence claim</span>
+      <p>Verifying black-box agent traces as <em>evidence-local obligations with calibrated abstention</em> cuts the false-valid rate 4&ndash;16&times;, the gap <em>widens with horizon</em>, the effect is <em>causally the abstention decision rule</em> (not the checkers), it transfers across two unrelated reward-hack surfaces via only a data adapter &mdash; and it moves a real downstream metric.</p>
+    </div>
+    <p class="measure" style="margin-top:18px">The first three clauses are already proven (SA-1, the horizon slice, SA-3). The last clause &mdash; and the rigor behind the transfer claim &mdash; are what currently block spotlight.</p>
+  </section>
+
+  <!-- 2 LANDSCAPE -->
+  <section id="landscape">
+    <div class="sec-head"><span class="sec-no">§2</span><h2>The 2026 field you are landing in</h2></div>
+    <p class="lede measure">This is a crowded subfield. Reviewers will pattern-match AVG to these, so positioning has to be explicit &mdash; and the differentiators (locality, abstention, cross-surface transfer) are exactly where these are weakest.</p>
+    <div class="grid2">
+      <div class="paper"><h4>TRACE</h4><p>Triage&ndash;inspect&ndash;judge over agent traces to a trajectory verdict. <a class="arx" href="https://arxiv.org/abs/2606.07054">arXiv:2606.07054</a></p></div>
+      <div class="paper"><h4>AgentLTL</h4><p>Measures/enforces/trains procedural compliance in tool-using agents &mdash; overlaps your &tau;-bench policy story. <a class="arx" href="https://arxiv.org/pdf/2607.02599">arXiv:2607.02599</a></p></div>
+      <div class="paper"><h4>Proof-Carrying Agent Actions</h4><p>Model-agnostic runtime governance; predicates over traces, veto on violation. <a class="arx" href="https://arxiv.org/pdf/2606.04104">arXiv:2606.04104</a></p></div>
+      <div class="paper"><h4>C-Trace (Runtime Compliance)</h4><p>Formal predicates over execution traces, runtime rejection. <a class="arx" href="https://arxiv.org/html/2606.19242v1">arXiv:2606.19242</a></p></div>
+      <div class="paper"><h4>Agent-as-a-Judge / AJ-Bench</h4><p>Evidence-gathering judges &mdash; the baseline reviewers will demand you beat. <a class="arx" href="https://arxiv.org/pdf/2604.18240">arXiv:2604.18240</a></p></div>
+      <div class="paper"><h4>Graph of Verification (GoV)</h4><p>DAG-decomposed verification of reasoning &mdash; your "graph" framing. <a class="arx" href="https://arxiv.org/pdf/2506.12509">arXiv:2506.12509</a></p></div>
+    </div>
+    <p class="measure" style="margin-top:18px"><b>The wedge:</b> most of these <em>commit</em> a verdict. Few abstain, few show one mechanism transferring across unrelated failure surfaces. That is AVG's defensible ground &mdash; organize the tables around it.</p>
+  </section>
+
+  <!-- 3 ASSETS -->
+  <section id="assets">
+    <div class="sec-head"><span class="sec-no">§3</span><h2>What you already have</h2></div>
+    <p class="lede measure">Reuse, don't redo. Every run below maps to a place in the spotlight section.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Experiment</th><th>What it proves</th><th>Spotlight role</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">SA-1</td><td>False-valid <b>4.4&times; / 16&times;</b> below monolith; gap widens with horizon</td><td>Headline <b>Table 1</b></td></tr>
+          <tr><td class="mono">SA-3</td><td>Abstention is causal: <b>&minus;82% to &minus;95%</b> when removed</td><td>Mechanism <b>Table 2</b></td></tr>
+          <tr><td class="mono">SA-2</td><td>Clean transfer diagonal; misspec &rarr; abstain, not over-credit</td><td>Transfer table (needs 3rd domain)</td></tr>
+          <tr><td class="mono">SA-6</td><td>Integrity vs. policy layer each catch their own reward-hack; monolith 100% blind</td><td>Stress grid (keep)</td></tr>
+          <tr><td class="mono">SA-4 / SA-5</td><td>Online intervention + offline harness loop (offline replay)</td><td><b>Weakest</b> &mdash; reframe / demote</td></tr>
+          <tr><td class="mono">LLM-judge</td><td>Beats real <span class="mono">gpt-4o-mini</span> ~15&times; at n=120</td><td>Scale up before it's a headline</td></tr>
+          <tr><td class="mono">Escalation</td><td>+30 pts coverage at flat false-valid</td><td>Dynamic-obligations result</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 4 GAPS -->
+  <section id="gaps">
+    <div class="sec-head"><span class="sec-no">§4</span><h2>Three gaps &rarr; three P0 fixes</h2></div>
+    <p class="lede measure">Each blocker has a direct, feasible answer. These are the critical path.</p>
+    <div class="gaps">
+      <div class="gap">
+        <div class="problem"><span class="k">Gap 01</span><h4>No downstream payoff</h4><p>Every number is intrinsic verifier quality. A spotlight verifier paper needs "&hellip;and therefore something got better."</p></div>
+        <div class="arrow" aria-hidden="true">&rarr;</div>
+        <div class="fix"><span class="k">Fix</span><h4>Best-of-N reranking / filtering</h4><p>Select trajectories with AVG vs. monolith vs. PRM; report downstream task success. Cashes out false-valid directly.</p></div>
+      </div>
+      <div class="gap">
+        <div class="problem"><span class="k">Gap 02</span><h4>Coverage is ~16%</h4><p>AVG abstains on ~5/6 of traces offline. "Is a verifier that declines that often useful?" needs a direct answer.</p></div>
+        <div class="arrow" aria-hidden="true">&rarr;</div>
+        <div class="fix"><span class="k">Fix</span><h4>Selective-verification frontier</h4><p>Re-plot SA-3: false-valid vs. coverage as the threshold sweeps. Turns the liability into a tunable knob.</p></div>
+      </div>
+      <div class="gap">
+        <div class="problem"><span class="k">Gap 03</span><h4>Strawman baselines only</h4><p>You beat a monolith and one LLM judge &mdash; no PRM, no evidence-gathering judge, no named 2026 verifier.</p></div>
+        <div class="arrow" aria-hidden="true">&rarr;</div>
+        <div class="fix"><span class="k">Fix</span><h4>Add PRM + Agent-as-a-Judge arms</h4><p>Run them on the SA-1 setup so differentiation is shown, not asserted.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 BLUEPRINT -->
+  <section id="blueprint">
+    <div class="sec-head"><span class="sec-no">§5</span><h2>The section blueprint</h2></div>
+    <p class="lede measure">Figures and tables in reading order. Bold entries are new or extended.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Slot</th><th>Content</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">Fig 1</td><td><b>Teaser:</b> false-valid vs. trace length, AVG vs. judges vs. PRM, both domains &mdash; the one crisp, non-obvious result</td><td>SA-1 + new arms</td></tr>
+          <tr><td class="mono">Table 1</td><td><b>Main result</b> + Agent-as-a-Judge and PRM arms; FV overall, FV long-horizon, coverage, accuracy, cost</td><td>SA-1 extended</td></tr>
+          <tr><td class="mono">Fig 2</td><td><b>Selective verification:</b> false-valid vs. coverage frontier; dominates at matched coverage</td><td>SA-3 re-plot</td></tr>
+          <tr><td class="mono">Table 2</td><td>Abstention is causal &mdash; with/without, both domains</td><td>SA-3</td></tr>
+          <tr><td class="mono">Table 3</td><td>Transfer diagonal, <b>3&times;3</b> with a third domain</td><td>SA-2 + SWE-Gym</td></tr>
+          <tr><td class="mono">Table 4</td><td>Stress + integrity ablation; add baselines' FV under each perturbation</td><td>SA-6</td></tr>
+          <tr><td class="mono">Table 5</td><td><b>Downstream payoff</b> &mdash; the missing clause</td><td>new (SA-7)</td></tr>
+          <tr><td class="mono">§ Dyn.</td><td>Escalation: +30 pts coverage at flat FV &mdash; demoted to one tight result</td><td>SA-4/5 reframed</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6 NEW EXPERIMENTS -->
+  <section id="new">
+    <div class="sec-head"><span class="sec-no">§6</span><h2>New experiments, prioritized</h2></div>
+    <p class="lede measure">Ordered by leverage per unit effort. The P0 block is the difference between a solid paper and a spotlight one.</p>
+    <div class="exp-stack">
+      <div class="exp" style="--pri:var(--p0)">
+        <div class="exp-row"><span class="pill p0">P0</span><h3>Downstream utility &mdash; best-of-N reranking</h3></div>
+        <p>Select from N sampled trajectories per task with AVG vs. monolith vs. PRM; report task success of the pick. Stronger variant: filter a trace pool and report the filtered-in set's true-success rate.</p>
+        <div class="why"><b>Why first:</b> highest-leverage single experiment &mdash; corpora and verifier arms already exist, and it turns "false-valid" into "cleaner data / better selection."</div>
+      </div>
+      <div class="exp" style="--pri:var(--p0)">
+        <div class="exp-row"><span class="pill p0">P0</span><h3>Two real competitive baselines</h3></div>
+        <p>An Agent-as-a-Judge (evidence-gathering) arm and a PRM / step-scored arm on the SA-1 setup. Without these, differentiation from the 2026 field is asserted, not shown.</p>
+      </div>
+      <div class="exp" style="--pri:var(--p0)">
+        <div class="exp-row"><span class="pill p0">P0</span><h3>Scale the LLM-judge slice</h3></div>
+        <p>From n=120 single-seed to n&ge;500 &times; 3 seeds (at least on &tau;-bench) so the ~15&times; headline survives a rigor challenge.</p>
+      </div>
+      <div class="exp" style="--pri:var(--p1)">
+        <div class="exp-row"><span class="pill p1">P1</span><h3>Third domain for transfer</h3></div>
+        <p>SWE-Gym via the existing terminal adapter is the low-cost path. A 3&times;3 diagonal is far more convincing than 2&times;2 for "adapter necessary, misspec abstains."</p>
+      </div>
+      <div class="exp" style="--pri:var(--p1)">
+        <div class="exp-row"><span class="pill p1">P1</span><h3>Selective-verification frontier</h3></div>
+        <p>Mostly a re-plot of SA-3 data. High value, low cost &mdash; this is the answer to the coverage objection.</p>
+      </div>
+      <div class="exp" style="--pri:var(--p1)">
+        <div class="exp-row"><span class="pill p1">P1</span><h3>Human-review efficiency</h3></div>
+        <p>Time-to-correct-verdict (or accuracy) with the witness vs. the raw trace on ~50 traces. Lands the "witness compresses the trace" claim the intro promises.</p>
+      </div>
+      <div class="exp" style="--pri:var(--p2)">
+        <div class="exp-row"><span class="pill p2">P2</span><h3>Cost curves + robustness sweep</h3></div>
+        <p>Cost-normalized performance curves (already promised in Sec 4.7) and a small noisy-log / tool-schema-shift grid for the appendix.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 BREADTH VS DEPTH -->
+  <section id="breadth">
+    <div class="sec-head"><span class="sec-no">§7</span><h2>Would more benchmarks &amp; baselines help?</h2></div>
+    <p class="lede measure">Partly &mdash; and unevenly. Baselines are worth adding; benchmarks only barely. Both feel productive, but neither is what converts this to a spotlight. Add a little breadth as insurance; spend the real effort on depth.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Lever</th><th>Add?</th><th>How far</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>Competitive baselines</b></td>
+            <td><span class="pill done">YES</span></td>
+            <td>2&ndash;3 specific: PRM, Agent-as-a-Judge, +1 named 2026 verifier</td>
+            <td>Credibility gate vs. the field. Reviewers check the <em>category</em> is represented, not the count &mdash; a 4th/5th judge is diminishing returns.</td>
+          </tr>
+          <tr>
+            <td><b>More benchmark domains</b></td>
+            <td><span class="pill p1">SPARINGLY</span></td>
+            <td>+1 (SWE-Gym via existing adapter), then stop</td>
+            <td>A 3&times;3 transfer diagonal is worth it. Beyond that, each new domain needs an adapter + spec + traces + the reward-hack framing to hold &mdash; and is a chance for the clean story to break. Downside-heavy.</td>
+          </tr>
+          <tr>
+            <td><b>Downstream payoff</b></td>
+            <td><span class="pill p0">FIRST</span></td>
+            <td>The load-bearing addition (SA-7)</td>
+            <td>Orthogonal to breadth. This is the item that actually moves the tier.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="thesis" style="margin-top:20px">
+      <span class="tag">The decisive point</span>
+      <p>More benchmarks + more baselines still leaves you as <em>&ldquo;a better verifier, benchmarked more carefully.&rdquo;</em> That is a strong poster, not a spotlight. The tier comes from <em>depth on the claim</em> &mdash; the causal abstention ablation (you have it) plus a downstream payoff (you don't yet).</p>
+    </div>
+    <p class="measure" style="margin-top:18px"><b>One trap to avoid:</b> a poorly-chosen extra domain can actively <em>hurt</em> &mdash; it shrinks the headline gap where endpoint checks already suffice, or wrecks the coverage story where there's little mechanical evidence. Your own proposal says gains are largest only where correctness is weakly supervised, so breadth is not free.</p>
+  </section>
+
+  <!-- 8 RIGOR + LIMITS -->
+  <section id="rigor">
+    <div class="sec-head"><span class="sec-no">§8</span><h2>Rigor upgrades &amp; honest limits</h2></div>
+    <div class="grid2" style="gap:24px; align-items:start">
+      <div>
+        <h3 style="margin-bottom:12px">Rigor reviewers will demand</h3>
+        <ul class="clean">
+          <li><b>&ge;3 seeds, mean&plusmn;SE, significance test</b> on the FV gap. Terminal-Bench is single-seed today &mdash; fix.</li>
+          <li><b>Reframe calibration:</b> AUROC 0.46/0.60 is a liability if sold as calibration. The label is coarse; the <em>abstain decision</em> is what's calibrated &mdash; Fig 2 is the right evidence. Say this before a reviewer weaponizes it.</li>
+          <li><b>Matched-budget disclosure:</b> put AVG, judges, and PRM on equal token/cost budgets and state it &mdash; else "you just spent more compute."</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="margin-bottom:12px">Limits to pre-empt in the paper</h3>
+        <ul class="clean">
+          <li><b>Offline-replay only</b> &mdash; no live agent; caveat the "online intervention" framing.</li>
+          <li><b>Low absolute coverage</b> by design &mdash; own it via the frontier.</li>
+          <li><b>Trajectory-level weak labels</b> limit step-level calibration.</li>
+          <li><b>Two&rarr;three domains</b> is still narrow vs. Sec 4.1's suite &mdash; frame MCPVerse / DAComp / JourneyBench as the extensibility surface.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 CRITICAL PATH -->
+  <section id="critical">
+    <div class="sec-head"><span class="sec-no">§9</span><h2>The critical path</h2></div>
+    <div class="crit">
+      <span class="tag">If you do only three things</span>
+      <h2>The minimum to become spotlight-shaped</h2>
+      <ol>
+        <li><b>Add the best-of-N reranking / filtering result</b> (Table 5) &mdash; the downstream payoff the paper is missing.</li>
+        <li><b>Add a PRM + Agent-as-a-Judge baseline</b> to Table 1 &mdash; benchmark against the real 2026 field, not a strawman.</li>
+        <li><b>Turn the 84%-abstain liability into the selective-verification frontier</b> (Fig 2) &mdash; a knob, not a weakness.</li>
+      </ol>
+      <p class="close">These three give the section its sharp thesis, a causal ablation, <em>and</em> a downstream payoff &mdash; the shape spotlight reviewers reward. Recommended first move: scaffold the reranking experiment (<span class="mono" style="color:#fff">experiment_sa7.py</span>), since the corpora and verifier arms already exist.</p>
+    </div>
+  </section>
+
+  <footer>docs/spotlight-plan-artifact.html · Adaptive Verifier Graphs · plan is a recommendation, not a decision on the paper's narrative</footer>
+</div>

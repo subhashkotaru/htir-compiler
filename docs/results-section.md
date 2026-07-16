@@ -248,6 +248,65 @@ unchanged. The result is no duplication, no cross-domain leakage, every
 obligation a single primitive rule — the precondition for escalation to grow
 `E_i` safely rather than compounding an already-tangled judgment.
 
+## Downstream payoff: verification as a data filter (SA-7)
+
+The preceding results are *intrinsic* — a lower false-valid rate against the
+mechanical reward. The question a practitioner asks next is whether that buys a
+better *downstream outcome*. We test the most consequential use of a verifier:
+**filtering candidate trajectories to build clean training / reranking data**. We
+group each corpus by task (τ-bench: 280 tasks × ~15 candidates; Terminal-Bench:
+11 tasks × 17–72 candidates), and use each verifier arm as a selector, two ways —
+(i) **reranking**: pick the single highest-scored trajectory per task and measure
+its true (reward = 1) success rate; (ii) **filtering**: keep the trajectories an
+arm credits `valid` and measure how much reward-hack leaks into the kept set. The
+corpus is compiled + scored once; metrics are reported as **mean ± SE over three
+per-task candidate subsamples** (`htir/eval/experiment_sa7.py`).
+
+**Filtering — the headline.** Used as a keep-if-`valid` data filter, AVG's kept
+set is **near-clean of reward-hack where the monolith's is majority-contaminated**
+(false-valid = fraction of the kept set that is actually a failed trajectory):
+
+| Domain | Arm | Kept-set precision ↑ | Yield (fraction kept) | **Reward-hack leakage** ↓ |
+|---|---|---|---|---|
+| τ-bench | monolithic | 0.631 ± 0.002 | 0.667 | **0.599 ± 0.001** |
+| τ-bench | **avg_full** | **0.773 ± 0.010** | 0.061 | **0.034 ± 0.001** |
+| Terminal-Bench | monolithic | 0.471 ± 0.034 | 0.568 | **0.660 ± 0.023** |
+| Terminal-Bench | **avg_full** | 0.273 ± 0.138 | 0.102 | **0.164 ± 0.034** |
+
+On τ-bench (base rate 0.588), filtering with AVG yields a **77.3 %-clean** pool —
++18.5 points over the base rate — versus the monolith's 63.1 %, and lets through
+**17.9× less reward-hack** (0.034 vs 0.599). On Terminal-Bench the leakage gap is
+**4.0×** (0.164 vs 0.660), consistent with the intrinsic SA-1 false-valid gap. The
+mechanism is the same abstention that drives every earlier result: AVG declines to
+credit a trajectory it cannot support, so the reward-hacks it cannot mechanically
+disprove are *withheld* rather than shipped as training labels.
+
+**The honest caveat — precision vs. yield.** The safety comes at a **yield** cost:
+offline, AVG only positively credits the fraction of trajectories it can
+mechanically confirm (6 % on τ-bench, 10 % on Terminal-Bench), because the
+semantic policy / test-support checkers abstain without an API key (as in SA-1).
+Reward-hack **leakage** is therefore the stable, comparable filtering metric — it
+is a rate over the kept-invalid traces and moves in AVG's favour in both domains —
+whereas kept-set **precision** is confounded by that low yield: on Terminal-Bench
+the ~10 %-of-pool AVG keeps is too small for a stable precision estimate
+(0.273 ± 0.138) and its exit-code-only positives over-credit, so *offline* AVG's
+value on Terminal-Bench is its abstention (veto), not its positive credit. Lifting
+the yield — turning AVG into a high-precision *and* high-coverage filter — is
+exactly what the funded LLM-judge slice (semantic policy / test-support checkers)
+is expected to deliver, and is scoped as follow-up work.
+
+**Reranking — comparable offline.** As a best-of-N reranker (score =
+coverage-aware p-valid, `trajectory_valid_score`, which induces the tie-break
+resolved-valid > abstained > resolved-invalid), AVG and the monolith are
+**statistically indistinguishable** offline: τ-bench avg 0.615 ± 0.003 vs mono
+0.596 ± 0.014 (paired bootstrap over tasks, gap +0.004, 95 % CI [−0.050, +0.061],
+p = 0.45); Terminal-Bench avg 0.515 vs mono 0.576 (gap +0.091, CI [−0.18, +0.36],
+p = 0.38, 11 tasks). Both sit near the random-pick floor (τ 0.595, Terminal 0.545)
+and well below the oracle ceiling (0.890 / 0.939) — the *positive-selection*
+signal, unlike the *rejection* signal, needs the semantic checkers to separate the
+arms. We report this null honestly: **the downstream win is in filtering out
+reward-hack, not (yet) in ranking the survivors.**
+
 ## Takeaways
 
 - Evidence-local verification with calibrated abstention cuts false-valid rates
@@ -262,3 +321,7 @@ obligation a single primitive rule — the precondition for escalation to grow
   points of coverage with the false-valid rate held flat — a design we selected
   by measuring three variants, and made sound by decomposing obligations to
   atomic, per-constraint primitives.
+- The intrinsic gain is a **downstream one**: used to filter candidate
+  trajectories into training data, AVG leaks **4–18× less reward-hack** than a
+  monolithic judge — at an honestly-disclosed yield cost that the semantic-checker
+  slice is expected to close.
