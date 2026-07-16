@@ -59,9 +59,12 @@ evidence is insufficient rather than guessing.
 
 **Protocol.** Offline results are **mean ± SE over 3 seeds** at n = 1 000
 (τ-bench) or n = 3 000 (Terminal-Bench), balanced 50/50 valid/invalid. The
-LLM-judge slice is a single seed at n = 120 with `gpt-4o-mini`. All numbers are
-reproducible from `data/*_results.json` via `htir.eval.experiment_tau` /
-`experiment_sa{1,3,6}`.
+LLM-judge slice's plumbing is scaled to the same bar — **n = 500 × 3 seeds** with
+mean ± SE, paired-t significance, and measured token cost (SA-9,
+`data/sa9_tau_results.json`); the funded `gpt-4o-mini` run is pending a credited
+key, so that file is currently the deterministic degraded dry-run (the original
+real-judge point is a single seed at n = 120). All numbers are reproducible from
+`data/*_results.json` via `htir.eval.experiment_tau` / `experiment_sa{1,3,6}`.
 
 ## Q1 — Evidence-local verification vs. a monolithic judge (SA-1)
 
@@ -210,10 +213,10 @@ consequential DB mutation is policy-sensitive, so an unconfirmed / unauthenticat
 action is withheld), not the integrity module. The same graph, two different
 protective layers, each doing its job on the domain it is meant for.
 
-## The LLM-judge baseline (τ-bench, n = 120)
+## The LLM-judge baseline (τ-bench)
 
 Replacing the cheap endpoint heuristic with a *real* `gpt-4o-mini` judge over the
-full transcript does not close the gap:
+full transcript does not close the gap. At n = 120 (single seed):
 
 | arm | false-valid (overall) | false-valid (long-horizon) |
 |---|---|---|
@@ -224,6 +227,48 @@ AVG beats a real LLM judge by **~15× (31× on long-horizon)**. Strikingly, the 
 monolith is slightly *worse* than the endpoint heuristic (0.733 vs 0.678): a
 holistic model is confidently fooled by a plausible-but-SOP-violating trajectory
 — precisely the failure evidence-local verification is designed to catch.
+
+### Scaling the judge slice with error bars (SA-9)
+
+The n = 120 single-seed number above is too thin to survive a rigor challenge, so
+we built the seed / aggregation / significance / token-accounting plumbing to
+restate it at the paper bar — **n = 500 × 3 seeds, mean ± SE, and a paired-t
+significance statement** (`htir/eval/experiment_tau.py`, `--experiments sa9`;
+`data/sa9_tau_results.json`). Every LLM-backed pass funnels through one call
+site, so the run also reports its **real measured token cost** on a matched
+per-arm compute budget (one full-trace judge call for `monolithic` /
+`agent_judge`, one narrow step-critic call per step for `prm`).
+
+The funded LLM run is **blocked on an OpenRouter key with credit** (the project's
+key is unfunded), so `monolithic` / `agent_judge` / `prm` in the committed
+`sa9_tau_results.json` are the **deterministic degraded arms** (endpoint /
+evidence-gather / step-heuristic), with `token_cost = 0` and the file flagged
+`status: degraded-no-key`, `headline_pending: true`. Even so, the *deterministic*
+monolith already reproduces the gap at scale, now with tight error bars and
+significance:
+
+| arm (n = 500 × 3 seeds) | false-valid (overall) | false-valid (long-horizon) |
+|---|---|---|
+| `avg_full` | **0.044 ± 0.007** | **0.035 ± 0.009** |
+| `monolithic` | 0.669 ± 0.009 | 0.757 ± 0.018 |
+| `agent_judge` | 0.669 ± 0.009 | 0.757 ± 0.018 |
+| `prm` | 0.861 ± 0.015 | 0.984 ± 0.008 |
+
+AVG's advantage is **15.2× overall / 21.5× long-horizon**, and the false-valid
+gap vs. full AVG is significant for every baseline (`monolithic − avg_full =
++0.625 ± 0.015`, paired t = 42.6, p = 5e-4; `prm − avg_full = +0.817 ± 0.010`,
+t = 78.5, p = 2e-4). This is deliberately the *conservative* comparison: the real
+`gpt-4o-mini` judge was, at n = 120, marginally **worse** than this endpoint
+heuristic (0.733 vs 0.669), so the funded slice is expected to *widen* the gap,
+not close it.
+
+**Honest status.** The committed numbers are the plumbing dry-run, not the funded
+result — they demonstrate the seeded, error-barred, significance-tested pipeline
+runs end-to-end and is byte-deterministic offline. Funding the key and re-running
+the single documented command (`--experiments sa9 --use-llm --llm-n 500
+--llm-seeds 0,1,2`) overwrites the file in place with the real judge numbers and
+a nonzero `token_cost`; the ~15× headline stands or is revised to its true value
+from that run.
 
 ## Dynamically updating the obligations
 
@@ -371,7 +416,10 @@ reward-hack, not (yet) in ranking the survivors.**
   **widens with horizon length**.
 - The safety comes from the **abstention decision rule** (−82 % to −95 % when
   removed), not from any single checker, and it beats a **real LLM judge** by
-  ~15× on the domain where we could afford one.
+  ~15× (single-seed n = 120); the seeded, error-barred, significance-tested
+  scale-up (SA-9, n = 500 × 3) reproduces 15.2× / 21.5× against the deterministic
+  monolith at p < 0.001 and is a one-command run from the real judge once the
+  key is funded.
 - A mis-specified verifier **abstains rather than over-credits** (clean transfer
   diagonal), so per-domain adapters are safe to add.
 - Escalation lets AVG **update its obligations on the fly** — recovering +30

@@ -47,7 +47,7 @@ from htir.eval.datasets import (
     load_tau_bench,
     normalize_tau_record,
 )
-from htir.eval.seeds import format_aggregate, run_multiseed
+from htir.eval.seeds import MeanSE, PairedGap, format_aggregate, paired_t_test, run_multiseed
 from htir.eval.experiment_sa1 import run_sa1, format_table as sa1_table
 from htir.eval.experiment_sa3 import run_sa3, format_table as sa3_table
 from htir.eval.experiment_sa6 import run_sa6, format_table as sa6_table
@@ -60,6 +60,16 @@ DEFAULT_TERMINAL_CACHE = "data/tau_cache/terminal_sample_600.jsonl"
 # long-horizon knee sits lower than terminal's 20.
 TAU_LONG_HORIZON_STEPS = 12
 LLM_MODEL = "openai/gpt-4o-mini"  # cheap-tier judge for the LLM slice (plan Sec. 5)
+
+# SA-9: the LLM-judge false-valid gaps whose significance we report -- each
+# LLM-backed baseline's false-valid rate vs. full AVG (the headline contrast).
+# ``monolithic`` is the real LLM-as-judge; ``agent_judge`` the evidence-gathering
+# LLM judge; ``prm`` the LLM step-critic. Overall + long-horizon each.
+SA9_SIG_GAPS: list[tuple[str, str]] = [
+    ("monolithic", "avg_full"),
+    ("agent_judge", "avg_full"),
+    ("prm", "avg_full"),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -143,10 +153,177 @@ def _multiseed_experiment(
     }
 
 
+# ---------------------------------------------------------------------------
+# SA-9 -- Scale the LLM-judge slice (n>=500 x >=3 seeds + mean±SE + significance
+# + real token cost). The "AVG beats a real gpt-4o-mini judge ~15x" headline
+# currently rests on n=120 single-seed; this runner re-runs the *same* LLM
+# monolith / semantic-checker comparison across seeds and packages it to the
+# avg.tex Sec. 4.7 rigor bar. No new mechanism -- a scale + statistics pass.
+#
+# Blocked on a funded LLM key (project memory: the OpenRouter key is unfunded).
+# The code path is complete and ``use_llm``-gated: with ``use_llm=False`` (or a
+# key-less environment) every arm degrades to its deterministic offline verdict
+# and the run is a byte-exact plumbing dry-run (token_cost = 0, headline
+# pending); with a funded key the *same command* produces the real numbers.
+# ---------------------------------------------------------------------------
+
+def run_sa9(
+    tau_traces: list[dict[str, Any]],
+    *,
+    spec: Any,
+    seeds: list[int],
+    n: int,
+    model: str = LLM_MODEL,
+    long_horizon_steps: int = TAU_LONG_HORIZON_STEPS,
+    use_llm: bool = False,
+    log: Any = sys.stderr,
+) -> dict[str, Any]:
+    """
+    Multi-seed LLM-judge slice on τ-bench: run SA-1's arms (incl. the real LLM
+    monolith / Agent-as-a-Judge / PRM) over ``len(seeds)`` independent balanced
+    subsamples of size ``n``, aggregate false-valid to mean±SE, run a paired-t
+    significance test on each LLM baseline's gap vs. full AVG (overall +
+    long-horizon), and report the real token cost of the run.
+
+    Returns a JSON-able dict. Runs offline when ``use_llm=False`` (or no key):
+    the arms degrade deterministically, ``token_cost`` is zero, and the result is
+    flagged ``headline_pending`` -- a reproducible dry-run of the funded command.
+    """
+    from htir.utils.llm import get_usage, reset_usage
+
+    reset_usage()  # measure only this run's token cost
+
+    def sample_fn(seed: int) -> list[dict[str, Any]]:
+        return balanced_sample(tau_traces, n, seed=seed)
+
+    def run_fn(sample: list[dict[str, Any]]):
+        return run_sa1(sample, spec=spec, use_llm=use_llm, use_semantic=use_llm,
+                       long_horizon_steps=long_horizon_steps, model=model,
+                       progress_every=0, log=log)
+
+    summary, per_seed = run_multiseed(sample_fn, run_fn, seeds, extract=_sa1_metrics, log=log)
+    usage = get_usage()
+    agg = summary.aggregate
+
+    # Neutralize the wall-clock ``seconds`` field so the offline artifact is
+    # byte-deterministic across runs (the only non-reproducible field).
+    per_seed_dumps: list[dict[str, Any]] = []
+    for r in per_seed:
+        d = r.model_dump()
+        d["seconds"] = 0.0
+        per_seed_dumps.append(d)
+
+    # Paired-t significance on each LLM baseline's false-valid gap vs full AVG,
+    # overall and on the long-horizon slice (where holistic judges degrade most).
+    sig: list[PairedGap] = []
+    for a_arm, b_arm in SA9_SIG_GAPS:
+        for suffix, tag in (("", "overall"), (".long", "long")):
+            ak, bk = f"{a_arm}.false_valid{suffix}", f"{b_arm}.false_valid{suffix}"
+            if ak in agg and bk in agg:
+                sig.append(paired_t_test(
+                    agg[ak].values, agg[bk].values,
+                    label=f"{a_arm}_vs_{b_arm}.false_valid.{tag}", a=a_arm, b=b_arm,
+                ))
+
+    # Headline fold-reduction: monolithic-LLM judge false-valid / AVG false-valid.
+    def _ratio(num_key: str, den_key: str) -> float | None:
+        num, den = agg.get(num_key), agg.get(den_key)
+        if num is None or den is None or den.mean <= 0:
+            return None
+        return round(num.mean / den.mean, 1)
+
+    headline = {
+        "avg_full.false_valid": agg["avg_full.false_valid"].mean if "avg_full.false_valid" in agg else None,
+        "monolithic.false_valid": agg["monolithic.false_valid"].mean if "monolithic.false_valid" in agg else None,
+        "fold_overall": _ratio("monolithic.false_valid", "avg_full.false_valid"),
+        "fold_long_horizon": _ratio("monolithic.false_valid.long", "avg_full.false_valid.long"),
+    }
+
+    real_llm = bool(use_llm and usage.calls > 0)
+    notes = [
+        "SA-9 scales the τ-bench LLM-judge slice to n>=500 x >=3 seeds with "
+        "mean±SE and a paired-t significance statement on each LLM baseline's "
+        "false-valid gap vs full AVG (avg.tex Sec. 4.7).",
+        "token_cost is the REAL measured token usage of this run (0 offline); "
+        "the per-arm would-issue call proxy is in each per_seed arm's "
+        "mean_llm_calls -- the matched compute budget across arms.",
+    ]
+    if not real_llm:
+        notes.append(
+            "HEADLINE PENDING: this run had no funded LLM key, so every arm "
+            "degraded to its deterministic offline verdict (the LLM monolith / "
+            "Agent-as-a-Judge / PRM fell back; the semantic checker abstained) "
+            "and token_cost is 0. Re-run `python -m htir.eval.experiment_tau "
+            "--experiments sa9 --use-llm --llm-n 500 --llm-seeds 0,1,2` with "
+            "OPENROUTER_API_KEY funded to overwrite this file with the real "
+            "gpt-4o-mini judge numbers. The seed/aggregation/significance/"
+            "token-accounting plumbing is what this dry-run exercises."
+        )
+
+    return {
+        "experiment": "SA-9: Scaled LLM-judge slice (τ-bench)",
+        "domain": spec.domain_id,
+        "model": model,
+        "seeds": seeds,
+        "n_per_seed": summary.n_per_seed,
+        "long_horizon_steps": long_horizon_steps,
+        "use_llm": use_llm,
+        "real_llm": real_llm,
+        "status": "funded" if real_llm else "degraded-no-key",
+        "headline_pending": not real_llm,
+        "token_cost": usage.model_dump(),
+        "headline": headline,
+        "aggregate": {k: v.model_dump() for k, v in agg.items()},
+        "significance": [g.model_dump() for g in sig],
+        "per_seed": per_seed_dumps,
+        "notes": notes,
+    }
+
+
+def format_sa9(out: dict[str, Any]) -> str:
+    """Compact SA-9 report: false-valid mean±SE per arm + significance + cost."""
+    lines: list[str] = []
+    lines.append(
+        f"{out['experiment']}  |  model={out['model']}  seeds={out['seeds']}  "
+        f"n/seed={out['n_per_seed']}  status={out['status']}"
+    )
+    agg = {k: MeanSE(**v) for k, v in out["aggregate"].items()}
+    lines.append("  [false_valid mean±SE over seeds]")
+    lines.append(f"    {'arm':<12} {'overall':>16} {'long_horizon':>16}")
+    seen: list[str] = []
+    for key in out["aggregate"]:
+        if key.endswith(".false_valid"):
+            seen.append(key[: -len(".false_valid")])
+    for arm in seen:
+        ov = agg.get(f"{arm}.false_valid")
+        lh = agg.get(f"{arm}.false_valid.long")
+        lines.append(
+            f"    {arm:<12} {(ov.as_str() if ov else '-'):>16} "
+            f"{(lh.as_str() if lh else '-'):>16}"
+        )
+    hd = out["headline"]
+    if hd.get("fold_overall") is not None:
+        lines.append(
+            f"  headline: AVG beats the LLM monolith {hd['fold_overall']}x overall, "
+            f"{hd.get('fold_long_horizon', '-')}x long-horizon"
+        )
+    lines.append("  [significance -- paired t-test on false_valid gap vs full AVG]")
+    for g in out["significance"]:
+        lines.append(f"    {PairedGap(**g).as_str()}")
+    tc = out["token_cost"]
+    lines.append(
+        f"  token_cost: calls={tc['calls']} total_tokens={tc['total_tokens']} "
+        f"(prompt={tc['prompt_tokens']}, completion={tc['completion_tokens']})"
+    )
+    if out.get("headline_pending"):
+        lines.append("  NOTE: headline pending a funded LLM key (offline dry-run).")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="τ-bench experiment campaign (SA-1/3/6 + transfer)")
     p.add_argument("--experiments", type=str, default="sa1,sa3,sa6,transfer",
-                   help="comma list from: sa1, sa3, sa6, transfer")
+                   help="comma list from: sa1, sa3, sa6, transfer, sa9")
     p.add_argument("--cache", type=str, default=DEFAULT_TAU_CACHE, help="τ-bench raw/normalized JSONL")
     p.add_argument("--hf", action="store_true", help="stream τ-bench traces from the HF hub instead")
     p.add_argument("--terminal-cache", type=str, default=DEFAULT_TERMINAL_CACHE,
@@ -154,7 +331,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--n", type=int, default=1000, help="balanced sample size per seed")
     p.add_argument("--seeds", type=str, default="0,1,2", help="comma list of seeds")
     p.add_argument("--use-llm", action="store_true", help="also run a small LLM-enabled slice")
-    p.add_argument("--llm-n", type=int, default=120, help="balanced sample size for the LLM slice")
+    p.add_argument("--llm-n", type=int, default=500,
+                   help="balanced sample size for the LLM slice (SA-9 rigor bar: n>=500)")
+    p.add_argument("--llm-seeds", type=str, default="0,1,2",
+                   help="comma list of seeds for the SA-9 multi-seed LLM slice (mean±SE)")
     p.add_argument("--model", type=str, default=LLM_MODEL, help="OpenRouter judge model for the LLM slice")
     p.add_argument("--outdir", type=str, default="data", help="where to write <exp>_tau_results.json")
     args = p.parse_args(argv)
@@ -254,6 +434,16 @@ def main(argv: list[str] | None = None) -> int:
         print(format_transfer(tr), file=log)
         (outdir / "transfer_tau_results.json").write_text(tr.model_dump_json(indent=2))
         print(f"[tau] wrote {outdir/'transfer_tau_results.json'}", file=log)
+
+    if "sa9" in experiments:
+        llm_seeds = [int(s) for s in args.llm_seeds.split(",") if s.strip() != ""]
+        print(f"\n[tau] SA-9 scaled LLM-judge slice  (n={args.llm_n} x seeds={llm_seeds}, "
+              f"use_llm={args.use_llm}) ...", file=log)
+        out = run_sa9(tau_traces, spec=spec, seeds=llm_seeds, n=args.llm_n, model=args.model,
+                      long_horizon_steps=TAU_LONG_HORIZON_STEPS, use_llm=args.use_llm, log=log)
+        print(format_sa9(out), file=log)
+        (outdir / "sa9_tau_results.json").write_text(json.dumps(out, indent=2))
+        print(f"[tau] wrote {outdir/'sa9_tau_results.json'}", file=log)
 
     print(f"\n[tau] campaign done in {time.time()-t0:.1f}s", file=log)
     return 0
