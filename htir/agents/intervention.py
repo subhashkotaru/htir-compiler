@@ -1,5 +1,5 @@
 """
-Online intervention iota_t (AVG Step 7, avg.tex Sec. 3.11 "Online
+Online intervention iota_t (AVG Step 7, avg.tex Sec. 3.10 "Online
 Intervention").
 
 During execution, AVG monitors obligations on the *partial* graph G_{tau<=t}
@@ -101,7 +101,7 @@ def _default_risk(action: InterventionAction) -> float:
 
 def active_obligations(htir_prefix: HTIR) -> list[Obligation]:
     """
-    The active obligation set at step t (avg.tex Sec. 3.11): high-severity
+    The active obligation set at step t (avg.tex Sec. 3.10): high-severity
     (HIGH/CRITICAL) obligations that are FAILED or ABSTAINED in the current
     partial graph ``htir_prefix`` (G_{tau<=t}). Obligations must already be
     checked (e.g. via ``TraceAbstractionAgent.compile_prefix``, which runs
@@ -126,7 +126,7 @@ def select_intervention(
 ) -> InterventionAction:
     """
     iota_t* = argmax_iota E[r_hat - beta*Cost(iota) - gamma*Risk(iota)]
-    (avg.tex Sec. 3.11), evaluated over every ``InterventionAction``. With the
+    (avg.tex Sec. 3.10), evaluated over every ``InterventionAction``. With the
     default ``benefit_fn``/``cost_fn``/``risk_fn`` this deterministically
     picks ``obligation.escalation`` (alpha_i): swapping in a learned
     ``benefit_fn`` upgrades the policy without changing this interface.
@@ -156,7 +156,7 @@ def run_intervention_loop(
     """
     Replay ``raw_steps`` prefix by prefix over a *recorded* trace (not a live
     agent), computing the active obligation set and the selected
-    intervention at every step t (avg.tex Sec. 3.11). Returns the fully
+    intervention at every step t (avg.tex Sec. 3.10). Returns the fully
     compiled ``HTIR`` (over the whole trace) with ``intervention_log``
     populated with one ``InterventionLogEntry`` per (step, active obligation)
     pair observed along the way. Purely a recommendation trace -- does not

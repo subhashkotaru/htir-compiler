@@ -35,7 +35,10 @@ dependencies = [
 # LLM-backed semantic checks / analysis are optional; the deterministic
 # pipeline (ingest -> graph -> mechanical checks -> witness) needs none of it.
 llm = ["openai>=1.30.0", "python-dotenv>=1.0.0"]
-dev = ["pytest>=7.0", "openai>=1.30.0", "python-dotenv>=1.0.0"]
+# Evaluation harness (htir.eval): the Hugging Face `datasets` loader is only
+# needed to pull the Terminal-Bench corpus; local JSON/JSONL samples need none.
+eval = ["datasets>=2.14.0"]
+dev = ["pytest>=7.0", "openai>=1.30.0", "python-dotenv>=1.0.0", "datasets>=2.14.0"]
 
 [project.scripts]
 htir = "htir.cli:main"

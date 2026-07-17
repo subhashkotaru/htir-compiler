@@ -1,0 +1,1219 @@
+{
+  "experiment": "SA-1",
+  "domain": "tau_bench",
+  "n_per_seed": [
+    1000,
+    1000,
+    1000
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "aggregate": {
+    "base_rate_valid": {
+      "mean": 0.5,
+      "se": 0.0,
+      "stdev": 0.0,
+      "n": 3,
+      "values": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    "avg_full.false_valid": {
+      "mean": 0.042,
+      "se": 0.0030550504633038936,
+      "stdev": 0.0052915026221291815,
+      "n": 3,
+      "values": [
+        0.038,
+        0.04,
+        0.048
+      ]
+    },
+    "avg_full.resolved_frac": {
+      "mean": 0.157,
+      "se": 0.0010000000000000009,
+      "stdev": 0.001732050807568879,
+      "n": 3,
+      "values": [
+        0.158,
+        0.155,
+        0.158
+      ]
+    },
+    "avg_full.resolved_acc": {
+      "mean": 0.6647475159929223,
+      "se": 0.022952480900543346,
+      "stdev": 0.03975486307949533,
+      "n": 3,
+      "values": [
+        0.6772151898734177,
+        0.6967741935483871,
+        0.620253164556962
+      ]
+    },
+    "avg_full.false_valid.long": {
+      "mean": 0.03409401498653355,
+      "se": 0.0025939803069870205,
+      "stdev": 0.004492905685534633,
+      "n": 3,
+      "values": [
+        0.03254437869822485,
+        0.03058103975535168,
+        0.0391566265060241
+      ]
+    },
+    "exec_only.false_valid": {
+      "mean": 0.042,
+      "se": 0.0030550504633038936,
+      "stdev": 0.0052915026221291815,
+      "n": 3,
+      "values": [
+        0.038,
+        0.04,
+        0.048
+      ]
+    },
+    "exec_only.resolved_frac": {
+      "mean": 0.157,
+      "se": 0.0010000000000000009,
+      "stdev": 0.001732050807568879,
+      "n": 3,
+      "values": [
+        0.158,
+        0.155,
+        0.158
+      ]
+    },
+    "exec_only.resolved_acc": {
+      "mean": 0.6647475159929223,
+      "se": 0.022952480900543346,
+      "stdev": 0.03975486307949533,
+      "n": 3,
+      "values": [
+        0.6772151898734177,
+        0.6967741935483871,
+        0.620253164556962
+      ]
+    },
+    "exec_only.false_valid.long": {
+      "mean": 0.03409401498653355,
+      "se": 0.0025939803069870205,
+      "stdev": 0.004492905685534633,
+      "n": 3,
+      "values": [
+        0.03254437869822485,
+        0.03058103975535168,
+        0.0391566265060241
+      ]
+    },
+    "exec_free.false_valid": {
+      "mean": 0.0,
+      "se": 0.0,
+      "stdev": 0.0,
+      "n": 3,
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "exec_free.resolved_frac": {
+      "mean": 0.0,
+      "se": 0.0,
+      "stdev": 0.0,
+      "n": 3,
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "exec_free.resolved_acc": {
+      "mean": 0.0,
+      "se": 0.0,
+      "stdev": 0.0,
+      "n": 3,
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "exec_free.false_valid.long": {
+      "mean": 0.0,
+      "se": 0.0,
+      "stdev": 0.0,
+      "n": 3,
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "monolithic.false_valid": {
+      "mean": 0.6779999999999999,
+      "se": 0.010066445913694304,
+      "stdev": 0.017435595774162645,
+      "n": 3,
+      "values": [
+        0.67,
+        0.666,
+        0.698
+      ]
+    },
+    "monolithic.resolved_frac": {
+      "mean": 0.7766666666666667,
+      "se": 0.006765927710061486,
+      "stdev": 0.01171893055416464,
+      "n": 3,
+      "values": [
+        0.772,
+        0.768,
+        0.79
+      ]
+    },
+    "monolithic.resolved_acc": {
+      "mean": 0.5597241067004074,
+      "se": 0.003913849863067584,
+      "stdev": 0.006778986816029548,
+      "n": 3,
+      "values": [
+        0.5634715025906736,
+        0.5638020833333334,
+        0.5518987341772152
+      ]
+    },
+    "monolithic.false_valid.long": {
+      "mean": 0.7562519407925025,
+      "se": 0.013533781492601224,
+      "stdev": 0.023441197163720673,
+      "n": 3,
+      "values": [
+        0.7455621301775148,
+        0.7400611620795107,
+        0.7831325301204819
+      ]
+    },
+    "prm.false_valid": {
+      "mean": 0.8553333333333333,
+      "se": 0.0024037008503093285,
+      "stdev": 0.0041633319989322695,
+      "n": 3,
+      "values": [
+        0.854,
+        0.86,
+        0.852
+      ]
+    },
+    "prm.resolved_frac": {
+      "mean": 0.959,
+      "se": 0.0025166114784235857,
+      "stdev": 0.004358898943540678,
+      "n": 3,
+      "values": [
+        0.954,
+        0.962,
+        0.961
+      ]
+    },
+    "prm.resolved_acc": {
+      "mean": 0.5463947762850242,
+      "se": 0.0026048835627962767,
+      "stdev": 0.004511790678564185,
+      "n": 3,
+      "values": [
+        0.5429769392033543,
+        0.5446985446985447,
+        0.5515088449531738
+      ]
+    },
+    "prm.false_valid.long": {
+      "mean": 0.9830282532878378,
+      "se": 0.004220180682057304,
+      "stdev": 0.007309567358443929,
+      "n": 3,
+      "values": [
+        0.9763313609467456,
+        0.9908256880733946,
+        0.9819277108433735
+      ]
+    },
+    "agent_judge.false_valid": {
+      "mean": 0.6779999999999999,
+      "se": 0.010066445913694304,
+      "stdev": 0.017435595774162645,
+      "n": 3,
+      "values": [
+        0.67,
+        0.666,
+        0.698
+      ]
+    },
+    "agent_judge.resolved_frac": {
+      "mean": 0.7766666666666667,
+      "se": 0.006765927710061486,
+      "stdev": 0.01171893055416464,
+      "n": 3,
+      "values": [
+        0.772,
+        0.768,
+        0.79
+      ]
+    },
+    "agent_judge.resolved_acc": {
+      "mean": 0.5597241067004074,
+      "se": 0.003913849863067584,
+      "stdev": 0.006778986816029548,
+      "n": 3,
+      "values": [
+        0.5634715025906736,
+        0.5638020833333334,
+        0.5518987341772152
+      ]
+    },
+    "agent_judge.false_valid.long": {
+      "mean": 0.7562519407925025,
+      "se": 0.013533781492601224,
+      "stdev": 0.023441197163720673,
+      "n": 3,
+      "values": [
+        0.7455621301775148,
+        0.7400611620795107,
+        0.7831325301204819
+      ]
+    }
+  },
+  "per_seed": [
+    {
+      "experiment": "SA-1: Graph vs. Monolith (Q1)",
+      "n_traces": 1000,
+      "n_labeled": 1000,
+      "base_rate_valid": 0.5,
+      "long_horizon_steps": 12,
+      "n_long_horizon": 669,
+      "use_llm": false,
+      "use_semantic": false,
+      "domain_id": "tau_bench",
+      "seconds": 3.75,
+      "arms": [
+        {
+          "arm": "avg_full",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.038,
+            "false_invalid_rate": 0.064,
+            "resolved_accuracy": 0.6772151898734177,
+            "resolved_fraction": 0.158,
+            "abstention_rate": 0.842,
+            "valid_precision": 0.7246376811594203,
+            "valid_recall": 0.1,
+            "failure_flag_precision": 0.6404494382022472,
+            "failure_flag_recall": 0.114,
+            "confusion": {
+              "uncertain|invalid": 424,
+              "uncertain|valid": 418,
+              "invalid|invalid": 57,
+              "valid|invalid": 19,
+              "valid|valid": 50,
+              "invalid|valid": 32
+            }
+          },
+          "long_horizon": {
+            "n": 669,
+            "n_labeled": 669,
+            "false_valid_rate": 0.03254437869822485,
+            "false_invalid_rate": 0.08459214501510574,
+            "resolved_accuracy": 0.625,
+            "resolved_fraction": 0.1554559043348281,
+            "abstention_rate": 0.8445440956651719,
+            "valid_precision": 0.5,
+            "valid_recall": 0.03323262839879154,
+            "failure_flag_precision": 0.6585365853658537,
+            "failure_flag_recall": 0.15976331360946747,
+            "confusion": {
+              "uncertain|invalid": 273,
+              "uncertain|valid": 292,
+              "invalid|invalid": 54,
+              "valid|invalid": 11,
+              "invalid|valid": 28,
+              "valid|valid": 11
+            }
+          },
+          "total_llm_calls": 792,
+          "mean_llm_calls": 0.792
+        },
+        {
+          "arm": "exec_only",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.038,
+            "false_invalid_rate": 0.064,
+            "resolved_accuracy": 0.6772151898734177,
+            "resolved_fraction": 0.158,
+            "abstention_rate": 0.842,
+            "valid_precision": 0.7246376811594203,
+            "valid_recall": 0.1,
+            "failure_flag_precision": 0.6404494382022472,
+            "failure_flag_recall": 0.114,
+            "confusion": {
+              "uncertain|invalid": 424,
+              "uncertain|valid": 418,
+              "invalid|invalid": 57,
+              "valid|invalid": 19,
+              "valid|valid": 50,
+              "invalid|valid": 32
+            }
+          },
+          "long_horizon": {
+            "n": 669,
+            "n_labeled": 669,
+            "false_valid_rate": 0.03254437869822485,
+            "false_invalid_rate": 0.08459214501510574,
+            "resolved_accuracy": 0.625,
+            "resolved_fraction": 0.1554559043348281,
+            "abstention_rate": 0.8445440956651719,
+            "valid_precision": 0.5,
+            "valid_recall": 0.03323262839879154,
+            "failure_flag_precision": 0.6585365853658537,
+            "failure_flag_recall": 0.15976331360946747,
+            "confusion": {
+              "uncertain|invalid": 273,
+              "uncertain|valid": 292,
+              "invalid|invalid": 54,
+              "valid|invalid": 11,
+              "invalid|valid": 28,
+              "valid|valid": 11
+            }
+          },
+          "total_llm_calls": 0,
+          "mean_llm_calls": 0.0
+        },
+        {
+          "arm": "exec_free",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 500,
+              "uncertain|valid": 500
+            }
+          },
+          "long_horizon": {
+            "n": 669,
+            "n_labeled": 669,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 338,
+              "uncertain|valid": 331
+            }
+          },
+          "total_llm_calls": 792,
+          "mean_llm_calls": 0.792
+        },
+        {
+          "arm": "monolithic",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.67,
+            "false_invalid_rate": 0.004,
+            "resolved_accuracy": 0.5634715025906736,
+            "resolved_fraction": 0.772,
+            "abstention_rate": 0.228,
+            "valid_precision": 0.5521390374331551,
+            "valid_recall": 0.826,
+            "failure_flag_precision": 0.9166666666666666,
+            "failure_flag_recall": 0.044,
+            "confusion": {
+              "uncertain|invalid": 143,
+              "valid|valid": 413,
+              "invalid|invalid": 22,
+              "uncertain|valid": 85,
+              "valid|invalid": 335,
+              "invalid|valid": 2
+            }
+          },
+          "long_horizon": {
+            "n": 669,
+            "n_labeled": 669,
+            "false_valid_rate": 0.7455621301775148,
+            "false_invalid_rate": 0.006042296072507553,
+            "resolved_accuracy": 0.5243445692883895,
+            "resolved_fraction": 0.7982062780269058,
+            "abstention_rate": 0.20179372197309417,
+            "valid_precision": 0.5144508670520231,
+            "valid_recall": 0.8066465256797583,
+            "failure_flag_precision": 0.8666666666666667,
+            "failure_flag_recall": 0.038461538461538464,
+            "confusion": {
+              "uncertain|invalid": 73,
+              "valid|valid": 267,
+              "invalid|invalid": 13,
+              "valid|invalid": 252,
+              "uncertain|valid": 62,
+              "invalid|valid": 2
+            }
+          },
+          "total_llm_calls": 1000,
+          "mean_llm_calls": 1.0
+        },
+        {
+          "arm": "prm",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.854,
+            "false_invalid_rate": 0.018,
+            "resolved_accuracy": 0.5429769392033543,
+            "resolved_fraction": 0.954,
+            "abstention_rate": 0.046,
+            "valid_precision": 0.5348583877995643,
+            "valid_recall": 0.982,
+            "failure_flag_precision": 0.75,
+            "failure_flag_recall": 0.054,
+            "confusion": {
+              "valid|invalid": 427,
+              "invalid|valid": 9,
+              "valid|valid": 491,
+              "uncertain|invalid": 46,
+              "invalid|invalid": 27
+            }
+          },
+          "long_horizon": {
+            "n": 669,
+            "n_labeled": 669,
+            "false_valid_rate": 0.9763313609467456,
+            "false_invalid_rate": 0.00906344410876133,
+            "resolved_accuracy": 0.5022421524663677,
+            "resolved_fraction": 1.0,
+            "abstention_rate": 0.0,
+            "valid_precision": 0.49848024316109424,
+            "valid_recall": 0.9909365558912386,
+            "failure_flag_precision": 0.7272727272727273,
+            "failure_flag_recall": 0.023668639053254437,
+            "confusion": {
+              "valid|invalid": 330,
+              "invalid|valid": 3,
+              "valid|valid": 328,
+              "invalid|invalid": 8
+            }
+          },
+          "total_llm_calls": 13761,
+          "mean_llm_calls": 13.761
+        },
+        {
+          "arm": "agent_judge",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.67,
+            "false_invalid_rate": 0.004,
+            "resolved_accuracy": 0.5634715025906736,
+            "resolved_fraction": 0.772,
+            "abstention_rate": 0.228,
+            "valid_precision": 0.5521390374331551,
+            "valid_recall": 0.826,
+            "failure_flag_precision": 0.9166666666666666,
+            "failure_flag_recall": 0.044,
+            "confusion": {
+              "uncertain|invalid": 143,
+              "valid|valid": 413,
+              "invalid|invalid": 22,
+              "uncertain|valid": 85,
+              "valid|invalid": 335,
+              "invalid|valid": 2
+            }
+          },
+          "long_horizon": {
+            "n": 669,
+            "n_labeled": 669,
+            "false_valid_rate": 0.7455621301775148,
+            "false_invalid_rate": 0.006042296072507553,
+            "resolved_accuracy": 0.5243445692883895,
+            "resolved_fraction": 0.7982062780269058,
+            "abstention_rate": 0.20179372197309417,
+            "valid_precision": 0.5144508670520231,
+            "valid_recall": 0.8066465256797583,
+            "failure_flag_precision": 0.8666666666666667,
+            "failure_flag_recall": 0.038461538461538464,
+            "confusion": {
+              "uncertain|invalid": 73,
+              "valid|valid": 267,
+              "invalid|invalid": 13,
+              "valid|invalid": 252,
+              "uncertain|valid": 62,
+              "invalid|valid": 2
+            }
+          },
+          "total_llm_calls": 1000,
+          "mean_llm_calls": 1.0
+        }
+      ],
+      "notes": [
+        "Offline run (no API key): the semantic checker abstains, so avg_full collapses onto exec_only and exec_free abstains everywhere. The valid offline contrast is avg_full/exec_only (mechanical + abstention-aware aggregation) vs. monolithic (endpoint heuristic).",
+        "SA-8 baselines offline: prm is the deterministic step-heuristic process reward model (score every step, mean-threshold); it abstains only on a trace with no steps to score, so on any scoreable trace it commits -- over-committing on weak-label steps and, by rewarding locally-plausible steps, crediting even more failed traces than the endpoint monolith. agent_judge falls back to a deterministic multi-hop step-outcome gather that still commits -- an honest proxy for the LLM Agent-as-a-Judge, which (like the semantic checker) needs a key to show its real evidence-gathering. Both remain fooled by structurally-clean-but-failed traces; AVG abstains instead.",
+        "llm_calls are a would-issue cost proxy (0 real calls offline): the compute axis for the cost-normalized curve (avg.tex Sec. 4.7)."
+      ]
+    },
+    {
+      "experiment": "SA-1: Graph vs. Monolith (Q1)",
+      "n_traces": 1000,
+      "n_labeled": 1000,
+      "base_rate_valid": 0.5,
+      "long_horizon_steps": 12,
+      "n_long_horizon": 654,
+      "use_llm": false,
+      "use_semantic": false,
+      "domain_id": "tau_bench",
+      "seconds": 3.77,
+      "arms": [
+        {
+          "arm": "avg_full",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.04,
+            "false_invalid_rate": 0.054,
+            "resolved_accuracy": 0.6967741935483871,
+            "resolved_fraction": 0.155,
+            "abstention_rate": 0.845,
+            "valid_precision": 0.7183098591549296,
+            "valid_recall": 0.102,
+            "failure_flag_precision": 0.6785714285714286,
+            "failure_flag_recall": 0.114,
+            "confusion": {
+              "uncertain|invalid": 423,
+              "uncertain|valid": 422,
+              "invalid|valid": 27,
+              "valid|valid": 51,
+              "invalid|invalid": 57,
+              "valid|invalid": 20
+            }
+          },
+          "long_horizon": {
+            "n": 654,
+            "n_labeled": 654,
+            "false_valid_rate": 0.03058103975535168,
+            "false_invalid_rate": 0.0764525993883792,
+            "resolved_accuracy": 0.6601941747572816,
+            "resolved_fraction": 0.15749235474006115,
+            "abstention_rate": 0.8425076452599388,
+            "valid_precision": 0.5454545454545454,
+            "valid_recall": 0.03669724770642202,
+            "failure_flag_precision": 0.691358024691358,
+            "failure_flag_recall": 0.1712538226299694,
+            "confusion": {
+              "uncertain|invalid": 261,
+              "uncertain|valid": 290,
+              "invalid|valid": 25,
+              "invalid|invalid": 56,
+              "valid|valid": 12,
+              "valid|invalid": 10
+            }
+          },
+          "total_llm_calls": 789,
+          "mean_llm_calls": 0.789
+        },
+        {
+          "arm": "exec_only",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.04,
+            "false_invalid_rate": 0.054,
+            "resolved_accuracy": 0.6967741935483871,
+            "resolved_fraction": 0.155,
+            "abstention_rate": 0.845,
+            "valid_precision": 0.7183098591549296,
+            "valid_recall": 0.102,
+            "failure_flag_precision": 0.6785714285714286,
+            "failure_flag_recall": 0.114,
+            "confusion": {
+              "uncertain|invalid": 423,
+              "uncertain|valid": 422,
+              "invalid|valid": 27,
+              "valid|valid": 51,
+              "invalid|invalid": 57,
+              "valid|invalid": 20
+            }
+          },
+          "long_horizon": {
+            "n": 654,
+            "n_labeled": 654,
+            "false_valid_rate": 0.03058103975535168,
+            "false_invalid_rate": 0.0764525993883792,
+            "resolved_accuracy": 0.6601941747572816,
+            "resolved_fraction": 0.15749235474006115,
+            "abstention_rate": 0.8425076452599388,
+            "valid_precision": 0.5454545454545454,
+            "valid_recall": 0.03669724770642202,
+            "failure_flag_precision": 0.691358024691358,
+            "failure_flag_recall": 0.1712538226299694,
+            "confusion": {
+              "uncertain|invalid": 261,
+              "uncertain|valid": 290,
+              "invalid|valid": 25,
+              "invalid|invalid": 56,
+              "valid|valid": 12,
+              "valid|invalid": 10
+            }
+          },
+          "total_llm_calls": 0,
+          "mean_llm_calls": 0.0
+        },
+        {
+          "arm": "exec_free",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 500,
+              "uncertain|valid": 500
+            }
+          },
+          "long_horizon": {
+            "n": 654,
+            "n_labeled": 654,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 327,
+              "uncertain|valid": 327
+            }
+          },
+          "total_llm_calls": 789,
+          "mean_llm_calls": 0.789
+        },
+        {
+          "arm": "monolithic",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.666,
+            "false_invalid_rate": 0.004,
+            "resolved_accuracy": 0.5638020833333334,
+            "resolved_fraction": 0.768,
+            "abstention_rate": 0.232,
+            "valid_precision": 0.5493910690121786,
+            "valid_recall": 0.812,
+            "failure_flag_precision": 0.9310344827586207,
+            "failure_flag_recall": 0.054,
+            "confusion": {
+              "uncertain|invalid": 140,
+              "valid|invalid": 333,
+              "valid|valid": 406,
+              "uncertain|valid": 92,
+              "invalid|invalid": 27,
+              "invalid|valid": 2
+            }
+          },
+          "long_horizon": {
+            "n": 654,
+            "n_labeled": 654,
+            "false_valid_rate": 0.7400611620795107,
+            "false_invalid_rate": 0.0061162079510703364,
+            "resolved_accuracy": 0.5361216730038023,
+            "resolved_fraction": 0.8042813455657493,
+            "abstention_rate": 0.19571865443425077,
+            "valid_precision": 0.5207920792079208,
+            "valid_recall": 0.8042813455657493,
+            "failure_flag_precision": 0.9047619047619048,
+            "failure_flag_recall": 0.0581039755351682,
+            "confusion": {
+              "uncertain|invalid": 66,
+              "valid|invalid": 242,
+              "valid|valid": 263,
+              "uncertain|valid": 62,
+              "invalid|invalid": 19,
+              "invalid|valid": 2
+            }
+          },
+          "total_llm_calls": 1000,
+          "mean_llm_calls": 1.0
+        },
+        {
+          "arm": "prm",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.86,
+            "false_invalid_rate": 0.016,
+            "resolved_accuracy": 0.5446985446985447,
+            "resolved_fraction": 0.962,
+            "abstention_rate": 0.038,
+            "valid_precision": 0.5336225596529284,
+            "valid_recall": 0.984,
+            "failure_flag_precision": 0.8,
+            "failure_flag_recall": 0.064,
+            "confusion": {
+              "valid|invalid": 430,
+              "valid|valid": 492,
+              "invalid|invalid": 32,
+              "uncertain|invalid": 38,
+              "invalid|valid": 8
+            }
+          },
+          "long_horizon": {
+            "n": 654,
+            "n_labeled": 654,
+            "false_valid_rate": 0.9908256880733946,
+            "false_invalid_rate": 0.0030581039755351682,
+            "resolved_accuracy": 0.5030581039755352,
+            "resolved_fraction": 1.0,
+            "abstention_rate": 0.0,
+            "valid_precision": 0.5015384615384615,
+            "valid_recall": 0.9969418960244648,
+            "failure_flag_precision": 0.75,
+            "failure_flag_recall": 0.009174311926605505,
+            "confusion": {
+              "valid|invalid": 324,
+              "valid|valid": 326,
+              "invalid|invalid": 3,
+              "invalid|valid": 1
+            }
+          },
+          "total_llm_calls": 13589,
+          "mean_llm_calls": 13.589
+        },
+        {
+          "arm": "agent_judge",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.666,
+            "false_invalid_rate": 0.004,
+            "resolved_accuracy": 0.5638020833333334,
+            "resolved_fraction": 0.768,
+            "abstention_rate": 0.232,
+            "valid_precision": 0.5493910690121786,
+            "valid_recall": 0.812,
+            "failure_flag_precision": 0.9310344827586207,
+            "failure_flag_recall": 0.054,
+            "confusion": {
+              "uncertain|invalid": 140,
+              "valid|invalid": 333,
+              "valid|valid": 406,
+              "uncertain|valid": 92,
+              "invalid|invalid": 27,
+              "invalid|valid": 2
+            }
+          },
+          "long_horizon": {
+            "n": 654,
+            "n_labeled": 654,
+            "false_valid_rate": 0.7400611620795107,
+            "false_invalid_rate": 0.0061162079510703364,
+            "resolved_accuracy": 0.5361216730038023,
+            "resolved_fraction": 0.8042813455657493,
+            "abstention_rate": 0.19571865443425077,
+            "valid_precision": 0.5207920792079208,
+            "valid_recall": 0.8042813455657493,
+            "failure_flag_precision": 0.9047619047619048,
+            "failure_flag_recall": 0.0581039755351682,
+            "confusion": {
+              "uncertain|invalid": 66,
+              "valid|invalid": 242,
+              "valid|valid": 263,
+              "uncertain|valid": 62,
+              "invalid|invalid": 19,
+              "invalid|valid": 2
+            }
+          },
+          "total_llm_calls": 1000,
+          "mean_llm_calls": 1.0
+        }
+      ],
+      "notes": [
+        "Offline run (no API key): the semantic checker abstains, so avg_full collapses onto exec_only and exec_free abstains everywhere. The valid offline contrast is avg_full/exec_only (mechanical + abstention-aware aggregation) vs. monolithic (endpoint heuristic).",
+        "SA-8 baselines offline: prm is the deterministic step-heuristic process reward model (score every step, mean-threshold); it abstains only on a trace with no steps to score, so on any scoreable trace it commits -- over-committing on weak-label steps and, by rewarding locally-plausible steps, crediting even more failed traces than the endpoint monolith. agent_judge falls back to a deterministic multi-hop step-outcome gather that still commits -- an honest proxy for the LLM Agent-as-a-Judge, which (like the semantic checker) needs a key to show its real evidence-gathering. Both remain fooled by structurally-clean-but-failed traces; AVG abstains instead.",
+        "llm_calls are a would-issue cost proxy (0 real calls offline): the compute axis for the cost-normalized curve (avg.tex Sec. 4.7)."
+      ]
+    },
+    {
+      "experiment": "SA-1: Graph vs. Monolith (Q1)",
+      "n_traces": 1000,
+      "n_labeled": 1000,
+      "base_rate_valid": 0.5,
+      "long_horizon_steps": 12,
+      "n_long_horizon": 672,
+      "use_llm": false,
+      "use_semantic": false,
+      "domain_id": "tau_bench",
+      "seconds": 3.82,
+      "arms": [
+        {
+          "arm": "avg_full",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.048,
+            "false_invalid_rate": 0.072,
+            "resolved_accuracy": 0.620253164556962,
+            "resolved_fraction": 0.158,
+            "abstention_rate": 0.842,
+            "valid_precision": 0.6470588235294118,
+            "valid_recall": 0.088,
+            "failure_flag_precision": 0.6,
+            "failure_flag_recall": 0.108,
+            "confusion": {
+              "uncertain|valid": 420,
+              "valid|valid": 44,
+              "uncertain|invalid": 422,
+              "invalid|valid": 36,
+              "invalid|invalid": 54,
+              "valid|invalid": 24
+            }
+          },
+          "long_horizon": {
+            "n": 672,
+            "n_labeled": 672,
+            "false_valid_rate": 0.0391566265060241,
+            "false_invalid_rate": 0.09411764705882353,
+            "resolved_accuracy": 0.5714285714285714,
+            "resolved_fraction": 0.15625,
+            "abstention_rate": 0.84375,
+            "valid_precision": 0.4583333333333333,
+            "valid_recall": 0.03235294117647059,
+            "failure_flag_precision": 0.6049382716049383,
+            "failure_flag_recall": 0.14759036144578314,
+            "confusion": {
+              "uncertain|valid": 297,
+              "uncertain|invalid": 270,
+              "invalid|valid": 32,
+              "invalid|invalid": 49,
+              "valid|valid": 11,
+              "valid|invalid": 13
+            }
+          },
+          "total_llm_calls": 791,
+          "mean_llm_calls": 0.791
+        },
+        {
+          "arm": "exec_only",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.048,
+            "false_invalid_rate": 0.072,
+            "resolved_accuracy": 0.620253164556962,
+            "resolved_fraction": 0.158,
+            "abstention_rate": 0.842,
+            "valid_precision": 0.6470588235294118,
+            "valid_recall": 0.088,
+            "failure_flag_precision": 0.6,
+            "failure_flag_recall": 0.108,
+            "confusion": {
+              "uncertain|valid": 420,
+              "valid|valid": 44,
+              "uncertain|invalid": 422,
+              "invalid|valid": 36,
+              "invalid|invalid": 54,
+              "valid|invalid": 24
+            }
+          },
+          "long_horizon": {
+            "n": 672,
+            "n_labeled": 672,
+            "false_valid_rate": 0.0391566265060241,
+            "false_invalid_rate": 0.09411764705882353,
+            "resolved_accuracy": 0.5714285714285714,
+            "resolved_fraction": 0.15625,
+            "abstention_rate": 0.84375,
+            "valid_precision": 0.4583333333333333,
+            "valid_recall": 0.03235294117647059,
+            "failure_flag_precision": 0.6049382716049383,
+            "failure_flag_recall": 0.14759036144578314,
+            "confusion": {
+              "uncertain|valid": 297,
+              "uncertain|invalid": 270,
+              "invalid|valid": 32,
+              "invalid|invalid": 49,
+              "valid|valid": 11,
+              "valid|invalid": 13
+            }
+          },
+          "total_llm_calls": 0,
+          "mean_llm_calls": 0.0
+        },
+        {
+          "arm": "exec_free",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|valid": 500,
+              "uncertain|invalid": 500
+            }
+          },
+          "long_horizon": {
+            "n": 672,
+            "n_labeled": 672,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|valid": 340,
+              "uncertain|invalid": 332
+            }
+          },
+          "total_llm_calls": 791,
+          "mean_llm_calls": 0.791
+        },
+        {
+          "arm": "monolithic",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.698,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.5518987341772152,
+            "resolved_fraction": 0.79,
+            "abstention_rate": 0.21,
+            "valid_precision": 0.541994750656168,
+            "valid_recall": 0.826,
+            "failure_flag_precision": 0.8214285714285714,
+            "failure_flag_recall": 0.046,
+            "confusion": {
+              "valid|valid": 413,
+              "valid|invalid": 349,
+              "uncertain|invalid": 128,
+              "invalid|invalid": 23,
+              "uncertain|valid": 82,
+              "invalid|valid": 5
+            }
+          },
+          "long_horizon": {
+            "n": 672,
+            "n_labeled": 672,
+            "false_valid_rate": 0.7831325301204819,
+            "false_invalid_rate": 0.008823529411764706,
+            "resolved_accuracy": 0.5252707581227437,
+            "resolved_fraction": 0.8244047619047619,
+            "abstention_rate": 0.17559523809523808,
+            "valid_precision": 0.5176252319109462,
+            "valid_recall": 0.8205882352941176,
+            "failure_flag_precision": 0.8,
+            "failure_flag_recall": 0.03614457831325301,
+            "confusion": {
+              "valid|valid": 279,
+              "valid|invalid": 260,
+              "invalid|invalid": 12,
+              "uncertain|invalid": 60,
+              "uncertain|valid": 58,
+              "invalid|valid": 3
+            }
+          },
+          "total_llm_calls": 1000,
+          "mean_llm_calls": 1.0
+        },
+        {
+          "arm": "prm",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.852,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.5515088449531738,
+            "resolved_fraction": 0.961,
+            "abstention_rate": 0.039,
+            "valid_precision": 0.5374592833876222,
+            "valid_recall": 0.99,
+            "failure_flag_precision": 0.875,
+            "failure_flag_recall": 0.07,
+            "confusion": {
+              "valid|valid": 495,
+              "valid|invalid": 426,
+              "uncertain|invalid": 39,
+              "invalid|invalid": 35,
+              "invalid|valid": 5
+            }
+          },
+          "long_horizon": {
+            "n": 672,
+            "n_labeled": 672,
+            "false_valid_rate": 0.9819277108433735,
+            "false_invalid_rate": 0.0058823529411764705,
+            "resolved_accuracy": 0.5119047619047619,
+            "resolved_fraction": 1.0,
+            "abstention_rate": 0.0,
+            "valid_precision": 0.5090361445783133,
+            "valid_recall": 0.9941176470588236,
+            "failure_flag_precision": 0.75,
+            "failure_flag_recall": 0.018072289156626505,
+            "confusion": {
+              "valid|valid": 338,
+              "valid|invalid": 326,
+              "invalid|invalid": 6,
+              "invalid|valid": 2
+            }
+          },
+          "total_llm_calls": 13781,
+          "mean_llm_calls": 13.781
+        },
+        {
+          "arm": "agent_judge",
+          "overall": {
+            "n": 1000,
+            "n_labeled": 1000,
+            "false_valid_rate": 0.698,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.5518987341772152,
+            "resolved_fraction": 0.79,
+            "abstention_rate": 0.21,
+            "valid_precision": 0.541994750656168,
+            "valid_recall": 0.826,
+            "failure_flag_precision": 0.8214285714285714,
+            "failure_flag_recall": 0.046,
+            "confusion": {
+              "valid|valid": 413,
+              "valid|invalid": 349,
+              "uncertain|invalid": 128,
+              "invalid|invalid": 23,
+              "uncertain|valid": 82,
+              "invalid|valid": 5
+            }
+          },
+          "long_horizon": {
+            "n": 672,
+            "n_labeled": 672,
+            "false_valid_rate": 0.7831325301204819,
+            "false_invalid_rate": 0.008823529411764706,
+            "resolved_accuracy": 0.5252707581227437,
+            "resolved_fraction": 0.8244047619047619,
+            "abstention_rate": 0.17559523809523808,
+            "valid_precision": 0.5176252319109462,
+            "valid_recall": 0.8205882352941176,
+            "failure_flag_precision": 0.8,
+            "failure_flag_recall": 0.03614457831325301,
+            "confusion": {
+              "valid|valid": 279,
+              "valid|invalid": 260,
+              "invalid|invalid": 12,
+              "uncertain|invalid": 60,
+              "uncertain|valid": 58,
+              "invalid|valid": 3
+            }
+          },
+          "total_llm_calls": 1000,
+          "mean_llm_calls": 1.0
+        }
+      ],
+      "notes": [
+        "Offline run (no API key): the semantic checker abstains, so avg_full collapses onto exec_only and exec_free abstains everywhere. The valid offline contrast is avg_full/exec_only (mechanical + abstention-aware aggregation) vs. monolithic (endpoint heuristic).",
+        "SA-8 baselines offline: prm is the deterministic step-heuristic process reward model (score every step, mean-threshold); it abstains only on a trace with no steps to score, so on any scoreable trace it commits -- over-committing on weak-label steps and, by rewarding locally-plausible steps, crediting even more failed traces than the endpoint monolith. agent_judge falls back to a deterministic multi-hop step-outcome gather that still commits -- an honest proxy for the LLM Agent-as-a-Judge, which (like the semantic checker) needs a key to show its real evidence-gathering. Both remain fooled by structurally-clean-but-failed traces; AVG abstains instead.",
+        "llm_calls are a would-issue cost proxy (0 real calls offline): the compute axis for the cost-normalized curve (avg.tex Sec. 4.7)."
+      ]
+    }
+  ],
+  "significance": [
+    {
+      "label": "monolithic_vs_avg_full.false_valid",
+      "a": "monolithic",
+      "b": "avg_full",
+      "mean_a": 0.6779999999999999,
+      "mean_b": 0.042,
+      "mean_diff": 0.636,
+      "se_diff": 0.00721110255092795,
+      "t_stat": 88.19733119981179,
+      "df": 2,
+      "p_value": 0.0001285302570475951,
+      "n_seeds": 3,
+      "diffs": [
+        0.632,
+        0.626,
+        0.6499999999999999
+      ]
+    },
+    {
+      "label": "prm_vs_avg_full.false_valid",
+      "a": "prm",
+      "b": "avg_full",
+      "mean_a": 0.8553333333333333,
+      "mean_b": 0.042,
+      "mean_diff": 0.8133333333333334,
+      "se_diff": 0.004807401700618657,
+      "t_stat": 169.18355984869473,
+      "df": 2,
+      "p_value": 3.493501416605841e-05,
+      "n_seeds": 3,
+      "diffs": [
+        0.816,
+        0.82,
+        0.8039999999999999
+      ]
+    },
+    {
+      "label": "agent_judge_vs_avg_full.false_valid",
+      "a": "agent_judge",
+      "b": "avg_full",
+      "mean_a": 0.6779999999999999,
+      "mean_b": 0.042,
+      "mean_diff": 0.636,
+      "se_diff": 0.00721110255092795,
+      "t_stat": 88.19733119981179,
+      "df": 2,
+      "p_value": 0.0001285302570475951,
+      "n_seeds": 3,
+      "diffs": [
+        0.632,
+        0.626,
+        0.6499999999999999
+      ]
+    }
+  ]
+}

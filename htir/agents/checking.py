@@ -1,5 +1,5 @@
 """
-Checker execution (AVG Step 5, avg.tex Sec. 3.8 "Checking Obligations").
+Checker execution (AVG Step 5, avg.tex Sec. 3.7 "Checking Obligations").
 
 This module discharges each ``Obligation`` produced by
 ``htir.agents.obligations.build_claims_and_obligations`` by running the
@@ -12,7 +12,7 @@ the finished obligation set.
 
 Entry point: ``check_obligations``.
 
-Checker contract (avg.tex Sec. 3.8): a checker consumes an obligation and its
+Checker contract (avg.tex Sec. 3.7): a checker consumes an obligation and its
 *local* graph context only -- the claim, its r_i-typed candidate evidence
 ``E_i``, and the immediate neighbourhood (producing step, consumed/produced
 artifacts, validation/dependency edges touching it). It is never handed the
@@ -89,6 +89,8 @@ def check_obligations(
     spec: DomainSpec,
     *,
     use_semantic: bool = False,
+    disable_mechanical: bool = False,
+    force_decision: bool = False,
     domain_artifacts: DomainArtifactBundle | None = None,
     model: str = DEFAULT_MODEL,
 ) -> HTIR:
@@ -96,6 +98,28 @@ def check_obligations(
     Run the checker routed to each obligation in ``htir.obligations``, filling
     ``result``/``status`` and propagating to the linked claim's ``status``.
     Mutates ``htir`` in place and returns it for chaining.
+
+    ``use_semantic`` / ``disable_mechanical`` gate the two checker families so
+    the same pipeline expresses the paper's verifier arms (avg.tex Sec. 4.3;
+    see ``htir.agents.baselines``):
+
+    * full AVG   -> ``use_semantic=True,  disable_mechanical=False``
+    * exec-only  -> ``use_semantic=False, disable_mechanical=False`` (default)
+    * exec-free  -> ``use_semantic=True,  disable_mechanical=True``
+
+    When ``disable_mechanical`` is set, MECHANICAL-routed obligations abstain
+    without running their checker (no execution evidence is consulted), which
+    is exactly the execution-free ablation.
+
+    ``force_decision`` is the **no-abstention** ablation (avg.tex Sec. 4.5,
+    ablation #3): every checker must emit pass/fail, none may abstain. After
+    the routed checker runs, its abstain probability mass is redistributed onto
+    pass/fail (:func:`_force_decision`) so no obligation stays ABSTAINED. An
+    obligation the verifier had *no evidence* for (pure abstain) is pushed to
+    the optimistic prior -- it is credited PASSED rather than left unresolved --
+    which is exactly the over-crediting that calibrated abstention is meant to
+    prevent (Q3). Genuine mechanical fails still fail. This is off by default so
+    the calibrated-abstention path stays byte-for-byte reproducible.
 
     Idempotent: recomputes and overwrites every obligation's result/status
     (and every affected claim's status) rather than appending/skipping, so a
@@ -112,10 +136,13 @@ def check_obligations(
         claim = claims_by_id.get(ob.claim_id)
         result = _run_checker(
             htir, spec, ob, claim, evidence_by_id,
-            use_semantic=use_semantic, domain_artifacts=domain_artifacts, model=model,
+            use_semantic=use_semantic, disable_mechanical=disable_mechanical,
+            domain_artifacts=domain_artifacts, model=model,
         )
+        if force_decision:
+            result = _force_decision(result)
         ob.result = result
-        ob.status = _status_from_result(result)
+        ob.status = _status_from_result(result, forced=force_decision)
         obligations_by_claim.setdefault(ob.claim_id, []).append(ob)
 
     # Claim status is derived once per claim from *all* of its obligations
@@ -133,18 +160,64 @@ def check_obligations(
 # Status derivation
 # ---------------------------------------------------------------------------
 
-def _status_from_result(result: CheckerResult) -> ObligationStatus:
+def _status_from_result(result: CheckerResult, *, forced: bool = False) -> ObligationStatus:
     """
     argmax(p_pass, p_fail, p_abstain) with a conservative tie-break: when two
     probabilities are equal, prefer abstain over fail over pass (checking a
     claim conservatively is safer than over-crediting it).
+
+    Under ``forced`` (the no-abstention ablation) abstention is not an allowed
+    outcome, so the candidate is dropped and the tie-break flips to the
+    optimistic pass > fail: a forced no-evidence obligation (p_pass == p_fail)
+    is credited PASSED rather than flagged, which is the over-crediting Q3
+    predicts when abstention is removed.
     """
+    if forced:
+        candidates = [
+            (result.p_pass, ObligationStatus.PASSED),
+            (result.p_fail, ObligationStatus.FAILED),
+        ]
+        return max(candidates, key=lambda pair: pair[0])[1]
     candidates = [
         (result.p_abstain, ObligationStatus.ABSTAINED),
         (result.p_fail, ObligationStatus.FAILED),
         (result.p_pass, ObligationStatus.PASSED),
     ]
     return max(candidates, key=lambda pair: pair[0])[1]
+
+
+# Prior credited to a forced obligation that had no evidence to decide on
+# (pure abstain): 0.5 leaves it exactly at the pass/invalid boundary, so it
+# contributes an uninformative-but-committed 0.5 to the trajectory score while
+# the status tie-break (pass > fail) credits it. Genuine mechanical pass/fail
+# results are untouched -- only the abstain mass is redistributed.
+_FORCED_PASS_PRIOR = 0.5
+
+
+def _force_decision(result: CheckerResult) -> CheckerResult:
+    """
+    No-abstention ablation (avg.tex Sec. 4.5 #3): redistribute a checker's
+    abstain mass onto pass/fail so the obligation must commit. Mass is split in
+    proportion to the existing pass/fail signal; a pure abstain (no signal at
+    all) is split by the optimistic ``_FORCED_PASS_PRIOR``. The score is
+    recomputed as ``p_pass - p_fail`` and ``evidence_used`` is preserved.
+    """
+    if result.p_abstain <= 0.0:
+        return result
+    signal = result.p_pass + result.p_fail
+    if signal > 0.0:
+        share_pass = result.p_pass / signal
+    else:
+        share_pass = _FORCED_PASS_PRIOR
+    p_pass = result.p_pass + result.p_abstain * share_pass
+    p_fail = result.p_fail + result.p_abstain * (1.0 - share_pass)
+    return CheckerResult(
+        p_pass=p_pass,
+        p_fail=p_fail,
+        p_abstain=0.0,
+        score=p_pass - p_fail,
+        evidence_used=list(result.evidence_used),
+    )
 
 
 def _aggregate_claim_status(obligations: list[Obligation], is_refuted_by_evidence: bool) -> ClaimStatus:
@@ -190,6 +263,7 @@ def _run_checker(
     evidence_by_id: dict[int, EvidenceNode],
     *,
     use_semantic: bool,
+    disable_mechanical: bool = False,
     domain_artifacts: DomainArtifactBundle | None,
     model: str,
 ) -> CheckerResult:
@@ -200,9 +274,12 @@ def _run_checker(
         return _abstain()
 
     if ob.checker == CheckerType.MECHANICAL:
+        if disable_mechanical:
+            # Execution-free ablation: no mechanical evidence is consulted.
+            return _abstain()
         return _check_mechanical(htir, spec, ob, claim, evidence_by_id, domain_artifacts=domain_artifacts)
     if ob.checker == CheckerType.SEMANTIC:
-        return _check_semantic(ob, claim, evidence_by_id, use_semantic=use_semantic, model=model)
+        return _check_semantic(htir, ob, claim, evidence_by_id, use_semantic=use_semantic, model=model)
     # ABSTENTION and UNASSIGNED both abstain: UNASSIGNED means genuinely no
     # evidence type was ever routable, which is exactly the abstention case.
     return _abstain()
@@ -267,6 +344,55 @@ def _mech_execution_status(ctx: CheckerContext) -> CheckerResult:
 @register_checker(claim_type="artifact_provenance")
 def _mech_provenance(ctx: CheckerContext) -> CheckerResult:
     return _check_provenance(ctx.htir, ctx.claim)
+
+
+@register_checker(claim_type="constraint_compliance")
+def _mech_constraint(ctx: CheckerContext) -> CheckerResult:
+    return _check_precondition(ctx.htir, ctx.spec, ctx.obligation, ctx.claim)
+
+
+# Obligation template-id prefix for per-constraint obligations (see
+# ``htir.agents.obligations._emit_constraint_obligations``).
+_CONSTRAINT_TEMPLATE_PREFIX = "constraint:"
+
+
+def _check_precondition(htir: HTIR, spec: DomainSpec, ob: Obligation, claim: ClaimNode) -> CheckerResult:
+    """
+    Mechanical precondition-ordering check for a ``requires_prior`` constraint
+    (e.g. authenticate-before-action): the governed step must be preceded by a
+    *successful* step of a required operation type. Structural, no LLM.
+
+    * a successful prior step of a required op type  -> PASS;
+    * such steps exist but none succeeded (ambiguous) -> ABSTAIN (conservative);
+    * no prior step of the required op type at all    -> FAIL (clear violation).
+
+    Abstains (never fabricates) when the obligation is not a ``requires_prior``
+    constraint obligation, so this checker is a safe default for the
+    ``constraint_compliance`` claim type shared with the semantic path.
+    """
+    tid = ob.template_id or ""
+    if not tid.startswith(_CONSTRAINT_TEMPLATE_PREFIX):
+        return _abstain()
+    constraint_id = tid[len(_CONSTRAINT_TEMPLATE_PREFIX):]
+    constraint = next((c for c in spec.constraints if c.constraint_id == constraint_id), None)
+    if constraint is None or not constraint.requires_prior:
+        return _abstain()
+    if claim.source_step_id is None:
+        return _abstain()
+
+    required_roles = set(constraint.requires_prior)
+    prior = [
+        s for s in htir.steps_in_order()
+        if s.step_id < claim.source_step_id and s.role in required_roles
+    ]
+    if any(s.execution_status == ExecutionStatus.SUCCESS for s in prior):
+        return _decide(evidence_used=[], passed=True)
+    if prior:
+        # A required op was attempted but not observed to succeed -- stay
+        # conservative rather than vetoing a possibly-fine trajectory.
+        return _decide(evidence_used=[], passed=None)
+    # The governed action ran with no prior required operation at all.
+    return _decide(evidence_used=[], passed=False)
 
 
 def _check_execution_status(htir: HTIR, claim: ClaimNode, candidate_evidence_ids: list[int]) -> CheckerResult:
@@ -416,7 +542,36 @@ class _SemanticVerdict(BaseModel):
     rationale: str = ""
 
 
+def _producing_step_context(htir: HTIR, claim: ClaimNode) -> str:
+    """
+    The claim's producing step, rendered as the checker's *local neighbourhood*
+    (avg.tex Sec. 3.7: a checker sees the claim, its candidate evidence, and the
+    immediate neighbourhood incl. the producing step). This is the action a
+    policy/final-answer obligation is actually about -- without it the model has
+    the rulebook but not the move to judge. Empty string when there is no
+    producing step (nothing local to add).
+    """
+    if claim.source_step_id is None:
+        return ""
+    step = htir.get_step(claim.source_step_id)
+    if step is None:
+        return ""
+    tools = "; ".join(
+        f"{tc.name}({truncate(tc.arguments_text or '', 160)}) -> {truncate(tc.result or '', 160)}"
+        for tc in step.tool_calls
+    )
+    parts = [f"Step {step.step_id} — operation type: {step.role}; status: {step.execution_status.value}"]
+    if step.request_message:
+        parts.append(f"context/request: {truncate(step.request_message, 400)}")
+    if step.response_message:
+        parts.append(f"agent output: {truncate(step.response_message, 400)}")
+    if tools:
+        parts.append(f"tool calls: {tools}")
+    return "\n".join(parts)
+
+
 def _check_semantic(
+    htir: HTIR,
     ob: Obligation,
     claim: ClaimNode,
     evidence_by_id: dict[int, EvidenceNode],
@@ -425,9 +580,16 @@ def _check_semantic(
     model: str,
 ) -> CheckerResult:
     """
-    Narrow LLM judge over a single claim-evidence pair. With
-    ``use_semantic=False`` (the default), always abstains without calling the
-    model -- this keeps the deterministic path byte-for-byte reproducible.
+    Narrow LLM judge over a single claim, its candidate evidence, and its local
+    neighbourhood (the producing step). With ``use_semantic=False`` (the
+    default), always abstains without calling the model -- this keeps the
+    deterministic path byte-for-byte reproducible.
+
+    The producing-step context is what lets a policy-compliance obligation
+    ("step N complies with policy P") actually be judged: the candidate evidence
+    supplies the policy P (an Omega_d artifact), and the local neighbourhood
+    supplies the action step N to hold against it (avg.tex Sec. 3.7's checker
+    contract). Only consulted when the LLM is on, so no offline result changes.
     """
     if not use_semantic:
         return _abstain()
@@ -438,15 +600,19 @@ def _check_semantic(
         f"- {evidence_by_id[e].description}: {truncate(evidence_by_id[e].content, 500)}"
         for e in ob.candidate_evidence_ids if e in evidence_by_id
     )
+    step_context = _producing_step_context(htir, claim)
+    step_block = f"Action under review (the step this claim is about):\n{step_context}\n\n" if step_context else ""
     msgs = [
         system(
-            "You are a narrow claim-evidence checker. Given exactly one claim "
-            "and its candidate evidence, judge whether the evidence supports "
-            "(pass), contradicts (fail), or is insufficient to decide "
-            "(abstain) the claim. Never guess beyond the evidence given."
+            "You are a narrow claim-evidence checker. Given exactly one claim, "
+            "the action it is about, and its candidate evidence (e.g. a policy or "
+            "schema), judge whether the evidence supports (pass), contradicts "
+            "(fail), or is insufficient to decide (abstain) the claim. Judge the "
+            "action against the evidence; never guess beyond what is shown."
         ),
         user(
             f"Claim: {claim.statement}\n\n"
+            f"{step_block}"
             f"Candidate evidence:\n{evidence_desc}\n\n"
             "Return verdict (pass/fail/abstain), confidence (0-1), and a short rationale."
         ),

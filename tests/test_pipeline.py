@@ -623,6 +623,48 @@ def test_aggregate_abstain_heavy_high_severity_is_uncertain():
     assert z.predicted_status == "uncertain"
 
 
+def test_aggregate_all_abstained_no_pass_is_uncertain_not_valid():
+    """Regression (over-crediting bug): a trace that binds only low/medium
+    obligations, all of which ABSTAIN, has zero supporting evidence and must
+    aggregate to 'uncertain', never 'valid'. Reproduces scratch_results.json
+    real_traces[0] (56 uni-tool-schema obligations, all abstained, coverage
+    0.0) which previously fell through to 'valid'."""
+    htir = HTIR(task_id="agg-all-abstain", obligations=[
+        _obligation(i, ObligationStatus.ABSTAINED, Severity.LOW, p_abstain=1.0)
+        for i in range(1, 6)
+    ])
+
+    z = aggregate(htir)
+    assert z.predicted_status == "uncertain"
+    assert z.uncertainty == 1.0
+
+
+def test_aggregate_zero_obligations_is_uncertain_not_valid():
+    """Regression: a trace that binds *no* obligations verified nothing, so it
+    cannot be credited as 'valid'. Reproduces scratch_results.json
+    real_traces[2] (0 obligations) which previously aggregated to 'valid'."""
+    htir = HTIR(task_id="agg-empty", obligations=[])
+
+    z = aggregate(htir)
+    assert z.predicted_status == "uncertain"
+
+
+def test_aggregate_broad_low_severity_abstention_with_one_pass_is_uncertain():
+    """A single incidental pass must not mask that most of the trajectory went
+    unverified: with abstention above BROAD_ABSTAIN_FRACTION_THRESHOLD across
+    all severities, the status is 'uncertain' even though no high-severity
+    obligation exists to trigger the high-severity rule."""
+    htir = HTIR(task_id="agg-broad-abstain", obligations=[
+        _obligation(1, ObligationStatus.PASSED, Severity.LOW, p_pass=1.0),
+        _obligation(2, ObligationStatus.ABSTAINED, Severity.LOW, p_abstain=1.0),
+        _obligation(3, ObligationStatus.ABSTAINED, Severity.MEDIUM, p_abstain=1.0),
+        _obligation(4, ObligationStatus.ABSTAINED, Severity.LOW, p_abstain=1.0),
+    ])
+
+    z = aggregate(htir)
+    assert z.predicted_status == "uncertain"
+
+
 def test_build_witness_is_deterministic_and_idempotent():
     """Step 6: build_witness makes no LLM call and re-running it yields an identical witness."""
     htir = _build_compiled_synthetic_htir()
@@ -657,6 +699,79 @@ def test_compile_run_checks_flag_populates_aggregate_and_witness(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Verifier arms / baselines (htir.agents.baselines, avg.tex Sec. 4.3)
+# ---------------------------------------------------------------------------
+
+def _compiled_terminal_htir():
+    """Compile the synthetic terminal trace offline through obligation gen."""
+    from htir.adapters import load_trace
+    from htir.models.domain import get_domain_spec
+    from tests.test_adapters import TERMINAL_TRACE
+
+    spec = get_domain_spec("terminal_swe")
+    steps = load_trace(TERMINAL_TRACE)
+    htir = TraceAbstractionAgent(domain_spec=spec).compile(
+        task_id="arm", raw_steps=steps, harness_snippets={},
+    )
+    return htir, spec
+
+
+def test_run_all_arms_returns_every_arm_offline():
+    from htir.agents.baselines import VerifierArm, run_all_arms
+
+    htir, spec = _compiled_terminal_htir()
+    results = run_all_arms(htir, spec, use_llm=False)
+    assert set(results) == set(VerifierArm)
+    for agg in results.values():
+        assert agg.predicted_status in ("valid", "invalid", "uncertain")
+
+
+def test_exec_free_abstains_more_than_exec_only():
+    """Disabling mechanical evidence (exec-free) can only raise abstention /
+    uncertainty relative to exec-only over the same graph."""
+    from htir.agents.baselines import VerifierArm, run_arm
+
+    htir, spec = _compiled_terminal_htir()
+    exec_only = run_arm(htir, spec, VerifierArm.EXEC_ONLY, use_llm=False)
+    exec_free = run_arm(htir, spec, VerifierArm.EXEC_FREE, use_llm=False)
+    assert exec_free.uncertainty >= exec_only.uncertainty
+
+
+def test_arms_do_not_mutate_caller_graph():
+    """run_arm works on a copy by default: obligation statuses on the caller's
+    graph are untouched so arms can be compared independently."""
+    from htir.agents.baselines import VerifierArm, run_arm
+
+    htir, spec = _compiled_terminal_htir()
+    before = [o.status for o in htir.obligations]
+    run_arm(htir, spec, VerifierArm.EXEC_ONLY, use_llm=False)
+    assert [o.status for o in htir.obligations] == before  # all still PENDING
+
+
+def test_monolithic_judge_is_endpoint_oriented():
+    """The monolithic baseline trusts the last observable validation outcome:
+    a trace ending in a passing test reads 'valid'; ending in a failing test
+    reads 'invalid' -- with no obligation graph or abstention."""
+    from htir.agents.baselines import monolithic_judge
+
+    passing = HTIR(task_id="mono-pass", steps=[
+        TraceStep(step_id=1, request_message="edit", response_message="done",
+                  role="edit_file", execution_status=ExecutionStatus.SUCCESS),
+        TraceStep(step_id=2, request_message="pytest", response_message="ok",
+                  role="run_test", execution_status=ExecutionStatus.SUCCESS),
+    ])
+    failing = HTIR(task_id="mono-fail", steps=[
+        TraceStep(step_id=1, request_message="edit", response_message="done",
+                  role="edit_file", execution_status=ExecutionStatus.SUCCESS),
+        TraceStep(step_id=2, request_message="pytest", response_message="1 failed",
+                  role="run_test", execution_status=ExecutionStatus.FAILURE),
+    ])
+    assert monolithic_judge(passing).predicted_status == "valid"
+    assert monolithic_judge(failing).predicted_status == "invalid"
+    assert monolithic_judge(passing).evidence_coverage == 0.0  # no localization
+
+
+# ---------------------------------------------------------------------------
 # Work item A -- Omega_d weak domain artifacts (htir.models.domain)
 # ---------------------------------------------------------------------------
 
@@ -675,12 +790,12 @@ def _policy_governed_spec() -> DomainSpec:
     )
 
 
-def test_omega_bundle_produces_policy_compliance_obligation_with_candidate_evidence():
+def test_constraint_bundle_produces_atomic_constraint_obligation_with_candidate_evidence():
     """
-    Work item A: with a loaded Omega_d policy artifact, a policy-sensitive
-    step gets a real omega-policy-compliance obligation whose candidate
-    evidence points at that artifact's content, still PENDING (Step 5's job
-    to discharge).
+    With a loaded Omega_d bundle, each governing S_d.K_d constraint yields ONE
+    atomic ``constraint:<id>`` obligation (not a whole-SOP judgment duplicated
+    per policy artifact). A constraint without ``requires_prior`` routes to the
+    SEMANTIC checker with its own rule text as candidate evidence, still PENDING.
     """
     spec = _policy_governed_spec()
     steps = [
@@ -689,7 +804,7 @@ def test_omega_bundle_produces_policy_compliance_obligation_with_candidate_evide
             role="final_submission", execution_status=ExecutionStatus.SUCCESS,
         ),
     ]
-    htir = HTIR(task_id="omega-policy-test", domain_id=spec.domain_id, steps=steps)
+    htir = HTIR(task_id="constraint-policy-test", domain_id=spec.domain_id, steps=steps)
     bundle = DomainArtifactBundle(
         domain_id=spec.domain_id,
         artifacts=[
@@ -704,21 +819,21 @@ def test_omega_bundle_produces_policy_compliance_obligation_with_candidate_evide
     enrich(htir, spec, domain_artifacts=bundle)
     build_claims_and_obligations(htir, spec, domain_artifacts=bundle)
 
-    omega_obs = [o for o in htir.obligations if o.template_id == "omega-policy-compliance"]
-    assert len(omega_obs) == 1
-    ob = omega_obs[0]
+    constraint_obs = [o for o in htir.obligations if o.template_id == "constraint:policy-required"]
+    assert len(constraint_obs) == 1, "exactly one atomic obligation per governing constraint"
+    ob = constraint_obs[0]
     assert ob.status == ObligationStatus.PENDING
-    assert ob.checker == CheckerType.SEMANTIC
-    assert ob.candidate_evidence_ids, "expected E_i to point at the Omega_d policy artifact"
+    assert ob.checker == CheckerType.SEMANTIC       # no requires_prior -> semantic
+    assert ob.candidate_evidence_ids, "expected E_i to point at the constraint's rule text"
 
     evidence_by_id = {e.evidence_id for e in htir.evidence}
     assert set(ob.candidate_evidence_ids) <= evidence_by_id
     pointed_evidence = next(e for e in htir.evidence if e.evidence_id in ob.candidate_evidence_ids)
-    assert "no-fabrication-policy" in pointed_evidence.description
-    assert "fabricate" in pointed_evidence.content
+    assert "policy-required" in pointed_evidence.description          # scoped to THIS constraint
+    assert "cite an applicable policy" in pointed_evidence.content    # the narrow rule, not the SOP
 
     dep_reasons = [lk.reason for lk in htir.dependency_links if lk.source_step_id == 1]
-    assert any("no-fabrication-policy" in r for r in dep_reasons)
+    assert any("no-fabrication-policy" in r for r in dep_reasons)     # analysis link_policy unchanged
 
 
 def test_omega_bundle_absent_leaves_obligations_unchanged():

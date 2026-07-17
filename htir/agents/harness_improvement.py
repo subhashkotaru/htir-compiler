@@ -1,5 +1,5 @@
 """
-Offline harness improvement (AVG Step 8, avg.tex Sec. 3.12 "Offline Harness
+Offline harness improvement (AVG Step 8, avg.tex Sec. 3.11 "Offline Harness
 Improvement").
 
 Verification witnesses accumulated across many traces (Step 6 output) also
@@ -20,7 +20,7 @@ the harness itself) and scores/gates them. Applying a proposal is a separate,
 explicit call (``apply_domain_spec_edit``); nothing here mutates a
 ``DomainSpec`` in place.
 
-Two edit targets exist per avg.tex Sec. 3.12's examples ("agents frequently
+Two edit targets exist per avg.tex Sec. 3.11's examples ("agents frequently
 pass a narrow test but fail hidden tests" / "produce CSV without checking
 headers"): (i) the domain spec ``S_d`` (add obligation templates -- cheapest,
 self-contained, and what this module implements end-to-end) and (ii) the
@@ -57,7 +57,7 @@ from htir.models.htir import (
 class HarnessConfig(BaseModel):
     """
     h = (p, s, m, r): prompts, skills, memory policies, and runtime rules
-    (avg.tex Sec. 3.12). The harness itself is out of this repo's scope (it
+    (avg.tex Sec. 3.11). The harness itself is out of this repo's scope (it
     lives wherever the agent harness runs), so this is an opaque, descriptive
     snapshot -- nothing here executes prompts/skills/rules.
 
@@ -76,7 +76,7 @@ class HarnessConfig(BaseModel):
 class WitnessRecord(BaseModel):
     """
     One (trace_id, VerificationWitness, task_outcome) entry (avg.tex Sec.
-    3.12), extended with the small amount of extra digest information
+    3.11), extended with the small amount of extra digest information
     ``score_config`` needs that a bare witness doesn't carry on its own
     (severity/coverage/cost/policy signal, and mined recurring-failure tags).
     """
@@ -124,7 +124,7 @@ class ProposedEdit(BaseModel):
 
 
 # Recognised recurring-failure tags -> the domain-spec template that guards
-# against them, per avg.tex Sec. 3.12's two named examples. Unrecognised tags
+# against them, per avg.tex Sec. 3.11's two named examples. Unrecognised tags
 # propose nothing -- mining never invents an obligation out of thin air.
 _KNOWN_FAILURE_TEMPLATES: dict[str, ObligationTemplate] = {
     "hidden_test_failure": ObligationTemplate(
@@ -155,18 +155,30 @@ MIN_RECURRENCE_FRACTION = 0.5
 
 
 def mine_recurring_failures(
-    corpus: WitnessCorpus, *, min_fraction: float = MIN_RECURRENCE_FRACTION
+    corpus: WitnessCorpus,
+    *,
+    min_fraction: float = MIN_RECURRENCE_FRACTION,
+    known_templates: dict[str, ObligationTemplate] | None = None,
 ) -> list[ProposedEdit]:
     """
     Scan ``corpus.records[*].failure_tags`` for tags recurring in at least
     ``min_fraction`` of the traces, and propose a stronger domain-spec
-    obligation template for each recognised one (avg.tex Sec. 3.12: "agents
+    obligation template for each recognised one (avg.tex Sec. 3.11: "agents
     frequently pass a narrow test but fail hidden tests" -> a stronger
     validation obligation; "produce CSV without checking headers" -> a
     CSV-schema obligation). A tag with no known template mapping, or that
     doesn't recur often enough, proposes nothing -- this stays a mechanical,
     auditable pattern-match, not a generative process.
+
+    ``known_templates`` maps a recognised failure tag to the obligation
+    template that guards against it. It defaults to the domain-neutral
+    :data:`_KNOWN_FAILURE_TEMPLATES`; a concrete domain passes a specialised
+    map so the remediation template it proposes actually *binds* to that
+    domain's operation vocabulary (e.g. a terminal task triggers the
+    hidden-test obligation on its ``run_test`` operation rather than the
+    neutral ``validation`` trigger). Unrecognised tags still propose nothing.
     """
+    templates = known_templates if known_templates is not None else _KNOWN_FAILURE_TEMPLATES
     n = len(corpus.records)
     if n == 0:
         return []
@@ -181,7 +193,7 @@ def mine_recurring_failures(
         count = counts[tag]
         if count / n < min_fraction:
             continue
-        template = _KNOWN_FAILURE_TEMPLATES.get(tag)
+        template = templates.get(tag)
         if template is None:
             continue
         proposals.append(
@@ -219,7 +231,7 @@ def apply_domain_spec_edit(spec: DomainSpec, edit: ProposedEdit) -> DomainSpec:
 # Score J_hat and the acceptance gate
 # ---------------------------------------------------------------------------
 
-# Explicit, auditable weights for J_hat (avg.tex Sec. 3.12: "task success,
+# Explicit, auditable weights for J_hat (avg.tex Sec. 3.11: "task success,
 # failed obligations, unresolved high-severity obligations, evidence
 # coverage, cost, and policy violations").
 W_TASK_SUCCESS = 1.0
@@ -239,16 +251,27 @@ W_FAILURE_MISSED = 1.0
 DEFAULT_ACCEPT_EPSILON = 0.01
 
 
-def score_config(corpus: WitnessCorpus, config: HarnessConfig) -> float:
+def score_config(
+    corpus: WitnessCorpus,
+    config: HarnessConfig,
+    *,
+    known_templates: dict[str, ObligationTemplate] | None = None,
+) -> float:
     """
-    J_hat(h) (avg.tex Sec. 3.12): task success, failed obligations,
+    J_hat(h) (avg.tex Sec. 3.11): task success, failed obligations,
     unresolved high-severity obligations, evidence coverage, cost, and
     policy violations, averaged over ``corpus``, plus a catch/miss term for
     recurring failure tags against ``config.active_obligation_template_ids``
     -- a tag whose mapped template is active is rewarded (caught); one whose
     mapped template is not active is penalized (missed). Returns 0.0 for an
     empty corpus.
+
+    ``known_templates`` (the tag -> guarding-template map) must match the one
+    passed to :func:`mine_recurring_failures` so the catch/miss term keys on
+    the same template ids the loop actually applies; it defaults to the
+    domain-neutral :data:`_KNOWN_FAILURE_TEMPLATES`.
     """
+    templates = known_templates if known_templates is not None else _KNOWN_FAILURE_TEMPLATES
     records = corpus.records
     n = len(records)
     if n == 0:
@@ -265,7 +288,7 @@ def score_config(corpus: WitnessCorpus, config: HarnessConfig) -> float:
     missed = 0
     for record in records:
         for tag in record.failure_tags:
-            template_id = _KNOWN_FAILURE_TEMPLATES.get(tag)
+            template_id = templates.get(tag)
             template_id = template_id.template_id if template_id is not None else None
             if template_id is not None and template_id in config.active_obligation_template_ids:
                 caught += 1
@@ -289,7 +312,7 @@ def accept_edit(
 ) -> bool:
     """
     Accept(Delta h) = I[J_hat(h+Delta h) > J_hat(h) + epsilon AND Safe(Delta h) = 1]
-    (avg.tex Sec. 3.12). ``safe`` is the caller-supplied ``Safe(Delta h)``
+    (avg.tex Sec. 3.11). ``safe`` is the caller-supplied ``Safe(Delta h)``
     judgement (out of scope to compute here -- e.g. a held-out regression
     suite or a human sign-off); this function only implements the gate.
     """

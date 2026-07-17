@@ -1,0 +1,244 @@
+{
+  "experiment": "SA-3: Calibrated Abstention (Q3)",
+  "n_traces": 3000,
+  "n_labeled": 3000,
+  "base_rate_valid": 0.5,
+  "use_llm": false,
+  "domain_id": "terminal_swe",
+  "seconds": 18.56,
+  "auroc_all": 0.4570688888888889,
+  "ece_all": 0.11102375341128429,
+  "reliability": [
+    {
+      "lo": 0.0,
+      "hi": 0.1,
+      "count": 0,
+      "mean_score": 0.0,
+      "empirical_valid": 0.0,
+      "gap": 0.0
+    },
+    {
+      "lo": 0.1,
+      "hi": 0.2,
+      "count": 0,
+      "mean_score": 0.0,
+      "empirical_valid": 0.0,
+      "gap": 0.0
+    },
+    {
+      "lo": 0.2,
+      "hi": 0.3,
+      "count": 5,
+      "mean_score": 0.26940664852746493,
+      "empirical_valid": 0.0,
+      "gap": 0.26940664852746493
+    },
+    {
+      "lo": 0.3,
+      "hi": 0.4,
+      "count": 45,
+      "mean_score": 0.3518135852620812,
+      "empirical_valid": 0.13333333333333333,
+      "gap": 0.21848025192874784
+    },
+    {
+      "lo": 0.4,
+      "hi": 0.5,
+      "count": 91,
+      "mean_score": 0.4574511557541066,
+      "empirical_valid": 0.2857142857142857,
+      "gap": 0.1717368700398209
+    },
+    {
+      "lo": 0.5,
+      "hi": 0.6,
+      "count": 1885,
+      "mean_score": 0.5164253194809035,
+      "empirical_valid": 0.5448275862068965,
+      "gap": 0.028402266725992997
+    },
+    {
+      "lo": 0.6,
+      "hi": 0.7,
+      "count": 530,
+      "mean_score": 0.6372592962159784,
+      "empirical_valid": 0.4867924528301887,
+      "gap": 0.15046684338578975
+    },
+    {
+      "lo": 0.7,
+      "hi": 0.8,
+      "count": 242,
+      "mean_score": 0.7383283941080706,
+      "empirical_valid": 0.4628099173553719,
+      "gap": 0.2755184767526987
+    },
+    {
+      "lo": 0.8,
+      "hi": 0.9,
+      "count": 128,
+      "mean_score": 0.8397666012193321,
+      "empirical_valid": 0.40625,
+      "gap": 0.4335166012193321
+    },
+    {
+      "lo": 0.9,
+      "hi": 1.0,
+      "count": 74,
+      "mean_score": 0.9434224915892597,
+      "empirical_valid": 0.25675675675675674,
+      "gap": 0.6866657348325029
+    }
+  ],
+  "risk_coverage": [
+    {
+      "abstention_budget": 0.0,
+      "coverage": 1.0,
+      "n_kept": 3000,
+      "accuracy": 0.5256666666666666,
+      "false_valid_rate": 0.9273333333333333,
+      "valid_precision": 0.5134662469394893
+    },
+    {
+      "abstention_budget": 0.1,
+      "coverage": 0.9,
+      "n_kept": 2700,
+      "accuracy": 0.5266666666666666,
+      "false_valid_rate": 0.9195571955719557,
+      "valid_precision": 0.5130910511918718
+    },
+    {
+      "abstention_budget": 0.2,
+      "coverage": 0.8,
+      "n_kept": 2400,
+      "accuracy": 0.51625,
+      "false_valid_rate": 0.9119547657512116,
+      "valid_precision": 0.5002213368747234
+    },
+    {
+      "abstention_budget": 0.3,
+      "coverage": 0.7,
+      "n_kept": 2100,
+      "accuracy": 0.5042857142857143,
+      "false_valid_rate": 0.9025044722719141,
+      "valid_precision": 0.4849412965798877
+    },
+    {
+      "abstention_budget": 0.4,
+      "coverage": 0.6,
+      "n_kept": 1800,
+      "accuracy": 0.49,
+      "false_valid_rate": 0.8904522613065327,
+      "valid_precision": 0.46594333936106086
+    },
+    {
+      "abstention_budget": 0.5,
+      "coverage": 0.5,
+      "n_kept": 1500,
+      "accuracy": 0.47,
+      "false_valid_rate": 0.9052631578947369,
+      "valid_precision": 0.44635193133047213
+    },
+    {
+      "abstention_budget": 0.6,
+      "coverage": 0.4,
+      "n_kept": 1200,
+      "accuracy": 0.4683333333333333,
+      "false_valid_rate": 0.9263622974963182,
+      "valid_precision": 0.44872918492550395
+    },
+    {
+      "abstention_budget": 0.7,
+      "coverage": 0.3,
+      "n_kept": 900,
+      "accuracy": 0.4633333333333333,
+      "false_valid_rate": 0.9176245210727969,
+      "valid_precision": 0.4384525205158265
+    },
+    {
+      "abstention_budget": 0.8,
+      "coverage": 0.2,
+      "n_kept": 600,
+      "accuracy": 0.43,
+      "false_valid_rate": 0.9419889502762431,
+      "valid_precision": 0.4100346020761246
+    },
+    {
+      "abstention_budget": 0.9,
+      "coverage": 0.1,
+      "n_kept": 300,
+      "accuracy": 0.35333333333333333,
+      "false_valid_rate": 0.9948717948717949,
+      "valid_precision": 0.3511705685618729
+    }
+  ],
+  "false_valid_reduction": {
+    "no_abstention": 0.724,
+    "avg_full": 0.128,
+    "absolute": 0.596,
+    "relative": 0.8232044198895028
+  },
+  "arms": [
+    {
+      "arm": "avg_full",
+      "decision_metrics": {
+        "n": 3000,
+        "n_labeled": 3000,
+        "false_valid_rate": 0.128,
+        "false_invalid_rate": 0.012666666666666666,
+        "resolved_accuracy": 0.3775811209439528,
+        "resolved_fraction": 0.113,
+        "abstention_rate": 0.887,
+        "valid_precision": 0.28888888888888886,
+        "valid_recall": 0.052,
+        "failure_flag_precision": 0.7246376811594203,
+        "failure_flag_recall": 0.03333333333333333,
+        "confusion": {
+          "uncertain|valid": 1403,
+          "uncertain|invalid": 1258,
+          "invalid|invalid": 50,
+          "valid|invalid": 192,
+          "invalid|valid": 19,
+          "valid|valid": 78
+        }
+      },
+      "n_committed": 339,
+      "coverage": 0.113,
+      "auroc_committed": 0.4609994035954673,
+      "ece_committed": 0.4387423550207669
+    },
+    {
+      "arm": "no_abstention",
+      "decision_metrics": {
+        "n": 3000,
+        "n_labeled": 3000,
+        "false_valid_rate": 0.724,
+        "false_invalid_rate": 0.012666666666666666,
+        "resolved_accuracy": 0.43275154004106775,
+        "resolved_fraction": 0.6493333333333333,
+        "abstention_rate": 0.3506666666666667,
+        "valid_precision": 0.42203299627461416,
+        "valid_recall": 0.5286666666666666,
+        "failure_flag_precision": 0.7246376811594203,
+        "failure_flag_recall": 0.03333333333333333,
+        "confusion": {
+          "valid|valid": 793,
+          "valid|invalid": 1086,
+          "uncertain|valid": 688,
+          "invalid|invalid": 50,
+          "uncertain|invalid": 364,
+          "invalid|valid": 19
+        }
+      },
+      "n_committed": 1948,
+      "coverage": 0.6493333333333333,
+      "auroc_committed": 0.5349044699229862,
+      "ece_committed": 0.19917593155896265
+    }
+  ],
+  "notes": [
+    "Offline run (no API key): the semantic checker abstains, so avg_full is mechanical-evidence-only and no_abstention forces those same mechanical checks to commit. The contrast is calibrated abstention vs. forced commitment over identical evidence (ablation #3).",
+    "Calibration truth is the weak trajectory-level reward label; the step-level gold slice (avg.tex P0) would sharpen the reliability diagram but is not required for these trajectory-level metrics.",
+    "auroc_committed is the abstention-calibrated AUROC: the shared score restricted to the traces each arm commits to. auroc_all/ece_all/reliability/risk_coverage are over all labeled traces (0.5-imputed when a trace had no scoreable obligation)."
+  ]
+}

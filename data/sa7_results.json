@@ -1,0 +1,182 @@
+{
+  "experiment": "SA-7: Downstream payoff (best-of-N reranking / filtering)",
+  "domain_id": "terminal_swe",
+  "n_traces": 600,
+  "n_labeled": 600,
+  "n_tasks_total": 11,
+  "n_tasks_used": 11,
+  "min_candidates": 3,
+  "candidates_per_task": 8,
+  "base_rate_valid": 0.5,
+  "use_llm": false,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "seconds": 2.93,
+  "reranking": [
+    {
+      "arm": "avg_full",
+      "pick_success": {
+        "mean": 0.5151515151515151,
+        "se": 0.06060606060606061,
+        "stdev": 0.1049727762162956,
+        "n": 3,
+        "values": [
+          0.45454545454545453,
+          0.45454545454545453,
+          0.6363636363636364
+        ]
+      },
+      "delta_vs_monolith": {
+        "mean": -0.06060606060606063,
+        "se": 0.10925912955951483,
+        "stdev": 0.18924236358783025,
+        "n": 3,
+        "values": [
+          0.09090909090909088,
+          -0.27272727272727276,
+          0.0
+        ]
+      }
+    },
+    {
+      "arm": "monolithic",
+      "pick_success": {
+        "mean": 0.5757575757575758,
+        "se": 0.10925912955951483,
+        "stdev": 0.18924236358783025,
+        "n": 3,
+        "values": [
+          0.36363636363636365,
+          0.7272727272727273,
+          0.6363636363636364
+        ]
+      },
+      "delta_vs_monolith": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ],
+  "filtering": [
+    {
+      "arm": "avg_full",
+      "precision": {
+        "mean": 0.27314814814814814,
+        "se": 0.13803751403588496,
+        "stdev": 0.23908798766065475,
+        "n": 3,
+        "values": [
+          0.0,
+          0.375,
+          0.4444444444444444
+        ]
+      },
+      "yield_kept": {
+        "mean": 0.10227272727272728,
+        "se": 0.006560798513518473,
+        "stdev": 0.01136363636363636,
+        "n": 3,
+        "values": [
+          0.11363636363636363,
+          0.09090909090909091,
+          0.10227272727272728
+        ]
+      },
+      "false_valid_rate": {
+        "mean": 0.16423109155667295,
+        "se": 0.034288576110780684,
+        "stdev": 0.059389555943064595,
+        "n": 3,
+        "values": [
+          0.23255813953488372,
+          0.125,
+          0.13513513513513514
+        ]
+      }
+    },
+    {
+      "arm": "monolithic",
+      "precision": {
+        "mean": 0.47085658534493385,
+        "se": 0.0343173592323362,
+        "stdev": 0.05943940977199917,
+        "n": 3,
+        "values": [
+          0.40425531914893614,
+          0.4897959183673469,
+          0.5185185185185185
+        ]
+      },
+      "yield_kept": {
+        "mean": 0.5681818181818182,
+        "se": 0.023655295448478796,
+        "stdev": 0.04097217358481808,
+        "n": 3,
+        "values": [
+          0.5340909090909091,
+          0.5568181818181818,
+          0.6136363636363636
+        ]
+      },
+      "false_valid_rate": {
+        "mean": 0.6596218311334591,
+        "se": 0.022826110967098124,
+        "stdev": 0.03953598393421911,
+        "n": 3,
+        "values": [
+          0.6511627906976745,
+          0.625,
+          0.7027027027027027
+        ]
+      }
+    }
+  ],
+  "oracle_pick_success": {
+    "mean": 0.9393939393939394,
+    "se": 0.030303030303030314,
+    "stdev": 0.05248638810814781,
+    "n": 3,
+    "values": [
+      0.9090909090909091,
+      1.0,
+      0.9090909090909091
+    ]
+  },
+  "random_pick_success": {
+    "mean": 0.5454545454545454,
+    "se": 0.01968239554055544,
+    "stdev": 0.034090909090909116,
+    "n": 3,
+    "values": [
+      0.5113636363636364,
+      0.5454545454545454,
+      0.5795454545454546
+    ]
+  },
+  "significance": {
+    "comparison": "avg_full - monolithic (reranking pick-success)",
+    "test": "paired bootstrap over tasks",
+    "n_tasks": 11,
+    "n_boot": 2000,
+    "observed_gap": 0.0909,
+    "ci95_low": -0.1818,
+    "ci95_high": 0.3636,
+    "p_value_one_sided": 0.38
+  },
+  "notes": [
+    "Reranking: per task, pick argmax over candidates by the coverage-aware p_valid selection score (trajectory_valid_score for AVG; 0.5±0.5·confidence for the monolith), which induces resolved-valid > abstained (0.5 prior) > resolved-invalid. pick_success is the true (reward=1) rate of the picks. oracle = task has any valid candidate (ceiling); random = mean per-task valid fraction (unguided floor).",
+    "Filtering: keep the traces an arm credits 'valid'; precision is the kept set's true-valid fraction (reward-hack that leaks into kept data = 1-precision), yield is the fraction kept. Precision above base_rate is the selection value; report yield so high-precision/low-yield arms are not flattered.",
+    "Significance: paired bootstrap over 11 tasks (n_boot=2000) at the seed-0 candidate budget; CI95 and one-sided P(gap<=0) for the avg_full - monolithic reranking gap. The stable cross-domain win is the filtering hack-leakage (false_valid) gap, whose per-seed SE is tiny; reranking is comparable offline (CI straddles 0).",
+    "Offline run (no API key): avg_full collapses onto exec_only (mechanical evidence + abstention-aware aggregation) and monolithic is the endpoint heuristic, as in SA-1. Numbers are byte-reproducible; the LLM arms only sharpen the same contrast."
+  ]
+}

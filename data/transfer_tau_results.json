@@ -1,0 +1,161 @@
+{
+  "experiment": "SA-2 transfer matrix: zero-shot cross-domain verification (Q2)",
+  "train_specs": [
+    "universal_only",
+    "terminal_swe",
+    "tau_bench"
+  ],
+  "test_domains": [
+    "terminal_swe",
+    "tau_bench"
+  ],
+  "use_llm": false,
+  "seconds": 62.91,
+  "cells": [
+    {
+      "train_spec": "universal_only",
+      "test_domain": "terminal_swe",
+      "n": 600,
+      "metrics": {
+        "n": 600,
+        "n_labeled": 600,
+        "false_valid_rate": 0.0,
+        "false_invalid_rate": 0.0,
+        "resolved_accuracy": 0.0,
+        "resolved_fraction": 0.0,
+        "abstention_rate": 1.0,
+        "valid_precision": 0.0,
+        "valid_recall": 0.0,
+        "failure_flag_precision": 0.0,
+        "failure_flag_recall": 0.0,
+        "confusion": {
+          "uncertain|invalid": 300,
+          "uncertain|valid": 300
+        }
+      }
+    },
+    {
+      "train_spec": "universal_only",
+      "test_domain": "tau_bench",
+      "n": 1000,
+      "metrics": {
+        "n": 1000,
+        "n_labeled": 1000,
+        "false_valid_rate": 0.0,
+        "false_invalid_rate": 0.0,
+        "resolved_accuracy": 0.0,
+        "resolved_fraction": 0.0,
+        "abstention_rate": 1.0,
+        "valid_precision": 0.0,
+        "valid_recall": 0.0,
+        "failure_flag_precision": 0.0,
+        "failure_flag_recall": 0.0,
+        "confusion": {
+          "uncertain|invalid": 500,
+          "uncertain|valid": 500
+        }
+      }
+    },
+    {
+      "train_spec": "terminal_swe",
+      "test_domain": "terminal_swe",
+      "n": 600,
+      "metrics": {
+        "n": 600,
+        "n_labeled": 600,
+        "false_valid_rate": 0.15666666666666668,
+        "false_invalid_rate": 0.02,
+        "resolved_accuracy": 0.3614457831325301,
+        "resolved_fraction": 0.13833333333333334,
+        "abstention_rate": 0.8616666666666667,
+        "valid_precision": 0.22950819672131148,
+        "valid_recall": 0.04666666666666667,
+        "failure_flag_precision": 0.7272727272727273,
+        "failure_flag_recall": 0.05333333333333334,
+        "confusion": {
+          "uncertain|invalid": 237,
+          "uncertain|valid": 280,
+          "invalid|invalid": 16,
+          "valid|invalid": 47,
+          "valid|valid": 14,
+          "invalid|valid": 6
+        }
+      }
+    },
+    {
+      "train_spec": "terminal_swe",
+      "test_domain": "tau_bench",
+      "n": 1000,
+      "metrics": {
+        "n": 1000,
+        "n_labeled": 1000,
+        "false_valid_rate": 0.0,
+        "false_invalid_rate": 0.0,
+        "resolved_accuracy": 0.0,
+        "resolved_fraction": 0.0,
+        "abstention_rate": 1.0,
+        "valid_precision": 0.0,
+        "valid_recall": 0.0,
+        "failure_flag_precision": 0.0,
+        "failure_flag_recall": 0.0,
+        "confusion": {
+          "uncertain|invalid": 500,
+          "uncertain|valid": 500
+        }
+      }
+    },
+    {
+      "train_spec": "tau_bench",
+      "test_domain": "terminal_swe",
+      "n": 600,
+      "metrics": {
+        "n": 600,
+        "n_labeled": 600,
+        "false_valid_rate": 0.0,
+        "false_invalid_rate": 0.0,
+        "resolved_accuracy": 0.0,
+        "resolved_fraction": 0.0,
+        "abstention_rate": 1.0,
+        "valid_precision": 0.0,
+        "valid_recall": 0.0,
+        "failure_flag_precision": 0.0,
+        "failure_flag_recall": 0.0,
+        "confusion": {
+          "uncertain|invalid": 300,
+          "uncertain|valid": 300
+        }
+      }
+    },
+    {
+      "train_spec": "tau_bench",
+      "test_domain": "tau_bench",
+      "n": 1000,
+      "metrics": {
+        "n": 1000,
+        "n_labeled": 1000,
+        "false_valid_rate": 0.038,
+        "false_invalid_rate": 0.08,
+        "resolved_accuracy": 0.6569767441860465,
+        "resolved_fraction": 0.172,
+        "abstention_rate": 0.828,
+        "valid_precision": 0.7246376811594203,
+        "valid_recall": 0.1,
+        "failure_flag_precision": 0.6116504854368932,
+        "failure_flag_recall": 0.126,
+        "confusion": {
+          "uncertain|invalid": 418,
+          "uncertain|valid": 410,
+          "invalid|invalid": 63,
+          "valid|invalid": 19,
+          "valid|valid": 50,
+          "invalid|valid": 40
+        }
+      }
+    }
+  ],
+  "notes": [
+    "Transfer = apply the verifier specced for the ROW domain to the COLUMN domain's traces. A trace is parsed by its own shape-detected adapter, but compile() filters step roles to the active S_d vocabulary, so an off-domain spec collapses operations to 'other' -> no obligation binds -> the verifier abstains (resolved_fraction ~ 0). The diagonal (matched adapter+spec) is where obligations bind and the verifier resolves.",
+    "Headline: resolved_fraction on the diagonal vs off it shows adapters are necessary for cross-domain transfer; false_valid stays low everywhere (abstention, not over-crediting, is how a mis-specced verifier fails).",
+    "Offline (no API key): only mechanical obligations discharge; policy/final-answer (semantic) obligations abstain, as elsewhere in the SA series."
+  ]
+}

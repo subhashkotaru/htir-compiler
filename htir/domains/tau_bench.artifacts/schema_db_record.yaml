@@ -1,0 +1,13 @@
+# Omega_d SCHEMA artifact for the tau_bench domain.
+# identifier matches the db_record artifact-type schema_hint in tau_bench.yaml.
+artifact_kind: schema
+identifier: db_record
+content: "A tau-bench database record is keyed by its id and must be internally consistent:\n  - user:\
+  \        {user_id, email, name, address, payment_methods[], orders[]|reservations[], membership}\n \
+  \ - order:       {order_id, user_id, status(pending|processed|delivered|cancelled), items[], payment}\n\
+  \  - reservation: {reservation_id, user_id, flights[], passengers[], cabin, baggages, insurance}\nA\
+  \ mutation is conformant iff it targets an existing record owned by the authenticated\nuser and leaves\
+  \ the record in a valid status transition (e.g. only *pending* orders may\nbe modified/cancelled; delivered\
+  \ orders may be returned/exchanged).\n"
+metadata:
+  source: tau-bench domain convention

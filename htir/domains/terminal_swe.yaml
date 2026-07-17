@@ -32,6 +32,7 @@ constraints:
     applies_to_operations: [edit_file]
 
 obligation_templates:
+  # -- domain (S_d.B_d) ---------------------------------------------------
   - template_id: swe-edit-then-validate
     claim_template: An implementation edit is validated by a post-edit test run.
     scope: domain
@@ -48,3 +49,58 @@ obligation_templates:
     required_evidence: schema
     severity: medium
     escalation: request-evidence
+
+  # A produced file must have producer provenance. Routes (via claim_type)
+  # to the mechanical provenance checker, so it PASSES on any edit we
+  # recorded provenance for -- the positive evidence that lets a clean
+  # trajectory aggregate to 'valid' rather than abstaining throughout.
+  - template_id: swe-edit-provenance
+    claim_template: An edited file has recorded producer provenance.
+    scope: domain
+    trigger: edit_file
+    required_evidence: artifact
+    severity: medium
+    escalation: request-evidence
+    target_claim_type: artifact_provenance
+
+  # -- universal-equivalent (O_uni over the terminal vocabulary) ----------
+  # The universal templates from default.yaml, re-expressed with terminal
+  # operation-type triggers (default's 'tool_invocation'/'validation' names
+  # do not exist here). Together with the domain templates above this makes
+  # O = O_uni u O_dom u O_trig for terminal traces.
+  - template_id: swe-command-status
+    claim_template: A shell command completed successfully (non-error exit).
+    scope: universal
+    trigger: run_command
+    required_evidence: executable
+    severity: medium
+    escalation: request-evidence
+    target_claim_type: execution_status
+
+  - template_id: swe-test-status
+    claim_template: A test run completed successfully.
+    scope: universal
+    trigger: run_test
+    required_evidence: executable
+    severity: high
+    escalation: repair
+    target_claim_type: execution_status
+
+  - template_id: uni-final-answer-supported
+    claim_template: Final answer is connected to supporting evidence.
+    scope: universal
+    trigger: final_submission
+    required_evidence: semantic
+    severity: high
+    escalation: escalate
+    target_claim_type: final_answer_support
+
+  # -- trajectory-triggered (O_trig) --------------------------------------
+  - template_id: trig-explain-failure
+    claim_template: A failed step is explained or addressed by a later step.
+    scope: trajectory_triggered
+    trigger: failed_step
+    required_evidence: log
+    severity: medium
+    escalation: repair
+    target_claim_type: execution_status

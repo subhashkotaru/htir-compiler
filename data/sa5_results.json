@@ -1,0 +1,142 @@
+{
+  "experiment": "SA-5: Offline Harness Improvement Loop (Q4b)",
+  "n_traces": 3000,
+  "n_experience": 2077,
+  "n_holdout": 923,
+  "n_batches": 3,
+  "use_llm": false,
+  "domain_id": "terminal_swe",
+  "seconds": 16.62,
+  "total_proposals": 1,
+  "total_accepted": 1,
+  "acceptance_rate": 1.0,
+  "final_template_ids": [
+    "harness-hidden-test-validation"
+  ],
+  "batches": [
+    {
+      "batch": 1,
+      "n_traces": 692,
+      "n_tagged": 43,
+      "corpus_size": 692,
+      "proposals_considered": 1,
+      "edits_accepted": 1,
+      "jhat_loop": 20.0802,
+      "jhat_noloop": -44.4198,
+      "active_template_ids": [
+        "harness-hidden-test-validation"
+      ]
+    },
+    {
+      "batch": 2,
+      "n_traces": 692,
+      "n_tagged": 41,
+      "corpus_size": 1384,
+      "proposals_considered": 0,
+      "edits_accepted": 0,
+      "jhat_loop": 40.5314,
+      "jhat_noloop": -85.4686,
+      "active_template_ids": [
+        "harness-hidden-test-validation"
+      ]
+    },
+    {
+      "batch": 3,
+      "n_traces": 693,
+      "n_tagged": 29,
+      "corpus_size": 2077,
+      "proposals_considered": 0,
+      "edits_accepted": 0,
+      "jhat_loop": 55.0082,
+      "jhat_noloop": -114.4918,
+      "active_template_ids": [
+        "harness-hidden-test-validation"
+      ]
+    }
+  ],
+  "heldout_baseline": {
+    "label": "baseline S_d^(0)",
+    "metrics": {
+      "n": 923,
+      "n_labeled": 923,
+      "false_valid_rate": 0.14183123877917414,
+      "false_invalid_rate": 0.03551912568306011,
+      "resolved_accuracy": 0.35664335664335667,
+      "resolved_fraction": 0.15492957746478872,
+      "abstention_rate": 0.8450704225352113,
+      "valid_precision": 0.17708333333333334,
+      "valid_recall": 0.04644808743169399,
+      "failure_flag_precision": 0.723404255319149,
+      "failure_flag_recall": 0.06104129263913824,
+      "confusion": {
+        "uncertain|valid": 336,
+        "uncertain|invalid": 444,
+        "invalid|invalid": 34,
+        "valid|invalid": 79,
+        "invalid|valid": 13,
+        "valid|valid": 17
+      }
+    },
+    "valid_kept_rate": 0.04644808743169399,
+    "triggering_traces": 550,
+    "genuinely_tested_valid_kept": 0
+  },
+  "heldout_grown": {
+    "label": "grown S_d^(final)",
+    "metrics": {
+      "n": 923,
+      "n_labeled": 923,
+      "false_valid_rate": 0.008976660682226212,
+      "false_invalid_rate": 0.03551912568306011,
+      "resolved_accuracy": 0.6538461538461539,
+      "resolved_fraction": 0.056338028169014086,
+      "abstention_rate": 0.9436619718309859,
+      "valid_precision": 0.0,
+      "valid_recall": 0.0,
+      "failure_flag_precision": 0.723404255319149,
+      "failure_flag_recall": 0.06104129263913824,
+      "confusion": {
+        "uncertain|valid": 353,
+        "uncertain|invalid": 518,
+        "invalid|invalid": 34,
+        "invalid|valid": 13,
+        "valid|invalid": 5
+      }
+    },
+    "valid_kept_rate": 0.0,
+    "triggering_traces": 550,
+    "genuinely_tested_valid_kept": 0
+  },
+  "false_valid_before": 0.14183123877917414,
+  "false_valid_after": 0.008976660682226212,
+  "false_valid_reduction": 0.9367,
+  "false_veto_before": 0.03551912568306011,
+  "false_veto_after": 0.03551912568306011,
+  "negative_transfer": 0.0,
+  "valid_coverage_cost": 0.0464,
+  "spec_growth": [
+    {
+      "version": 0,
+      "n_templates": 7,
+      "added_template_id": "",
+      "exemplar_obligations": 2,
+      "exemplar_high_severity": 0,
+      "exemplar_status": "valid"
+    },
+    {
+      "version": 1,
+      "n_templates": 8,
+      "added_template_id": "harness-hidden-test-validation",
+      "exemplar_obligations": 4,
+      "exemplar_high_severity": 2,
+      "exemplar_status": "uncertain"
+    }
+  ],
+  "exemplar_task_id": "break-filter-js-from-html",
+  "notes": [
+    "Offline run (no API key): the loop is fully deterministic and issues zero LLM calls. Valid and invalid traces are mechanically near-indistinguishable offline (the AUROC~0.5 finding of SA-1/SA-3), so the mined obligation withholds credit from the whole 'no genuine test run' population; residual false-valids are traces that DID run a passing test yet still failed the hidden grader -- the irreducible shortcut/overfit core the semantic/integrity checker (--use-llm) targets.",
+    "Failure detection is witness-driven (avg.tex Sec. 3.12): a trace is tagged 'hidden_test_failure' iff its verification witness credited it valid while the recorded reward says it failed. The remediation is mined + gated + applied through the Step-8 primitives (mine_recurring_failures / score_config / accept_edit / apply_domain_spec_edit); the base agent is never changed.",
+    "The mined obligation only ever abstains (via its registered checker), so it can never turn a valid trajectory into a false 'invalid' -- it only moves an over-credited 'valid' to 'uncertain'. Negative transfer is therefore the (near-zero) new false-veto rate plus the valid coverage it costs; traces that ran a genuine test keep their credit (targeting).",
+    "J_hat trajectory contrasts the AVG offline loop vs. a frozen no-offline-loop config (ablation #5, avg.tex Sec. 4.6). This whole experiment is the 'no online loop' mode (ablation #6): the verifier is used purely as an outer-loop scoring function, the complement of SA-4's online intervention."
+  ]
+}

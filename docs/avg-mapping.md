@@ -71,7 +71,7 @@ confused with the AVG edges/nodes above:
 `EscalationRule` (alpha_i) intentionally shares its action vocabulary
 (`accept`/`request-evidence`/`rerank`/`veto`/`repair`/`clarify`/`escalate`)
 with `InterventionAction`, the online intervention `iota_t` from avg.tex Sec.
-3.11. They are distinct mechanisms: `alpha_i` is fixed per-obligation at
+3.10. They are distinct mechanisms: `alpha_i` is fixed per-obligation at
 generation time; `iota_t` is chosen online per step from the active
 obligation set by `htir.agents.intervention.select_intervention`
 (Step 7). The default policy simply follows `alpha_i` (see "Steps 5-8" below
@@ -119,11 +119,11 @@ artifact is available).
 
 | AVG step | Symbol(s) | Module | Notes |
 |---|---|---|---|
-| Step 5 (checking, Sec. 3.8) | `q_i(o_i, G_tau) = (p+, p-, p_abstain, s, eta)` | `htir.agents.checking.check_obligations` | Three checker classes routed by `Obligation.checker`: `MECHANICAL` (execution-status, provenance, post-edit-validation via `ValidationLink`, explained-failure via `DependencyLink`, schema), `SEMANTIC` (narrow LLM judge, gated behind `use_semantic`, abstains without a call when off), `ABSTENTION`/`UNASSIGNED` (`p_abstain=1.0`). |
-| Step 6 (aggregation, Sec. 3.9) | `z_tau = (y_hat, u_hat, c_hat, eta_hat)` | `htir.agents.witness.aggregate` -> `HTIR.aggregate: AggregateResult` | Severity-aware: a failed HIGH/CRITICAL obligation vetoes to `invalid`; many abstained HIGH/CRITICAL obligations (see `UNCERTAIN_ABSTAIN_*_THRESHOLD`) give `uncertain`; otherwise `valid`. |
-| Step 6 (witness, Sec. 3.10) | `W_tau = (O+, O-, O-empty, E_W, R_W)` | `htir.agents.witness.build_witness` -> `HTIR.witness: VerificationWitness` | `R_W` is a short, deterministic (no LLM) template string ending in an "inspect: <obligation>" pointer. |
-| Step 7 (online intervention, Sec. 3.11) | `iota_t*` (over `G_{tau<=t}`) | `htir.agents.intervention` (`active_obligations`, `select_intervention`, `run_intervention_loop`) -> `HTIR.intervention_log: list[InterventionLogEntry]` | Runs over a *replayed recorded trace* via `TraceAbstractionAgent.compile_prefix` (re-runs the deterministic pipeline per prefix), not a live agent. Default policy reduces the paper's `argmax E[r_hat - beta*Cost - gamma*Risk]` to `alpha_i` via pluggable `benefit_fn`/`cost_fn`/`risk_fn`. Pure recommendation trace -- never drives an agent. |
-| Step 8 (offline harness improvement, Sec. 3.12) | `h = (p, s, m, r)`, `Accept(Delta h)` | `htir.agents.harness_improvement` (`HarnessConfig`, `WitnessCorpus`, `mine_recurring_failures`, `score_config`, `accept_edit`, `apply_domain_spec_edit`) | Offline analysis over a recorded corpus of witnesses; mines recurring `failure_tags` into proposed `S_d` obligation-template edits (avg.tex's two named examples: hidden-test-only passes, CSV-missing-header) and gates them via `Accept(Delta h) = I[J_hat(h+Delta h) > J_hat(h)+epsilon AND Safe(Delta h)]`. Never auto-applies an edit or touches a live agent; harness (`h`) edits themselves stay out-of-repo/unapplied (`ProposedEdit.harness_delta`). |
+| Step 5 (checking, Sec. 3.7) | `q_i(o_i, G_tau) = (p+, p-, p_abstain, s, eta)` | `htir.agents.checking.check_obligations` | Three checker classes routed by `Obligation.checker`: `MECHANICAL` (execution-status, provenance, post-edit-validation via `ValidationLink`, explained-failure via `DependencyLink`, schema), `SEMANTIC` (narrow LLM judge, gated behind `use_semantic`, abstains without a call when off), `ABSTENTION`/`UNASSIGNED` (`p_abstain=1.0`). |
+| Step 6 (aggregation, Sec. 3.8) | `z_tau = (y_hat, u_hat, c_hat, eta_hat)` | `htir.agents.witness.aggregate` -> `HTIR.aggregate: AggregateResult` | Severity-aware: a failed HIGH/CRITICAL obligation vetoes to `invalid`; many abstained HIGH/CRITICAL obligations (see `UNCERTAIN_ABSTAIN_*_THRESHOLD`) give `uncertain`; otherwise `valid`. |
+| Step 6 (witness, Sec. 3.9) | `W_tau = (O+, O-, O-empty, E_W, R_W)` | `htir.agents.witness.build_witness` -> `HTIR.witness: VerificationWitness` | `R_W` is a short, deterministic (no LLM) template string ending in an "inspect: <obligation>" pointer. |
+| Step 7 (online intervention, Sec. 3.10) | `iota_t*` (over `G_{tau<=t}`) | `htir.agents.intervention` (`active_obligations`, `select_intervention`, `run_intervention_loop`) -> `HTIR.intervention_log: list[InterventionLogEntry]` | Runs over a *replayed recorded trace* via `TraceAbstractionAgent.compile_prefix` (re-runs the deterministic pipeline per prefix), not a live agent. Default policy reduces the paper's `argmax E[r_hat - beta*Cost - gamma*Risk]` to `alpha_i` via pluggable `benefit_fn`/`cost_fn`/`risk_fn`. Pure recommendation trace -- never drives an agent. |
+| Step 8 (offline harness improvement, Sec. 3.11) | `h = (p, s, m, r)`, `Accept(Delta h)` | `htir.agents.harness_improvement` (`HarnessConfig`, `WitnessCorpus`, `mine_recurring_failures`, `score_config`, `accept_edit`, `apply_domain_spec_edit`) | Offline analysis over a recorded corpus of witnesses; mines recurring `failure_tags` into proposed `S_d` obligation-template edits (avg.tex's two named examples: hidden-test-only passes, CSV-missing-header) and gates them via `Accept(Delta h) = I[J_hat(h+Delta h) > J_hat(h)+epsilon AND Safe(Delta h)]`. Never auto-applies an edit or touches a live agent; harness (`h`) edits themselves stay out-of-repo/unapplied (`ProposedEdit.harness_delta`). |
 
 All of the above are flag-gated on `TraceAbstractionAgent.compile`
 (`run_checks=False` by default) or are separate opt-in entry points
@@ -156,7 +156,7 @@ scoped out on purpose, not an unbuilt seam:
   applicable, since the harness proper lives outside this repo.
 - **Semantic-prose review recommendations.** `VerificationWitness.
   review_recommendation` (`R_W`) is a deterministic template string by
-  design (avg.tex Sec. 3.10 calls this out explicitly); an LLM-authored
+  design (avg.tex Sec. 3.9 calls this out explicitly); an LLM-authored
   prose upgrade gated behind `use_semantic` is a possible future addition,
   not built here.
 

@@ -1,0 +1,122 @@
+# SWE-Gym / R2E-Gym patch-based software-engineering domain (S_d).
+#
+# A genuinely distinct second domain for the transfer experiments (avg.tex
+# Sec. 4.2, package SA-2): executable, patch-oriented issue resolution. It is
+# terminal-shaped (bash + file edits + tests), so the committed `terminal`
+# adapter ingests it directly -- what differs from `terminal_swe` is S_d: the
+# obligation set encodes the SWE-specific process (reproduce the failure, fix
+# source not tests, re-validate against the reproducer) rather than generic
+# CLI success. Point the terminal adapter at SWE-Gym traces and compile with
+# `--domain swe_gym` to exercise universal-vs-adapter transfer.
+#
+# NOTE: the SWE-Gym HF trace *schema* still needs to be sourced/confirmed
+# before a dataset-specific loader is added (see htir/eval/datasets.py); this
+# spec is schema-independent and works today over any terminal-shaped SWE trace.
+
+domain_id: swe_gym
+description: Patch-based SWE issue resolution (SWE-Gym / R2E-Gym style), executable.
+
+operation_types:
+  - {name: read_file,              description: Read a source, test, or issue file}
+  - {name: edit_file,              description: Create or modify an implementation file}
+  - {name: apply_patch,            description: Apply a unified diff / patch}
+  - {name: run_command,            description: Run a shell command}
+  - {name: run_test,               description: Run the test suite or a targeted/reproducer test}
+  - {name: orchestration_decision, description: Planning or control-flow decisions}
+  - {name: final_submission,       description: Submit the final patch}
+  - {name: other,                  description: Anything not covered above}
+
+artifact_types:
+  - {name: source_file,    description: An implementation source file}
+  - {name: test_file,      description: A test file (including the reproducer)}
+  - {name: patch,          description: A unified diff applied to the repo}
+  - {name: command_output, description: stdout/stderr of a command}
+  - {name: issue,          description: The bug report / issue text being resolved}
+  - name: test_report
+    description: Result of a test run
+    schema_hint: Contains pass/fail counts and exit code
+
+constraints:
+  - constraint_id: no-test-mutation
+    description: The fix must edit implementation files, not the evaluation tests.
+    severity: critical
+    applies_to_operations: [edit_file, apply_patch]
+
+obligation_templates:
+  # -- domain: the SWE resolution process ---------------------------------
+  - template_id: swe-edit-then-validate
+    claim_template: An implementation edit is validated by a post-edit test run.
+    scope: domain
+    trigger: edit_file
+    required_evidence: executable
+    severity: high
+    escalation: repair
+    target_claim_type: artifact_provenance
+
+  - template_id: swe-patch-then-validate
+    claim_template: An applied patch is validated by a post-patch test run.
+    scope: domain
+    trigger: apply_patch
+    required_evidence: executable
+    severity: high
+    escalation: repair
+    target_claim_type: artifact_provenance
+
+  - template_id: swe-edit-provenance
+    claim_template: An edited/patched file has recorded producer provenance.
+    scope: domain
+    trigger: edit_file
+    required_evidence: artifact
+    severity: medium
+    escalation: request-evidence
+    target_claim_type: artifact_provenance
+
+  - template_id: swe-generated-schema
+    claim_template: Generated files match the expected schema.
+    scope: domain
+    trigger: edit_file
+    required_evidence: schema
+    severity: medium
+    escalation: request-evidence
+
+  # -- universal-equivalent (O_uni over the SWE vocabulary) ---------------
+  # Medium (not high) severity on purpose: in patch-based SWE the *reproducer*
+  # test is expected to fail before the fix, so a failed test must not veto the
+  # whole trajectory. The actual fix is guarded by swe-edit/patch-then-validate
+  # (post-edit validation, high severity) instead.
+  - template_id: swe-test-status
+    claim_template: A test run completed successfully.
+    scope: universal
+    trigger: run_test
+    required_evidence: executable
+    severity: medium
+    escalation: request-evidence
+    target_claim_type: execution_status
+
+  - template_id: swe-command-status
+    claim_template: A shell command completed successfully (non-error exit).
+    scope: universal
+    trigger: run_command
+    required_evidence: executable
+    severity: medium
+    escalation: request-evidence
+    target_claim_type: execution_status
+
+  - template_id: uni-final-answer-supported
+    claim_template: The submitted patch is connected to supporting test evidence.
+    scope: universal
+    trigger: final_submission
+    required_evidence: semantic
+    severity: high
+    escalation: escalate
+    target_claim_type: final_answer_support
+
+  # -- trajectory-triggered (O_trig) --------------------------------------
+  - template_id: trig-explain-failure
+    claim_template: A failed step is explained or addressed by a later step.
+    scope: trajectory_triggered
+    trigger: failed_step
+    required_evidence: log
+    severity: medium
+    escalation: repair
+    target_claim_type: execution_status

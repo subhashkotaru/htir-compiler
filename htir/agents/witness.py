@@ -1,30 +1,42 @@
 """
 Aggregation z_tau + Verification witness W_tau (AVG Step 6, avg.tex Sec.
-3.9-3.10 "Aggregating Obligation Results" / "Verification Witness").
+3.8-3.9 "Aggregating Obligation Results" / "Verification Witness").
 
 This module collapses the checked obligation set (``htir.agents.
 checking.check_obligations`` must already have run) into a trajectory-level
 status and the verification witness that is AVG's stated output. It does not
 run any checkers itself and makes no LLM calls -- aggregation and the review
-recommendation are both mechanical and deterministic, per avg.tex Sec. 3.10
+recommendation are both mechanical and deterministic, per avg.tex Sec. 3.9
 ("Keep it mechanical (no LLM) so it is reproducible; a semantic prose upgrade
 can be gated behind use_semantic later").
 
-Entry points: ``aggregate`` (z_tau, avg.tex Sec. 3.9) and ``build_witness``
-(W_tau, avg.tex Sec. 3.10).
+Entry points: ``aggregate`` (z_tau, avg.tex Sec. 3.8) and ``build_witness``
+(W_tau, avg.tex Sec. 3.9).
 
-Aggregation is severity-aware (avg.tex Sec. 3.9):
+Aggregation is severity-aware (avg.tex Sec. 3.8). Crucially, ``"valid"``
+requires *positive* support: the absence of failures is necessary but not
+sufficient. A trajectory only earns ``"valid"`` if at least one obligation was
+actually discharged (PASSED); otherwise there is no evidence on which to grant
+credit and the status is ``"uncertain"`` (avg.tex Sec. 3.4: "emits unresolved
+obligations instead of assigning unsupported credit"; Sec. 3.8: "treated as
+uncertain rather than successful"). The decision order is:
 
 * A **failed** obligation whose severity is HIGH or CRITICAL vetoes the
   trajectory -> ``predicted_status = "invalid"``, even if many low-severity
   obligations pass (the paper's "modified tests but suite passes" example).
-* Otherwise, if there is no veto but many HIGH/CRITICAL obligations abstained
-  -> ``predicted_status = "uncertain"``, not "valid".
+* Otherwise, if **no** obligation PASSED (this covers the zero-obligation,
+  zero-coverage, and all-abstained cases -- the over-crediting bug) ->
+  ``predicted_status = "uncertain"``, never "valid".
+* Otherwise, if many HIGH/CRITICAL obligations abstained ->
+  ``predicted_status = "uncertain"``, not "valid".
+* Otherwise, if abstention is broad across **all** severities (not only HIGH)
+  -> ``predicted_status = "uncertain"``.
 * Otherwise -> ``predicted_status = "valid"``.
 
-The thresholds that decide "many" are explicit module-level constants so
-they are auditable and testable (see ``HIGH_SEVERITIES``,
-``UNCERTAIN_ABSTAIN_COUNT_THRESHOLD``, ``UNCERTAIN_ABSTAIN_FRACTION_THRESHOLD``).
+The thresholds that decide "many"/"broad" are explicit module-level constants
+so they are auditable and testable (see ``HIGH_SEVERITIES``,
+``UNCERTAIN_ABSTAIN_COUNT_THRESHOLD``, ``UNCERTAIN_ABSTAIN_FRACTION_THRESHOLD``,
+``BROAD_ABSTAIN_FRACTION_THRESHOLD``).
 """
 
 from __future__ import annotations
@@ -55,6 +67,13 @@ UNCERTAIN_ABSTAIN_COUNT_THRESHOLD = 2
 # obligations overall but most of them abstained).
 UNCERTAIN_ABSTAIN_FRACTION_THRESHOLD = 0.5
 
+# A trajectory that *does* have at least one passed obligation and no
+# high-severity veto is still "uncertain" (not "valid") if this fraction of
+# *all* its obligations (any severity) abstained. This catches broad, low-
+# coverage verification where a couple of incidental passes would otherwise
+# mask that most of the trajectory went unverified.
+BROAD_ABSTAIN_FRACTION_THRESHOLD = 0.5
+
 # Severity weights used for the uncertainty score u_hat (severity-weighted
 # abstention mass) -- higher severities contribute more to uncertainty.
 SEVERITY_WEIGHT: dict[Severity, float] = {
@@ -70,7 +89,7 @@ STATUS_UNCERTAIN = "uncertain"
 
 
 # ---------------------------------------------------------------------------
-# z_tau: aggregation (avg.tex Sec. 3.9)
+# z_tau: aggregation (avg.tex Sec. 3.8)
 # ---------------------------------------------------------------------------
 
 def aggregate(htir: HTIR) -> AggregateResult:
@@ -87,13 +106,25 @@ def aggregate(htir: HTIR) -> AggregateResult:
     ]
     high_severity = [o for o in obligations if o.severity in HIGH_SEVERITIES]
     abstained_high = [o for o in high_severity if o.status == ObligationStatus.ABSTAINED]
+    passed = [o for o in obligations if o.status == ObligationStatus.PASSED]
+    abstained = [o for o in obligations if o.status == ObligationStatus.ABSTAINED]
 
     if failed_high:
         predicted_status = STATUS_INVALID
+    elif not passed:
+        # No obligation was positively discharged -> no evidence supports
+        # crediting the trajectory. Covers zero obligations, zero coverage,
+        # and all-abstained traces (the over-crediting bug, avg.tex Sec.
+        # 3.4 / 3.8): these are uncertain, never valid.
+        predicted_status = STATUS_UNCERTAIN
     elif high_severity and (
         len(abstained_high) >= UNCERTAIN_ABSTAIN_COUNT_THRESHOLD
         or (len(abstained_high) / len(high_severity)) >= UNCERTAIN_ABSTAIN_FRACTION_THRESHOLD
     ):
+        predicted_status = STATUS_UNCERTAIN
+    elif (len(abstained) / len(obligations)) >= BROAD_ABSTAIN_FRACTION_THRESHOLD:
+        # Some passes, no high-severity veto, but abstention is broad across
+        # all severities -> most of the trajectory went unverified.
         predicted_status = STATUS_UNCERTAIN
     else:
         predicted_status = STATUS_VALID
@@ -135,7 +166,7 @@ def _evidence_coverage(htir: HTIR) -> float:
 
 
 # ---------------------------------------------------------------------------
-# W_tau: verification witness (avg.tex Sec. 3.10)
+# W_tau: verification witness (avg.tex Sec. 3.9)
 # ---------------------------------------------------------------------------
 
 def build_witness(htir: HTIR) -> VerificationWitness:

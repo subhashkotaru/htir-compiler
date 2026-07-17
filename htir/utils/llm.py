@@ -15,7 +15,7 @@ import json
 import os
 from typing import Any, Optional, Type, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -23,6 +23,58 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "openai/gpt-4o"   # OpenRouter model slug; change freely
 
 _client: Optional[Any] = None
+
+
+# ---------------------------------------------------------------------------
+# Token accounting (SA-9: report the real token cost of an LLM-judge run so the
+# arms compare on a matched, disclosed budget -- avg.tex Sec. 4.7).
+#
+# Every LLM-backed pass in the codebase funnels through :func:`chat`, so a single
+# module-level accumulator here captures the token cost of *any* experiment
+# (monolithic judge, semantic checker, PRM step-critic, Agent-as-a-Judge) with no
+# per-caller plumbing. Offline (no key -> zero calls) it stays a byte-exact zero,
+# so the deterministic pipeline and its numbers are untouched.
+# ---------------------------------------------------------------------------
+
+class UsageTotals(BaseModel):
+    """Cumulative token/call cost since the last :func:`reset_usage`."""
+    calls: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+
+    def add(self, prompt: int, completion: int, total: int) -> None:
+        self.calls += 1
+        self.prompt_tokens += prompt
+        self.completion_tokens += completion
+        self.total_tokens += total
+
+
+_usage = UsageTotals()
+
+
+def reset_usage() -> None:
+    """Zero the token accumulator (call before a run you want to measure)."""
+    global _usage
+    _usage = UsageTotals()
+
+
+def get_usage() -> UsageTotals:
+    """A copy of the token totals accumulated since the last reset."""
+    return _usage.model_copy(deep=True)
+
+
+def _record_usage(resp: Any) -> None:
+    """Add one response's token usage to the accumulator (best-effort; a missing
+    or malformed ``usage`` block counts the call but zero tokens)."""
+    usage = getattr(resp, "usage", None)
+    if usage is None:
+        _usage.add(0, 0, 0)
+        return
+    prompt = int(getattr(usage, "prompt_tokens", 0) or 0)
+    completion = int(getattr(usage, "completion_tokens", 0) or 0)
+    total = int(getattr(usage, "total_tokens", 0) or (prompt + completion))
+    _usage.add(prompt, completion, total)
 
 
 def get_client() -> Any:
@@ -74,6 +126,7 @@ def chat(
         kwargs["response_format"] = response_format
 
     resp = get_client().chat.completions.create(**kwargs)
+    _record_usage(resp)
     return resp.choices[0].message.content or ""
 
 

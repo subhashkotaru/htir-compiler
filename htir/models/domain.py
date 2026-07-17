@@ -57,6 +57,13 @@ class Constraint(BaseModel):
         default_factory=list,
         description="Operation type names this constraint governs (empty = all)",
     )
+    requires_prior: list[str] = Field(
+        default_factory=list,
+        description="Operation-type names that must SUCCESSFULLY occur before a governed "
+        "step (a precondition ordering, e.g. authenticate-before-action). When set, the "
+        "constraint's obligation is a *mechanical* precondition check (structural, no LLM); "
+        "when empty, it is a narrow semantic check against the constraint's policy text.",
+    )
 
 
 class ObligationTemplate(BaseModel):
