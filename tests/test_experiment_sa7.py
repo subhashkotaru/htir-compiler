@@ -135,7 +135,9 @@ def test_sa7_reranking_bracket_and_significance():
 # ---------------------------------------------------------------------------
 
 def test_sa7_offline_is_byte_deterministic():
-    assert _run().model_dump_json() == _run().model_dump_json()
+    # Exclude the wall-clock ``seconds`` field, which is legitimately non-
+    # deterministic; the byte-determinism claim is about the science, not timing.
+    assert _run().model_dump_json(exclude={"seconds"}) == _run().model_dump_json(exclude={"seconds"})
 
 
 # ---------------------------------------------------------------------------

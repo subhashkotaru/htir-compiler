@@ -17,6 +17,7 @@ venv/
 .idea/
 .vscode/
 
-# Large local trajectory caches (reproducible via load_tau_bench(hf=True) / load_terminalbench)
+# Large local trajectory caches (reproducible via load_tau_bench(hf=True) / load_terminalbench / load_swe_gym(hf=True))
 data/tau_cache/
+data/swe_gym_cache/
 scratch_results.json

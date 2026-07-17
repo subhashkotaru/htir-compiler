@@ -1,0 +1,1491 @@
+{
+  "experiment": "SA-10: SWE-Gym third domain -> 3x3 cross-domain transfer (Q2)",
+  "domains": [
+    "terminal_swe",
+    "tau_bench",
+    "swe_gym"
+  ],
+  "train_specs": [
+    "universal_only",
+    "terminal_swe",
+    "tau_bench",
+    "swe_gym"
+  ],
+  "test_domains": [
+    "terminal_swe",
+    "tau_bench",
+    "swe_gym"
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "n_per_domain": {
+    "terminal_swe": 200,
+    "tau_bench": 200,
+    "swe_gym": 200
+  },
+  "use_llm": false,
+  "seconds": 0.0,
+  "cells": [
+    {
+      "train_spec": "universal_only",
+      "test_domain": "terminal_swe",
+      "n": 200,
+      "diagonal": false,
+      "cross_family": false,
+      "resolved_fraction": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "false_valid": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "abstention": {
+        "mean": 1.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "train_spec": "universal_only",
+      "test_domain": "tau_bench",
+      "n": 200,
+      "diagonal": false,
+      "cross_family": false,
+      "resolved_fraction": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "false_valid": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "abstention": {
+        "mean": 1.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "train_spec": "universal_only",
+      "test_domain": "swe_gym",
+      "n": 200,
+      "diagonal": false,
+      "cross_family": false,
+      "resolved_fraction": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "false_valid": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "abstention": {
+        "mean": 1.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "train_spec": "terminal_swe",
+      "test_domain": "terminal_swe",
+      "n": 200,
+      "diagonal": true,
+      "cross_family": false,
+      "resolved_fraction": {
+        "mean": 0.14833333333333332,
+        "se": 0.0016666666666666683,
+        "stdev": 0.0028867513459481316,
+        "n": 3,
+        "values": [
+          0.15,
+          0.145,
+          0.15
+        ]
+      },
+      "false_valid": {
+        "mean": 0.17333333333333334,
+        "se": 0.008819171036881969,
+        "stdev": 0.015275252316519465,
+        "n": 3,
+        "values": [
+          0.16,
+          0.19,
+          0.17
+        ]
+      },
+      "abstention": {
+        "mean": 0.8516666666666666,
+        "se": 0.0016666666666666683,
+        "stdev": 0.0028867513459481316,
+        "n": 3,
+        "values": [
+          0.85,
+          0.855,
+          0.85
+        ]
+      }
+    },
+    {
+      "train_spec": "terminal_swe",
+      "test_domain": "tau_bench",
+      "n": 200,
+      "diagonal": false,
+      "cross_family": true,
+      "resolved_fraction": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "false_valid": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "abstention": {
+        "mean": 1.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "train_spec": "terminal_swe",
+      "test_domain": "swe_gym",
+      "n": 200,
+      "diagonal": false,
+      "cross_family": false,
+      "resolved_fraction": {
+        "mean": 0.008333333333333333,
+        "se": 0.0016666666666666668,
+        "stdev": 0.002886751345948129,
+        "n": 3,
+        "values": [
+          0.005,
+          0.01,
+          0.01
+        ]
+      },
+      "false_valid": {
+        "mean": 0.006666666666666667,
+        "se": 0.0033333333333333335,
+        "stdev": 0.005773502691896258,
+        "n": 3,
+        "values": [
+          0.0,
+          0.01,
+          0.01
+        ]
+      },
+      "abstention": {
+        "mean": 0.9916666666666667,
+        "se": 0.0016666666666666683,
+        "stdev": 0.0028867513459481316,
+        "n": 3,
+        "values": [
+          0.995,
+          0.99,
+          0.99
+        ]
+      }
+    },
+    {
+      "train_spec": "tau_bench",
+      "test_domain": "terminal_swe",
+      "n": 200,
+      "diagonal": false,
+      "cross_family": true,
+      "resolved_fraction": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "false_valid": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "abstention": {
+        "mean": 1.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "train_spec": "tau_bench",
+      "test_domain": "tau_bench",
+      "n": 200,
+      "diagonal": true,
+      "cross_family": false,
+      "resolved_fraction": {
+        "mean": 0.16333333333333333,
+        "se": 0.008819171036881969,
+        "stdev": 0.015275252316519465,
+        "n": 3,
+        "values": [
+          0.15,
+          0.16,
+          0.18
+        ]
+      },
+      "false_valid": {
+        "mean": 0.043333333333333335,
+        "se": 0.01452966314513558,
+        "stdev": 0.025166114784235836,
+        "n": 3,
+        "values": [
+          0.02,
+          0.07,
+          0.04
+        ]
+      },
+      "abstention": {
+        "mean": 0.8366666666666666,
+        "se": 0.008819171036881977,
+        "stdev": 0.01527525231651948,
+        "n": 3,
+        "values": [
+          0.85,
+          0.84,
+          0.82
+        ]
+      }
+    },
+    {
+      "train_spec": "tau_bench",
+      "test_domain": "swe_gym",
+      "n": 200,
+      "diagonal": false,
+      "cross_family": true,
+      "resolved_fraction": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "false_valid": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "abstention": {
+        "mean": 1.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "train_spec": "swe_gym",
+      "test_domain": "terminal_swe",
+      "n": 200,
+      "diagonal": false,
+      "cross_family": false,
+      "resolved_fraction": {
+        "mean": 0.12333333333333334,
+        "se": 0.008333333333333337,
+        "stdev": 0.014433756729740649,
+        "n": 3,
+        "values": [
+          0.115,
+          0.14,
+          0.115
+        ]
+      },
+      "false_valid": {
+        "mean": 0.18000000000000002,
+        "se": 0.005773502691896255,
+        "stdev": 0.009999999999999995,
+        "n": 3,
+        "values": [
+          0.17,
+          0.19,
+          0.18
+        ]
+      },
+      "abstention": {
+        "mean": 0.8766666666666666,
+        "se": 0.008333333333333342,
+        "stdev": 0.014433756729740658,
+        "n": 3,
+        "values": [
+          0.885,
+          0.86,
+          0.885
+        ]
+      }
+    },
+    {
+      "train_spec": "swe_gym",
+      "test_domain": "tau_bench",
+      "n": 200,
+      "diagonal": false,
+      "cross_family": true,
+      "resolved_fraction": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "false_valid": {
+        "mean": 0.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "abstention": {
+        "mean": 1.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "train_spec": "swe_gym",
+      "test_domain": "swe_gym",
+      "n": 200,
+      "diagonal": true,
+      "cross_family": false,
+      "resolved_fraction": {
+        "mean": 0.008333333333333333,
+        "se": 0.0016666666666666668,
+        "stdev": 0.002886751345948129,
+        "n": 3,
+        "values": [
+          0.005,
+          0.01,
+          0.01
+        ]
+      },
+      "false_valid": {
+        "mean": 0.006666666666666667,
+        "se": 0.0033333333333333335,
+        "stdev": 0.005773502691896258,
+        "n": 3,
+        "values": [
+          0.0,
+          0.01,
+          0.01
+        ]
+      },
+      "abstention": {
+        "mean": 0.9916666666666667,
+        "se": 0.0016666666666666683,
+        "stdev": 0.0028867513459481316,
+        "n": 3,
+        "values": [
+          0.995,
+          0.99,
+          0.99
+        ]
+      }
+    }
+  ],
+  "significance": [
+    {
+      "label": "diagonal_vs_universal.resolved_fraction[terminal_swe]",
+      "a": "terminal_swexterminal_swe",
+      "b": "universal_onlyxterminal_swe",
+      "mean_a": 0.14833333333333332,
+      "mean_b": 0.0,
+      "mean_diff": 0.14833333333333332,
+      "se_diff": 0.0016666666666666683,
+      "t_stat": 88.9999999999999,
+      "df": 2,
+      "p_value": 0.0001262227837151532,
+      "n_seeds": 3,
+      "diffs": [
+        0.15,
+        0.145,
+        0.15
+      ]
+    },
+    {
+      "label": "diagonal_vs_universal.resolved_fraction[tau_bench]",
+      "a": "tau_benchxtau_bench",
+      "b": "universal_onlyxtau_bench",
+      "mean_a": 0.16333333333333333,
+      "mean_b": 0.0,
+      "mean_diff": 0.16333333333333333,
+      "se_diff": 0.008819171036881969,
+      "t_stat": 18.520259177452132,
+      "df": 2,
+      "p_value": 0.002902763743312426,
+      "n_seeds": 3,
+      "diffs": [
+        0.15,
+        0.16,
+        0.18
+      ]
+    },
+    {
+      "label": "diagonal_vs_universal.resolved_fraction[swe_gym]",
+      "a": "swe_gymxswe_gym",
+      "b": "universal_onlyxswe_gym",
+      "mean_a": 0.008333333333333333,
+      "mean_b": 0.0,
+      "mean_diff": 0.008333333333333333,
+      "se_diff": 0.0016666666666666668,
+      "t_stat": 5.0,
+      "df": 2,
+      "p_value": 0.037749551350623724,
+      "n_seeds": 3,
+      "diffs": [
+        0.005,
+        0.01,
+        0.01
+      ]
+    }
+  ],
+  "headline": {
+    "diagonal_resolved_fraction": {
+      "terminal_swe": 0.14833333333333332,
+      "tau_bench": 0.16333333333333333,
+      "swe_gym": 0.008333333333333333
+    },
+    "universal_only_resolved_fraction_max": 0.0,
+    "cross_family_false_valid_max": 0.0
+  },
+  "notes": [
+    "3x3 (+ universal floor) transfer: apply the verifier specced for the ROW domain to the COLUMN domain's traces; exec_only vs the weak reward label. Third domain (swe_gym) is real: htir.eval.datasets.load_swe_gym maps SWE-Gym OpenHands rollouts into the turn schema, parsed by the terminal adapter.",
+    "SAFETY PROPERTY (holds everywhere): universal_only and every cross-FAMILY off-diagonal cell abstain -- resolved_fraction ~ 0, false_valid ~ 0. A mis-specified verifier abstains; it never over-credits cross-domain.",
+    "HONEST CAVEAT #1 -- terminal_swe and swe_gym share the terminal adapter + operation vocabulary (they differ only in S_d), so they cross-bind: the clean separation axis this matrix demonstrates is policy (tau_bench) vs. terminal-family, not a 3-way diagonal.",
+    "HONEST CAVEAT #2 -- swe_gym's own diagonal resolves weakly offline: SWE-Gym agents re-validate via a reproducer script (python reproduce_error.py), not a test runner, and rarely after every edit, so high-severity post-edit obligations abstain and traces stay uncertain. A coverage limit of the offline mechanical checker on this corpus (the loader/S_d gate), not over-crediting -- false_valid stays low. --use-llm would let the semantic checker adjudicate the abstained obligations."
+  ],
+  "per_seed": [
+    {
+      "experiment": "SA-2 transfer matrix: zero-shot cross-domain verification (Q2)",
+      "train_specs": [
+        "universal_only",
+        "terminal_swe",
+        "tau_bench",
+        "swe_gym"
+      ],
+      "test_domains": [
+        "terminal_swe",
+        "tau_bench",
+        "swe_gym"
+      ],
+      "use_llm": false,
+      "seconds": 0.0,
+      "cells": [
+        {
+          "train_spec": "universal_only",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "universal_only",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "universal_only",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "terminal_swe",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.16,
+            "false_invalid_rate": 0.02,
+            "resolved_accuracy": 0.4,
+            "resolved_fraction": 0.15,
+            "abstention_rate": 0.85,
+            "valid_precision": 0.2,
+            "valid_recall": 0.04,
+            "failure_flag_precision": 0.8,
+            "failure_flag_recall": 0.08,
+            "confusion": {
+              "uncertain|invalid": 76,
+              "valid|invalid": 16,
+              "valid|valid": 4,
+              "uncertain|valid": 94,
+              "invalid|invalid": 8,
+              "invalid|valid": 2
+            }
+          }
+        },
+        {
+          "train_spec": "terminal_swe",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "terminal_swe",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.005,
+            "abstention_rate": 0.995,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 99,
+              "invalid|valid": 1
+            }
+          }
+        },
+        {
+          "train_spec": "tau_bench",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "tau_bench",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.02,
+            "false_invalid_rate": 0.09,
+            "resolved_accuracy": 0.6333333333333333,
+            "resolved_fraction": 0.15,
+            "abstention_rate": 0.85,
+            "valid_precision": 0.8461538461538461,
+            "valid_recall": 0.11,
+            "failure_flag_precision": 0.47058823529411764,
+            "failure_flag_recall": 0.08,
+            "confusion": {
+              "uncertain|invalid": 90,
+              "uncertain|valid": 80,
+              "valid|valid": 11,
+              "invalid|valid": 9,
+              "invalid|invalid": 8,
+              "valid|invalid": 2
+            }
+          }
+        },
+        {
+          "train_spec": "tau_bench",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "swe_gym",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.17,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.2608695652173913,
+            "resolved_fraction": 0.115,
+            "abstention_rate": 0.885,
+            "valid_precision": 0.19047619047619047,
+            "valid_recall": 0.04,
+            "failure_flag_precision": 1.0,
+            "failure_flag_recall": 0.02,
+            "confusion": {
+              "uncertain|invalid": 81,
+              "valid|invalid": 17,
+              "valid|valid": 4,
+              "uncertain|valid": 96,
+              "invalid|invalid": 2
+            }
+          }
+        },
+        {
+          "train_spec": "swe_gym",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "swe_gym",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.005,
+            "abstention_rate": 0.995,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 99,
+              "invalid|valid": 1
+            }
+          }
+        }
+      ],
+      "notes": [
+        "Transfer = apply the verifier specced for the ROW domain to the COLUMN domain's traces. A trace is parsed by its own shape-detected adapter, but compile() filters step roles to the active S_d vocabulary, so an off-domain spec collapses operations to 'other' -> no obligation binds -> the verifier abstains (resolved_fraction ~ 0). The diagonal (matched adapter+spec) is where obligations bind and the verifier resolves.",
+        "Headline: resolved_fraction on the diagonal vs off it shows adapters are necessary for cross-domain transfer; false_valid stays low everywhere (abstention, not over-crediting, is how a mis-specced verifier fails).",
+        "Offline (no API key): only mechanical obligations discharge; policy/final-answer (semantic) obligations abstain, as elsewhere in the SA series."
+      ]
+    },
+    {
+      "experiment": "SA-2 transfer matrix: zero-shot cross-domain verification (Q2)",
+      "train_specs": [
+        "universal_only",
+        "terminal_swe",
+        "tau_bench",
+        "swe_gym"
+      ],
+      "test_domains": [
+        "terminal_swe",
+        "tau_bench",
+        "swe_gym"
+      ],
+      "use_llm": false,
+      "seconds": 0.0,
+      "cells": [
+        {
+          "train_spec": "universal_only",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|valid": 100,
+              "uncertain|invalid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "universal_only",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "universal_only",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "terminal_swe",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.19,
+            "false_invalid_rate": 0.03,
+            "resolved_accuracy": 0.2413793103448276,
+            "resolved_fraction": 0.145,
+            "abstention_rate": 0.855,
+            "valid_precision": 0.24,
+            "valid_recall": 0.06,
+            "failure_flag_precision": 0.25,
+            "failure_flag_recall": 0.01,
+            "confusion": {
+              "valid|valid": 6,
+              "uncertain|invalid": 80,
+              "uncertain|valid": 91,
+              "valid|invalid": 19,
+              "invalid|invalid": 1,
+              "invalid|valid": 3
+            }
+          }
+        },
+        {
+          "train_spec": "terminal_swe",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "terminal_swe",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.01,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.01,
+            "abstention_rate": 0.99,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 99,
+              "uncertain|valid": 99,
+              "invalid|valid": 1,
+              "valid|invalid": 1
+            }
+          }
+        },
+        {
+          "train_spec": "tau_bench",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|valid": 100,
+              "uncertain|invalid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "tau_bench",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.07,
+            "false_invalid_rate": 0.05,
+            "resolved_accuracy": 0.625,
+            "resolved_fraction": 0.16,
+            "abstention_rate": 0.84,
+            "valid_precision": 0.5333333333333333,
+            "valid_recall": 0.08,
+            "failure_flag_precision": 0.7058823529411765,
+            "failure_flag_recall": 0.12,
+            "confusion": {
+              "uncertain|invalid": 81,
+              "uncertain|valid": 87,
+              "valid|invalid": 7,
+              "invalid|invalid": 12,
+              "valid|valid": 8,
+              "invalid|valid": 5
+            }
+          }
+        },
+        {
+          "train_spec": "tau_bench",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "swe_gym",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.19,
+            "false_invalid_rate": 0.02,
+            "resolved_accuracy": 0.25,
+            "resolved_fraction": 0.14,
+            "abstention_rate": 0.86,
+            "valid_precision": 0.24,
+            "valid_recall": 0.06,
+            "failure_flag_precision": 0.3333333333333333,
+            "failure_flag_recall": 0.01,
+            "confusion": {
+              "valid|valid": 6,
+              "uncertain|invalid": 80,
+              "uncertain|valid": 92,
+              "valid|invalid": 19,
+              "invalid|invalid": 1,
+              "invalid|valid": 2
+            }
+          }
+        },
+        {
+          "train_spec": "swe_gym",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "swe_gym",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.01,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.01,
+            "abstention_rate": 0.99,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 99,
+              "uncertain|valid": 99,
+              "invalid|valid": 1,
+              "valid|invalid": 1
+            }
+          }
+        }
+      ],
+      "notes": [
+        "Transfer = apply the verifier specced for the ROW domain to the COLUMN domain's traces. A trace is parsed by its own shape-detected adapter, but compile() filters step roles to the active S_d vocabulary, so an off-domain spec collapses operations to 'other' -> no obligation binds -> the verifier abstains (resolved_fraction ~ 0). The diagonal (matched adapter+spec) is where obligations bind and the verifier resolves.",
+        "Headline: resolved_fraction on the diagonal vs off it shows adapters are necessary for cross-domain transfer; false_valid stays low everywhere (abstention, not over-crediting, is how a mis-specced verifier fails).",
+        "Offline (no API key): only mechanical obligations discharge; policy/final-answer (semantic) obligations abstain, as elsewhere in the SA series."
+      ]
+    },
+    {
+      "experiment": "SA-2 transfer matrix: zero-shot cross-domain verification (Q2)",
+      "train_specs": [
+        "universal_only",
+        "terminal_swe",
+        "tau_bench",
+        "swe_gym"
+      ],
+      "test_domains": [
+        "terminal_swe",
+        "tau_bench",
+        "swe_gym"
+      ],
+      "use_llm": false,
+      "seconds": 0.0,
+      "cells": [
+        {
+          "train_spec": "universal_only",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "universal_only",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "universal_only",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "terminal_swe",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.17,
+            "false_invalid_rate": 0.03,
+            "resolved_accuracy": 0.3333333333333333,
+            "resolved_fraction": 0.15,
+            "abstention_rate": 0.85,
+            "valid_precision": 0.19047619047619047,
+            "valid_recall": 0.04,
+            "failure_flag_precision": 0.6666666666666666,
+            "failure_flag_recall": 0.06,
+            "confusion": {
+              "valid|invalid": 17,
+              "uncertain|valid": 93,
+              "uncertain|invalid": 77,
+              "invalid|invalid": 6,
+              "valid|valid": 4,
+              "invalid|valid": 3
+            }
+          }
+        },
+        {
+          "train_spec": "terminal_swe",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "terminal_swe",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.01,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.01,
+            "abstention_rate": 0.99,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 99,
+              "uncertain|valid": 99,
+              "invalid|valid": 1,
+              "valid|invalid": 1
+            }
+          }
+        },
+        {
+          "train_spec": "tau_bench",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "tau_bench",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.04,
+            "false_invalid_rate": 0.07,
+            "resolved_accuracy": 0.6944444444444444,
+            "resolved_fraction": 0.18,
+            "abstention_rate": 0.82,
+            "valid_precision": 0.7647058823529411,
+            "valid_recall": 0.13,
+            "failure_flag_precision": 0.631578947368421,
+            "failure_flag_recall": 0.12,
+            "confusion": {
+              "uncertain|invalid": 84,
+              "uncertain|valid": 80,
+              "invalid|valid": 7,
+              "valid|valid": 13,
+              "invalid|invalid": 12,
+              "valid|invalid": 4
+            }
+          }
+        },
+        {
+          "train_spec": "tau_bench",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "swe_gym",
+          "test_domain": "terminal_swe",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.18,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.17391304347826086,
+            "resolved_fraction": 0.115,
+            "abstention_rate": 0.885,
+            "valid_precision": 0.18181818181818182,
+            "valid_recall": 0.04,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "valid|invalid": 18,
+              "uncertain|valid": 95,
+              "uncertain|invalid": 82,
+              "valid|valid": 4,
+              "invalid|valid": 1
+            }
+          }
+        },
+        {
+          "train_spec": "swe_gym",
+          "test_domain": "tau_bench",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.0,
+            "false_invalid_rate": 0.0,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.0,
+            "abstention_rate": 1.0,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 100,
+              "uncertain|valid": 100
+            }
+          }
+        },
+        {
+          "train_spec": "swe_gym",
+          "test_domain": "swe_gym",
+          "n": 200,
+          "metrics": {
+            "n": 200,
+            "n_labeled": 200,
+            "false_valid_rate": 0.01,
+            "false_invalid_rate": 0.01,
+            "resolved_accuracy": 0.0,
+            "resolved_fraction": 0.01,
+            "abstention_rate": 0.99,
+            "valid_precision": 0.0,
+            "valid_recall": 0.0,
+            "failure_flag_precision": 0.0,
+            "failure_flag_recall": 0.0,
+            "confusion": {
+              "uncertain|invalid": 99,
+              "uncertain|valid": 99,
+              "invalid|valid": 1,
+              "valid|invalid": 1
+            }
+          }
+        }
+      ],
+      "notes": [
+        "Transfer = apply the verifier specced for the ROW domain to the COLUMN domain's traces. A trace is parsed by its own shape-detected adapter, but compile() filters step roles to the active S_d vocabulary, so an off-domain spec collapses operations to 'other' -> no obligation binds -> the verifier abstains (resolved_fraction ~ 0). The diagonal (matched adapter+spec) is where obligations bind and the verifier resolves.",
+        "Headline: resolved_fraction on the diagonal vs off it shows adapters are necessary for cross-domain transfer; false_valid stays low everywhere (abstention, not over-crediting, is how a mis-specced verifier fails).",
+        "Offline (no API key): only mechanical obligations discharge; policy/final-answer (semantic) obligations abstain, as elsewhere in the SA series."
+      ]
+    }
+  ]
+}

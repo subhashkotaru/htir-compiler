@@ -1,0 +1,763 @@
+{
+  "experiment": "SA-11: Selective-verification frontier (Fig 2)",
+  "domain_id": "terminal_swe",
+  "n_per_seed": [
+    400,
+    400,
+    400
+  ],
+  "n_labeled_per_seed": [
+    400,
+    400,
+    400
+  ],
+  "base_rate_valid": {
+    "mean": 0.5,
+    "se": 0.0,
+    "stdev": 0.0,
+    "n": 3,
+    "values": [
+      0.5,
+      0.5,
+      0.5
+    ]
+  },
+  "use_llm": false,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "seconds": 23.56,
+  "frontier": [
+    {
+      "threshold": 0.5,
+      "coverage": {
+        "mean": 1.0,
+        "se": 0.0,
+        "stdev": 0.0,
+        "n": 3,
+        "values": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "false_valid": {
+        "mean": 0.9416666666666668,
+        "se": 0.004409585518440961,
+        "stdev": 0.007637626158259692,
+        "n": 3,
+        "values": [
+          0.95,
+          0.94,
+          0.935
+        ]
+      }
+    },
+    {
+      "threshold": 0.51,
+      "coverage": {
+        "mean": 0.5266666666666667,
+        "se": 0.002204792759220508,
+        "stdev": 0.0038188130791298944,
+        "n": 3,
+        "values": [
+          0.5275,
+          0.53,
+          0.5225
+        ]
+      },
+      "false_valid": {
+        "mean": 0.58,
+        "se": 0.0050000000000000044,
+        "stdev": 0.008660254037844393,
+        "n": 3,
+        "values": [
+          0.585,
+          0.585,
+          0.57
+        ]
+      }
+    },
+    {
+      "threshold": 0.52,
+      "coverage": {
+        "mean": 0.5083333333333333,
+        "se": 0.004639803635691683,
+        "stdev": 0.008036375634160792,
+        "n": 3,
+        "values": [
+          0.505,
+          0.5175,
+          0.5025
+        ]
+      },
+      "false_valid": {
+        "mean": 0.5716666666666667,
+        "se": 0.0060092521257732855,
+        "stdev": 0.010408329997330611,
+        "n": 3,
+        "values": [
+          0.575,
+          0.58,
+          0.56
+        ]
+      }
+    },
+    {
+      "threshold": 0.53,
+      "coverage": {
+        "mean": 0.49333333333333335,
+        "se": 0.004409585518440989,
+        "stdev": 0.00763762615825974,
+        "n": 3,
+        "values": [
+          0.495,
+          0.5,
+          0.485
+        ]
+      },
+      "false_valid": {
+        "mean": 0.5533333333333333,
+        "se": 0.009279607271383356,
+        "stdev": 0.016072751268321566,
+        "n": 3,
+        "values": [
+          0.565,
+          0.56,
+          0.535
+        ]
+      }
+    },
+    {
+      "threshold": 0.54,
+      "coverage": {
+        "mean": 0.47500000000000003,
+        "se": 0.0038188130791298523,
+        "stdev": 0.006614378277661451,
+        "n": 3,
+        "values": [
+          0.4775,
+          0.48,
+          0.4675
+        ]
+      },
+      "false_valid": {
+        "mean": 0.545,
+        "se": 0.010408329997330674,
+        "stdev": 0.018027756377319962,
+        "n": 3,
+        "values": [
+          0.56,
+          0.55,
+          0.525
+        ]
+      }
+    },
+    {
+      "threshold": 0.55,
+      "coverage": {
+        "mean": 0.4566666666666667,
+        "se": 0.0036324157862838977,
+        "stdev": 0.006291528696058963,
+        "n": 3,
+        "values": [
+          0.4625,
+          0.4575,
+          0.45
+        ]
+      },
+      "false_valid": {
+        "mean": 0.5333333333333333,
+        "se": 0.010137937550497042,
+        "stdev": 0.017559422921421246,
+        "n": 3,
+        "values": [
+          0.55,
+          0.535,
+          0.515
+        ]
+      }
+    },
+    {
+      "threshold": 0.57,
+      "coverage": {
+        "mean": 0.37916666666666665,
+        "se": 0.0036324157862838977,
+        "stdev": 0.006291528696058963,
+        "n": 3,
+        "values": [
+          0.38,
+          0.385,
+          0.3725
+        ]
+      },
+      "false_valid": {
+        "mean": 0.44166666666666665,
+        "se": 0.008819171036881977,
+        "stdev": 0.01527525231651948,
+        "n": 3,
+        "values": [
+          0.455,
+          0.445,
+          0.425
+        ]
+      }
+    },
+    {
+      "threshold": 0.6,
+      "coverage": {
+        "mean": 0.30083333333333334,
+        "se": 0.004639803635691689,
+        "stdev": 0.008036375634160802,
+        "n": 3,
+        "values": [
+          0.295,
+          0.2975,
+          0.31
+        ]
+      },
+      "false_valid": {
+        "mean": 0.37333333333333335,
+        "se": 0.0072648315725677955,
+        "stdev": 0.012583057392117927,
+        "n": 3,
+        "values": [
+          0.385,
+          0.36,
+          0.375
+        ]
+      }
+    },
+    {
+      "threshold": 0.65,
+      "coverage": {
+        "mean": 0.22166666666666668,
+        "se": 0.005464532103585005,
+        "stdev": 0.009464847243000464,
+        "n": 3,
+        "values": [
+          0.215,
+          0.2175,
+          0.2325
+        ]
+      },
+      "false_valid": {
+        "mean": 0.2833333333333333,
+        "se": 0.004409585518440971,
+        "stdev": 0.00763762615825971,
+        "n": 3,
+        "values": [
+          0.285,
+          0.275,
+          0.29
+        ]
+      }
+    },
+    {
+      "threshold": 0.7,
+      "coverage": {
+        "mean": 0.1625,
+        "se": 0.008036375634160795,
+        "stdev": 0.013919410907075052,
+        "n": 3,
+        "values": [
+          0.16,
+          0.15,
+          0.1775
+        ]
+      },
+      "false_valid": {
+        "mean": 0.215,
+        "se": 0.010408329997330658,
+        "stdev": 0.018027756377319935,
+        "n": 3,
+        "values": [
+          0.21,
+          0.2,
+          0.235
+        ]
+      }
+    },
+    {
+      "threshold": 0.75,
+      "coverage": {
+        "mean": 0.12083333333333335,
+        "se": 0.008457409637576853,
+        "stdev": 0.014648663192705793,
+        "n": 3,
+        "values": [
+          0.11,
+          0.115,
+          0.1375
+        ]
+      },
+      "false_valid": {
+        "mean": 0.17166666666666666,
+        "se": 0.01424000624219589,
+        "stdev": 0.024664414311581243,
+        "n": 3,
+        "values": [
+          0.155,
+          0.16,
+          0.2
+        ]
+      }
+    },
+    {
+      "threshold": 0.8,
+      "coverage": {
+        "mean": 0.08,
+        "se": 0.006291528696058959,
+        "stdev": 0.010897247358851685,
+        "n": 3,
+        "values": [
+          0.0725,
+          0.075,
+          0.0925
+        ]
+      },
+      "false_valid": {
+        "mean": 0.11833333333333333,
+        "se": 0.013333333333333332,
+        "stdev": 0.02309401076758503,
+        "n": 3,
+        "values": [
+          0.105,
+          0.105,
+          0.145
+        ]
+      }
+    },
+    {
+      "threshold": 0.85,
+      "coverage": {
+        "mean": 0.03916666666666667,
+        "se": 0.002204792759220492,
+        "stdev": 0.003818813079129866,
+        "n": 3,
+        "values": [
+          0.035,
+          0.04,
+          0.0425
+        ]
+      },
+      "false_valid": {
+        "mean": 0.06833333333333334,
+        "se": 0.003333333333333332,
+        "stdev": 0.0057735026918962545,
+        "n": 3,
+        "values": [
+          0.065,
+          0.065,
+          0.075
+        ]
+      }
+    },
+    {
+      "threshold": 0.9,
+      "coverage": {
+        "mean": 0.029166666666666664,
+        "se": 0.000833333333333333,
+        "stdev": 0.0014433756729740636,
+        "n": 3,
+        "values": [
+          0.03,
+          0.0275,
+          0.03
+        ]
+      },
+      "false_valid": {
+        "mean": 0.051666666666666666,
+        "se": 0.0033333333333333344,
+        "stdev": 0.005773502691896259,
+        "n": 3,
+        "values": [
+          0.055,
+          0.045,
+          0.055
+        ]
+      }
+    },
+    {
+      "threshold": 0.95,
+      "coverage": {
+        "mean": 0.014166666666666668,
+        "se": 0.0016666666666666672,
+        "stdev": 0.0028867513459481294,
+        "n": 3,
+        "values": [
+          0.0125,
+          0.0125,
+          0.0175
+        ]
+      },
+      "false_valid": {
+        "mean": 0.023333333333333334,
+        "se": 0.003333333333333333,
+        "stdev": 0.005773502691896257,
+        "n": 3,
+        "values": [
+          0.02,
+          0.02,
+          0.03
+        ]
+      }
+    },
+    {
+      "threshold": 1.0,
+      "coverage": {
+        "mean": 0.005,
+        "se": 0.0014433756729740645,
+        "stdev": 0.0025,
+        "n": 3,
+        "values": [
+          0.0075,
+          0.0025,
+          0.005
+        ]
+      },
+      "false_valid": {
+        "mean": 0.01,
+        "se": 0.002886751345948129,
+        "stdev": 0.005,
+        "n": 3,
+        "values": [
+          0.015,
+          0.005,
+          0.01
+        ]
+      }
+    }
+  ],
+  "avg_native": {
+    "arm": "avg_full",
+    "coverage": {
+      "mean": 0.13583333333333333,
+      "se": 0.005833333333333329,
+      "stdev": 0.010103629710818443,
+      "n": 3,
+      "values": [
+        0.13,
+        0.13,
+        0.1475
+      ]
+    },
+    "false_valid": {
+      "mean": 0.15666666666666665,
+      "se": 0.0072648315725677955,
+      "stdev": 0.012583057392117927,
+      "n": 3,
+      "values": [
+        0.145,
+        0.155,
+        0.17
+      ]
+    }
+  },
+  "baselines": [
+    {
+      "arm": "monolithic",
+      "coverage": {
+        "mean": 0.5941666666666666,
+        "se": 0.00845740963757684,
+        "stdev": 0.014648663192705769,
+        "n": 3,
+        "values": [
+          0.6,
+          0.605,
+          0.5775
+        ]
+      },
+      "false_valid": {
+        "mean": 0.645,
+        "se": 0.00763762615825974,
+        "stdev": 0.013228756555322964,
+        "n": 3,
+        "values": [
+          0.635,
+          0.66,
+          0.64
+        ]
+      }
+    },
+    {
+      "arm": "prm",
+      "coverage": {
+        "mean": 0.6266666666666666,
+        "se": 0.008333333333333342,
+        "stdev": 0.014433756729740658,
+        "n": 3,
+        "values": [
+          0.635,
+          0.635,
+          0.61
+        ]
+      },
+      "false_valid": {
+        "mean": 0.71,
+        "se": 0.005773502691896263,
+        "stdev": 0.010000000000000009,
+        "n": 3,
+        "values": [
+          0.71,
+          0.72,
+          0.7
+        ]
+      }
+    },
+    {
+      "arm": "agent_judge",
+      "coverage": {
+        "mean": 0.5941666666666666,
+        "se": 0.00845740963757684,
+        "stdev": 0.014648663192705769,
+        "n": 3,
+        "values": [
+          0.6,
+          0.605,
+          0.5775
+        ]
+      },
+      "false_valid": {
+        "mean": 0.655,
+        "se": 0.00763762615825974,
+        "stdev": 0.013228756555322964,
+        "n": 3,
+        "values": [
+          0.645,
+          0.67,
+          0.65
+        ]
+      }
+    }
+  ],
+  "matched_coverage": [
+    {
+      "arm": "monolithic",
+      "coverage": {
+        "mean": 0.5941666666666666,
+        "se": 0.00845740963757684,
+        "stdev": 0.014648663192705769,
+        "n": 3,
+        "values": [
+          0.6,
+          0.605,
+          0.5775
+        ]
+      },
+      "baseline_false_valid": {
+        "mean": 0.645,
+        "se": 0.00763762615825974,
+        "stdev": 0.013228756555322964,
+        "n": 3,
+        "values": [
+          0.635,
+          0.66,
+          0.64
+        ]
+      },
+      "avg_false_valid_at_coverage": {
+        "mean": 0.6315653706640859,
+        "se": 0.009763511057295766,
+        "stdev": 0.016910897211496793,
+        "n": 3,
+        "values": [
+          0.641005291005291,
+          0.6416489361702127,
+          0.6120418848167539
+        ]
+      },
+      "gap": {
+        "mean": 0.013434629335914142,
+        "se": 0.01010786387062568,
+        "stdev": 0.017507333779913488,
+        "n": 3,
+        "values": [
+          -0.0060052910052910136,
+          0.01835106382978735,
+          0.02795811518324609
+        ]
+      },
+      "significance": {
+        "label": "monolithic_vs_avg_full.false_valid@matched_coverage",
+        "a": "monolithic",
+        "b": "avg_full",
+        "mean_a": 0.645,
+        "mean_b": 0.6315653706640859,
+        "mean_diff": 0.013434629335914142,
+        "se_diff": 0.01010786387062568,
+        "t_stat": 1.3291264611266014,
+        "df": 2,
+        "p_value": 0.31515408340035916,
+        "n_seeds": 3,
+        "diffs": [
+          -0.0060052910052910136,
+          0.01835106382978735,
+          0.02795811518324609
+        ]
+      }
+    },
+    {
+      "arm": "prm",
+      "coverage": {
+        "mean": 0.6266666666666666,
+        "se": 0.008333333333333342,
+        "stdev": 0.014433756729740658,
+        "n": 3,
+        "values": [
+          0.635,
+          0.635,
+          0.61
+        ]
+      },
+      "baseline_false_valid": {
+        "mean": 0.71,
+        "se": 0.005773502691896263,
+        "stdev": 0.010000000000000009,
+        "n": 3,
+        "values": [
+          0.71,
+          0.72,
+          0.7
+        ]
+      },
+      "avg_false_valid_at_coverage": {
+        "mean": 0.6564118851448508,
+        "se": 0.009822850028709086,
+        "stdev": 0.017013675324853542,
+        "n": 3,
+        "values": [
+          0.668042328042328,
+          0.6643085106382978,
+          0.6368848167539267
+        ]
+      },
+      "gap": {
+        "mean": 0.05358811485514914,
+        "se": 0.006197532014595804,
+        "stdev": 0.010734440330814632,
+        "n": 3,
+        "values": [
+          0.04195767195767197,
+          0.05569148936170221,
+          0.06311518324607324
+        ]
+      },
+      "significance": {
+        "label": "prm_vs_avg_full.false_valid@matched_coverage",
+        "a": "prm",
+        "b": "avg_full",
+        "mean_a": 0.71,
+        "mean_b": 0.6564118851448508,
+        "mean_diff": 0.05358811485514914,
+        "se_diff": 0.006197532014595804,
+        "t_stat": 8.646686250098233,
+        "df": 2,
+        "p_value": 0.01311271052838146,
+        "n_seeds": 3,
+        "diffs": [
+          0.04195767195767197,
+          0.05569148936170221,
+          0.06311518324607324
+        ]
+      }
+    },
+    {
+      "arm": "agent_judge",
+      "coverage": {
+        "mean": 0.5941666666666666,
+        "se": 0.00845740963757684,
+        "stdev": 0.014648663192705769,
+        "n": 3,
+        "values": [
+          0.6,
+          0.605,
+          0.5775
+        ]
+      },
+      "baseline_false_valid": {
+        "mean": 0.655,
+        "se": 0.00763762615825974,
+        "stdev": 0.013228756555322964,
+        "n": 3,
+        "values": [
+          0.645,
+          0.67,
+          0.65
+        ]
+      },
+      "avg_false_valid_at_coverage": {
+        "mean": 0.6315653706640859,
+        "se": 0.009763511057295766,
+        "stdev": 0.016910897211496793,
+        "n": 3,
+        "values": [
+          0.641005291005291,
+          0.6416489361702127,
+          0.6120418848167539
+        ]
+      },
+      "gap": {
+        "mean": 0.023434629335914153,
+        "se": 0.01010786387062568,
+        "stdev": 0.017507333779913488,
+        "n": 3,
+        "values": [
+          0.003994708994708995,
+          0.02835106382978736,
+          0.0379581151832461
+        ]
+      },
+      "significance": {
+        "label": "agent_judge_vs_avg_full.false_valid@matched_coverage",
+        "a": "agent_judge",
+        "b": "avg_full",
+        "mean_a": 0.655,
+        "mean_b": 0.6315653706640859,
+        "mean_diff": 0.023434629335914153,
+        "se_diff": 0.01010786387062568,
+        "t_stat": 2.31845517864731,
+        "df": 2,
+        "p_value": 0.1462891714716019,
+        "n_seeds": 3,
+        "diffs": [
+          0.003994708994708995,
+          0.02835106382978736,
+          0.0379581151832461
+        ]
+      }
+    }
+  ],
+  "auroc_all": {
+    "mean": 0.40252916666666666,
+    "se": 0.0033742926213422087,
+    "stdev": 0.005844446259769476,
+    "n": 3,
+    "values": [
+      0.396175,
+      0.4037375,
+      0.407675
+    ]
+  },
+  "ece_all": {
+    "mean": 0.15303654931287336,
+    "se": 0.0063253359547617615,
+    "stdev": 0.010955803248589564,
+    "n": 3,
+    "values": [
+      0.1634254155190702,
+      0.14159045890677827,
+      0.15409377351277162
+    ]
+  },
+  "dominates_at_matched_coverage": true,
+  "figure_path": "docs/sa11_frontier.png",
+  "notes": [
+    "Frontier: sweep the acceptance threshold tau over the shared coverage-aware p_valid (predict valid iff p_valid>=tau, invalid iff p_valid<=1-tau, else abstain). Each tau is an operating point (coverage, false_valid); false_valid is the SA-1 metric (invalid credited valid over ALL labeled-invalid), so a low-coverage point earns its low false-valid by abstaining, not by hiding errors in the denominator.",
+    "Matched coverage: AVG's false-valid is read off its own frontier, linearly interpolated to each baseline's coverage, per seed; gap>0 means AVG credits fewer reward-hacks than the baseline at the same coverage. Baselines sit on or above the frontier -> AVG weakly dominates, and its default operating point moves far down the same frontier for a large false-valid reduction.",
+    "Calibration reframe: the shared-score AUROC is low (coarse trajectory-level reward label -- a well-formed-but-failed trace is indistinguishable from a correct one to the mechanical checks), but the abstain decision the frontier traces is what carries the safety, not the raw ranking. The margin is thinnest at high coverage (where the weak score is forced to rank the confusable middle) and widest at AVG's low-coverage operating point.",
+    "Offline run (no API key): avg_full is mechanical evidence + abstention-aware aggregation and the baselines are their deterministic heuristics, as in SA-1. Every point is byte-reproducible; the LLM arms only sharpen the same frontier."
+  ]
+}
