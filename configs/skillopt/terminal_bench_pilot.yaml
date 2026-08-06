@@ -1,0 +1,67 @@
+# Track S full run -- SkillOpt on Terminal-Bench 2.0 (full 89-task suite).
+#
+# SkillOpt's training loop issues many rollouts per epoch; each TB2 rollout is
+# a real harbor/Docker trial (minutes + API $). Confirmed budget before running.
+#
+# Offline wiring check (no Docker / no API for rollouts):
+#   python scripts/skillopt_train_tb2.py --config configs/skillopt/terminal_bench_pilot.yaml --dry-run
+#
+# Backend note: SkillOpt's azure_openai backend supports plain OpenAI via
+# azure_openai_auth_mode: openai_compatible (uses OPENAI_API_KEY / the
+# azure_openai_api_key field below pointed at a real OpenAI key).
+
+env:
+  name: terminal_bench
+  skill_init: scripts/skills/skillopt-tb2-init/SKILL.md
+  out_root: data/skillopt_runs/tb2_89
+  data_path: data/skillopt/terminal_bench_tasks.json
+  split_mode: ratio
+  split_ratio: "3:1:6"   # train:val:test over the task list -> ~27:9:53 at n=89
+  split_seed: 42
+  # Full 89-task TB2 suite, no pilot cap.
+  limit: 89
+  workers: 4
+  harbor_agent: terminus-2
+  harbor_env: docker
+  harbor_max_retries: 0
+  inject_skill: true
+
+model:
+  # Optimizer (frontier) + target (frozen agent) -- both via OpenAI-compatible.
+  backend: azure_openai
+  optimizer: openai/gpt-5.4-mini
+  target: openai/gpt-5.4-mini
+  azure_openai_auth_mode: openai_compatible
+  azure_openai_endpoint: https://api.openai.com/v1
+  # Falls back to AZURE_OPENAI_API_KEY / OPENAI_API_KEY from the environment
+  # when empty; leave blank and rely on .env.
+  azure_openai_api_key: ""
+
+train:
+  num_epochs: 1
+  train_size: 27
+  steps_per_epoch: 1
+  batch_size: 2
+  accumulation: 1
+  seed: 0
+
+gradient:
+  minibatch_size: 2
+  merge_batch_size: 2
+  analyst_workers: 2
+  failure_only: false
+  max_analyst_rounds: 1
+
+optimizer:
+  learning_rate: 2
+  min_learning_rate: 1
+  lr_scheduler: constant
+  skill_update_mode: patch
+  use_slow_update: false
+  use_meta_skill: false
+
+evaluation:
+  use_gate: true
+  sel_env_num: 2
+  test_env_num: 15
+  eval_test: true

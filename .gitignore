@@ -21,3 +21,18 @@ venv/
 data/tau_cache/
 data/swe_gym_cache/
 scratch_results.json
+vendor/
+
+# Track M live-capture trace data -- raw per-trial harbor job trees AND the
+# normalized *.jsonl captures (full agent trajectories, large & regenerable via
+# scripts/live_meta_harness_tb2.py). Kept out of git; the SA-14 result summary
+# (data/sa14_results_*.json) is the committed record.
+data/live_traces/
+
+# SkillOpt training run outputs (best_skill.md, per-step rollouts, splits) --
+# regenerable via scripts/skillopt_train_tb2.py; keep out of git.
+data/skillopt_runs/
+
+# GEPA (Track G) run outputs (best_skill.md, per-rollout harbor trees, gepa
+# state) -- large and regenerable via scripts/gepa_train_tb2.py; keep out of git.
+data/gepa_runs/

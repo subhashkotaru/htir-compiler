@@ -1,10 +1,20 @@
 """
-Thin wrapper around the OpenRouter chat-completions API.
+Thin wrapper around the OpenRouter chat-completions API, with a direct-OpenAI
+fallback.
 
 OpenRouter exposes an OpenAI-compatible endpoint at
 https://openrouter.ai/api/v1, so the openai SDK can be reused
 with a custom base_url.  Set OPENROUTER_API_KEY in your environment
-(or .env file).
+(or .env file). If that is unset but OPENAI_API_KEY is (e.g. because you only
+set up Track M's live-capture key, not a separate OpenRouter one -- see
+docs/live-baselines-plan.md), every LLM-backed pass here (semantic checker,
+monolithic judge, PRM step-critic, Agent-as-a-Judge) transparently falls back
+to calling api.openai.com directly instead. That fallback can only serve
+OpenAI models: an OpenRouter-style non-"openai/" slug (e.g.
+"anthropic/claude-3.5-sonnet") raises immediately rather than silently
+routing to the wrong provider. The "openai/" prefix itself is stripped before
+the request, since the native OpenAI API doesn't understand OpenRouter's
+provider-prefixed slugs.
 
 Supports structured JSON output via response_format.
 """
@@ -23,6 +33,7 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "openai/gpt-4o"   # OpenRouter model slug; change freely
 
 _client: Optional[Any] = None
+_provider: Optional[str] = None  # "openrouter" | "openai", set by get_client()
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +89,7 @@ def _record_usage(resp: Any) -> None:
 
 
 def get_client() -> Any:
-    global _client
+    global _client, _provider
     if _client is None:
         # Imported lazily so the deterministic pipeline (and ``import htir``)
         # works without the optional ``llm`` extra installed. Install it with
@@ -90,21 +101,41 @@ def get_client() -> Any:
                 "The 'openai' package is required for LLM-backed passes. "
                 "Install it with: pip install 'htir[llm]'"
             ) from exc
-        api_key = os.getenv("OPENROUTER_API_KEY")
-        if not api_key:
-            raise EnvironmentError(
-                "OPENROUTER_API_KEY is not set. "
-                "Export it or add it to your .env file."
+        try:
+            # Optional (same 'llm' extra as openai); populates os.environ from a
+            # local .env before the getenvs below, so a .env-only key works
+            # without the caller having exported it into the shell. Silently a
+            # no-op without the dependency or without a .env file present.
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            pass
+
+        openrouter_key = os.getenv("OPENROUTER_API_KEY")
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if openrouter_key:
+            _provider = "openrouter"
+            _client = OpenAI(
+                api_key=openrouter_key,
+                base_url=OPENROUTER_BASE_URL,
+                default_headers={
+                    # Optional but recommended by OpenRouter docs
+                    "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "https://github.com/htir/htir"),
+                    "X-Title": os.getenv("OPENROUTER_APP_NAME", "HTIR"),
+                },
             )
-        _client = OpenAI(
-            api_key=api_key,
-            base_url=OPENROUTER_BASE_URL,
-            default_headers={
-                # Optional but recommended by OpenRouter docs
-                "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "https://github.com/htir/htir"),
-                "X-Title": os.getenv("OPENROUTER_APP_NAME", "HTIR"),
-            },
-        )
+        elif openai_key:
+            # Fallback: no OpenRouter key, but a direct OpenAI key is already
+            # set up (e.g. for Track M's live capture). OpenAI-only models
+            # ("openai/..." slugs) work as-is; non-OpenAI slugs can't be
+            # served by this path and are rejected in chat() below.
+            _provider = "openai"
+            _client = OpenAI(api_key=openai_key)
+        else:
+            raise EnvironmentError(
+                "Neither OPENROUTER_API_KEY nor OPENAI_API_KEY is set. "
+                "Export one, or add it to your .env file."
+            )
     return _client
 
 
@@ -116,8 +147,19 @@ def chat(
     response_format: Optional[dict] = None,
 ) -> str:  # noqa: E501
     """Send a chat-completion request and return the assistant text."""
+    client = get_client()  # sets _provider as a side effect; call before using it
+    resolved_model = model
+    if _provider == "openai":
+        if not model.startswith("openai/"):
+            raise EnvironmentError(
+                f"Model {model!r} needs OpenRouter (OPENROUTER_API_KEY is not set, so this "
+                "fell back to calling api.openai.com directly, which can only serve "
+                "OpenAI models). Export OPENROUTER_API_KEY to use non-OpenAI models."
+            )
+        resolved_model = model.removeprefix("openai/")
+
     kwargs: dict[str, Any] = {
-        "model": model,
+        "model": resolved_model,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
@@ -125,7 +167,18 @@ def chat(
     if response_format:
         kwargs["response_format"] = response_format
 
-    resp = get_client().chat.completions.create(**kwargs)
+    try:
+        resp = client.chat.completions.create(**kwargs)
+    except Exception as exc:
+        # Newer reasoning-tier models (e.g. gpt-5.x) reject the legacy
+        # `max_tokens` param and require `max_completion_tokens` instead.
+        # Retry once with the renamed param rather than hardcode a model
+        # list that will inevitably go stale.
+        if "max_completion_tokens" in str(exc) and "max_tokens" in kwargs:
+            kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
+            resp = client.chat.completions.create(**kwargs)
+        else:
+            raise
     _record_usage(resp)
     return resp.choices[0].message.content or ""
 

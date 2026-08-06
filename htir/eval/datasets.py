@@ -416,3 +416,177 @@ def load_swe_gym(
         if limit is not None and len(out) >= limit:
             break
     return out
+
+
+# ---------------------------------------------------------------------------
+# Meta-Harness / Terminal-Bench 2.0 live-captured trajectories (Track M, SA-14)
+# ---------------------------------------------------------------------------
+#
+# Unlike terminalbench-trajectories / tau-bench-trajectories / SWE-Gym above,
+# there is no pre-existing HF corpus here: these are trajectories *we* capture
+# by actually executing an agent -- Meta-Harness's released Terminal-Bench 2.0
+# scaffold (Lee et al. 2026, arXiv:2603.28052; artifact:
+# stanford-iris-lab/meta-harness-tbench2-artifact), or a plain baseline agent --
+# against live Terminal-Bench 2.0 tasks via the `harbor` CLI. See
+# `scripts/live_meta_harness_tb2.py`, which is intentionally *outside* this
+# package: htir core has no live-execution / subprocess / external-CLI
+# dependency, only this loader for the already-captured local output.
+#
+# Each record is expected to carry an OpenAI-messages transcript (the common
+# shape harbor's tool-calling agents -- Claude Code, Terminus, Codex-style --
+# emit) plus the task id, the harness label (``meta_harness`` | ``base_agent``,
+# the SA-14 grouping key), the executing model, and the real Terminal-Bench 2.0
+# pass/fail outcome. ``_tb2_tool_call`` is deliberately more permissive than
+# ``_swe_gym_tool_call`` above since the exact tool vocabulary depends on which
+# agent produced the transcript; ``htir.adapters.terminal``'s tool-name sets
+# already cover the common Claude-Code/Terminus/Codex names, so unrecognised
+# tools degrade to ``other`` rather than being dropped.
+_TB2_CMD_ARG_KEYS = ("command", "cmd", "file_text", "content")
+_TB2_PATH_ARG_KEYS = ("path", "file_path", "target_file")
+
+
+def _tb2_tool_call(tc: dict[str, Any]) -> dict[str, str]:
+    """
+    Map one tool call from a captured Terminal-Bench 2.0 transcript to the
+    ``{fn, cmd}`` shape ``htir.adapters.terminal`` classifies. Best-effort: falls
+    back to a JSON dump of the arguments when no recognised command/path key is
+    present, so an unusual tool degrades to ``other`` rather than being dropped.
+    """
+    fn = str((tc.get("function") or {}).get("name") or tc.get("name") or "tool")
+    raw_args = (tc.get("function") or {}).get("arguments")
+    if raw_args is None:
+        raw_args = tc.get("arguments")
+    if isinstance(raw_args, str):
+        try:
+            args = json.loads(raw_args) if raw_args.strip() else {}
+        except (json.JSONDecodeError, ValueError):
+            args = {}
+    elif isinstance(raw_args, dict):
+        args = raw_args
+    else:
+        args = {}
+
+    path = next((args[k] for k in _TB2_PATH_ARG_KEYS if args.get(k)), "")
+    cmd = next((args[k] for k in _TB2_CMD_ARG_KEYS if args.get(k)), "")
+    return {"fn": fn, "cmd": str(cmd or path or (json.dumps(args) if args else ""))}
+
+
+def _tb2_messages_to_turns(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Convert a captured TB2 OpenAI-messages transcript into ``{src,msg,tools,obs}``
+    turns -- structurally identical to ``_swe_gym_messages_to_turns`` (see there
+    for the shape), just paired with the more permissive ``_tb2_tool_call``.
+    """
+    turns: list[dict[str, Any]] = []
+    i = 0
+    n = len(messages)
+    while i < n:
+        m = messages[i] if isinstance(messages[i], dict) else {}
+        role = m.get("role")
+        if role == "user":
+            turns.append({"src": "user", "msg": str(m.get("content") or ""), "tools": [], "obs": None})
+            i += 1
+            continue
+        if role == "assistant":
+            tools = [_tb2_tool_call(t) for t in (m.get("tool_calls") or []) if isinstance(t, dict)]
+            obs_parts: list[str] = []
+            j = i + 1
+            while j < n and isinstance(messages[j], dict) and messages[j].get("role") == "tool":
+                obs_parts.append(str(messages[j].get("content") or ""))
+                j += 1
+            turns.append({
+                "src": "agent",
+                "msg": str(m.get("content") or ""),
+                "tools": tools,
+                "obs": "\n".join(p for p in obs_parts if p) or None,
+            })
+            i = j
+            continue
+        i += 1  # system / tool-without-a-preceding-assistant: skip
+    return turns
+
+
+def normalize_meta_harness_record(rec: dict[str, Any]) -> dict[str, Any]:
+    """
+    Normalize one captured Terminal-Bench 2.0 trial (the Meta-Harness scaffold
+    or a plain baseline agent, run live via ``scripts/live_meta_harness_tb2.py``)
+    into the turn-schema fields the eval harness expects:
+
+    * ``steps``      -- ``{src,msg,tools,obs}`` turns from the captured
+      OpenAI-messages transcript (so ``to_canonical_steps`` routes to
+      ``terminal``).
+    * ``reward``     -- ``1`` if Terminal-Bench 2.0 scored the trial solved else
+      ``0``. Accepts ``reward``/``passed``/``resolved``/``score`` aliases (the
+      capture script's exact field name depends on how harbor reports a task's
+      outcome, which needs validating against a real run -- see the module-level
+      docstring in ``scripts/live_meta_harness_tb2.py``).
+    * ``task_name``  -- the TB2 task id.
+    * ``harness``    -- ``'meta_harness'`` / ``'base_agent'`` (the SA-14
+      grouping key); ``'unknown'`` if not recorded.
+    * ``model``      -- the executing model string (e.g. ``openai/gpt-4o-mini``).
+
+    Idempotent, like :func:`normalize_swe_gym_record`: a record already in turn
+    schema round-trips with only its reward back-filled.
+    """
+    def _reward(r: dict[str, Any]) -> int:
+        for key in ("reward", "passed", "resolved", "score"):
+            if key in r and r[key] is not None:
+                v = r[key]
+                if isinstance(v, bool):
+                    return 1 if v else 0
+                try:
+                    return 1 if float(v) > 0 else 0
+                except (TypeError, ValueError):
+                    continue
+        return 0
+
+    if isinstance(rec.get("steps"), list):
+        return {**rec, "reward": _reward(rec)}
+    messages = rec.get("messages") or []
+    return {
+        "steps": _tb2_messages_to_turns(messages if isinstance(messages, list) else []),
+        "reward": _reward(rec),
+        "task_name": str(rec.get("task_id") or rec.get("task_name") or ""),
+        "harness": str(rec.get("harness") or "unknown"),
+        "model": str(rec.get("model") or ""),
+    }
+
+
+def load_meta_harness_tb2(paths: Iterable[str | Path]) -> list[dict[str, Any]]:
+    """
+    Load captured Terminal-Bench 2.0 trajectories (Track M, SA-14) from local
+    JSON/JSONL caches under ``data/live_traces/meta_harness_tb2/``. There is no
+    HF corpus for this -- it only exists once captured live via
+    ``scripts/live_meta_harness_tb2.py``.
+    """
+    return [normalize_meta_harness_record(rec) for rec in iter_local_traces(paths)]
+
+
+# ---------------------------------------------------------------------------
+# SkillOpt / Terminal-Bench 2.0 live-captured trajectories (Track S, SA-15)
+# ---------------------------------------------------------------------------
+#
+# Same OpenAI-messages + reward capture shape as Track M (SA-14). The harness
+# field is ``skillopt`` (best_skill.md injected via harbor --skill) or
+# ``no_skill`` (matched agent/model/tasks, no skill). Produced by the SkillOpt
+# training / eval driver ``scripts/skillopt_train_tb2.py`` (and any later
+# capture normaliser that reuses ``normalize_meta_harness_record``).
+
+
+def normalize_skillopt_record(rec: dict[str, Any]) -> dict[str, Any]:
+    """
+    Normalize one Track S capture record. Identical wire format to Track M, so
+    this is a thin alias that keeps the SA-15 call site explicit and lets the
+    harness vocabulary (``skillopt`` / ``no_skill``) stay documented here.
+    """
+    out = normalize_meta_harness_record(rec)
+    harness = str(out.get("harness") or rec.get("harness") or "unknown")
+    return {**out, "harness": harness}
+
+
+def load_skillopt_tb2(paths: Iterable[str | Path]) -> list[dict[str, Any]]:
+    """
+    Load captured SkillOpt / no-skill Terminal-Bench 2.0 trajectories (Track S,
+    SA-15) from local JSON/JSONL caches under ``data/live_traces/skillopt_tb2/``.
+    """
+    return [normalize_skillopt_record(rec) for rec in iter_local_traces(paths)]

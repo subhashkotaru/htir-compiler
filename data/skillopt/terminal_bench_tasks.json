@@ -1,0 +1,447 @@
+[
+  {
+    "id": "adaptive-rejection-sampler",
+    "task_type": "scientific-computing",
+    "difficulty": "medium"
+  },
+  {
+    "id": "bn-fit-modify",
+    "task_type": "scientific-computing",
+    "difficulty": "hard"
+  },
+  {
+    "id": "break-filter-js-from-html",
+    "task_type": "security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "build-cython-ext",
+    "task_type": "debugging",
+    "difficulty": "medium"
+  },
+  {
+    "id": "build-pmars",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "build-pov-ray",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "caffe-cifar-10",
+    "task_type": "machine-learning",
+    "difficulty": "medium"
+  },
+  {
+    "id": "cancel-async-tasks",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "chess-best-move",
+    "task_type": "games",
+    "difficulty": "medium"
+  },
+  {
+    "id": "circuit-fibsqrt",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "cobol-modernization",
+    "task_type": "software-engineering",
+    "difficulty": "easy"
+  },
+  {
+    "id": "code-from-image",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "compile-compcert",
+    "task_type": "system-administration",
+    "difficulty": "medium"
+  },
+  {
+    "id": "configure-git-webserver",
+    "task_type": "system-administration",
+    "difficulty": "hard"
+  },
+  {
+    "id": "constraints-scheduling",
+    "task_type": "personal-assistant",
+    "difficulty": "medium"
+  },
+  {
+    "id": "count-dataset-tokens",
+    "task_type": "model-training",
+    "difficulty": "medium"
+  },
+  {
+    "id": "crack-7z-hash",
+    "task_type": "security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "custom-memory-heap-crash",
+    "task_type": "debugging",
+    "difficulty": "medium"
+  },
+  {
+    "id": "db-wal-recovery",
+    "task_type": "file-operations",
+    "difficulty": "medium"
+  },
+  {
+    "id": "distribution-search",
+    "task_type": "machine-learning",
+    "difficulty": "medium"
+  },
+  {
+    "id": "dna-assembly",
+    "task_type": "scientific-computing",
+    "difficulty": "hard"
+  },
+  {
+    "id": "dna-insert",
+    "task_type": "scientific-computing",
+    "difficulty": "medium"
+  },
+  {
+    "id": "extract-elf",
+    "task_type": "file-operations",
+    "difficulty": "medium"
+  },
+  {
+    "id": "extract-moves-from-video",
+    "task_type": "file-operations",
+    "difficulty": "hard"
+  },
+  {
+    "id": "feal-differential-cryptanalysis",
+    "task_type": "mathematics",
+    "difficulty": "hard"
+  },
+  {
+    "id": "feal-linear-cryptanalysis",
+    "task_type": "mathematics",
+    "difficulty": "hard"
+  },
+  {
+    "id": "filter-js-from-html",
+    "task_type": "security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "financial-document-processor",
+    "task_type": "data-processing",
+    "difficulty": "medium"
+  },
+  {
+    "id": "fix-code-vulnerability",
+    "task_type": "security",
+    "difficulty": "hard"
+  },
+  {
+    "id": "fix-git",
+    "task_type": "software-engineering",
+    "difficulty": "easy"
+  },
+  {
+    "id": "fix-ocaml-gc",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "gcode-to-text",
+    "task_type": "file-operations",
+    "difficulty": "medium"
+  },
+  {
+    "id": "git-leak-recovery",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "git-multibranch",
+    "task_type": "system-administration",
+    "difficulty": "medium"
+  },
+  {
+    "id": "gpt2-codegolf",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "headless-terminal",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "hf-model-inference",
+    "task_type": "data-science",
+    "difficulty": "medium"
+  },
+  {
+    "id": "install-windows-3.11",
+    "task_type": "system-administration",
+    "difficulty": "hard"
+  },
+  {
+    "id": "kv-store-grpc",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "large-scale-text-editing",
+    "task_type": "file-operations",
+    "difficulty": "medium"
+  },
+  {
+    "id": "largest-eigenval",
+    "task_type": "mathematics",
+    "difficulty": "medium"
+  },
+  {
+    "id": "llm-inference-batching-scheduler",
+    "task_type": "machine-learning",
+    "difficulty": "hard"
+  },
+  {
+    "id": "log-summary-date-ranges",
+    "task_type": "data-processing",
+    "difficulty": "medium"
+  },
+  {
+    "id": "mailman",
+    "task_type": "system-administration",
+    "difficulty": "medium"
+  },
+  {
+    "id": "make-doom-for-mips",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "make-mips-interpreter",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "mcmc-sampling-stan",
+    "task_type": "data-science",
+    "difficulty": "hard"
+  },
+  {
+    "id": "merge-diff-arc-agi-task",
+    "task_type": "debugging",
+    "difficulty": "medium"
+  },
+  {
+    "id": "model-extraction-relu-logits",
+    "task_type": "mathematics",
+    "difficulty": "hard"
+  },
+  {
+    "id": "modernize-scientific-stack",
+    "task_type": "scientific-computing",
+    "difficulty": "medium"
+  },
+  {
+    "id": "mteb-leaderboard",
+    "task_type": "data-science",
+    "difficulty": "medium"
+  },
+  {
+    "id": "mteb-retrieve",
+    "task_type": "data-science",
+    "difficulty": "medium"
+  },
+  {
+    "id": "multi-source-data-merger",
+    "task_type": "data-processing",
+    "difficulty": "medium"
+  },
+  {
+    "id": "nginx-request-logging",
+    "task_type": "system-administration",
+    "difficulty": "medium"
+  },
+  {
+    "id": "openssl-selfsigned-cert",
+    "task_type": "security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "overfull-hbox",
+    "task_type": "debugging",
+    "difficulty": "easy"
+  },
+  {
+    "id": "password-recovery",
+    "task_type": "security",
+    "difficulty": "hard"
+  },
+  {
+    "id": "path-tracing",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "path-tracing-reverse",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "polyglot-c-py",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "polyglot-rust-c",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "portfolio-optimization",
+    "task_type": "optimization",
+    "difficulty": "medium"
+  },
+  {
+    "id": "protein-assembly",
+    "task_type": "scientific-computing",
+    "difficulty": "hard"
+  },
+  {
+    "id": "prove-plus-comm",
+    "task_type": "software-engineering",
+    "difficulty": "easy"
+  },
+  {
+    "id": "pypi-server",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "pytorch-model-cli",
+    "task_type": "model-training",
+    "difficulty": "medium"
+  },
+  {
+    "id": "pytorch-model-recovery",
+    "task_type": "model-training",
+    "difficulty": "medium"
+  },
+  {
+    "id": "qemu-alpine-ssh",
+    "task_type": "system-administration",
+    "difficulty": "medium"
+  },
+  {
+    "id": "qemu-startup",
+    "task_type": "system-administration",
+    "difficulty": "medium"
+  },
+  {
+    "id": "query-optimize",
+    "task_type": "data-science",
+    "difficulty": "medium"
+  },
+  {
+    "id": "raman-fitting",
+    "task_type": "scientific-computing",
+    "difficulty": "medium"
+  },
+  {
+    "id": "regex-chess",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "regex-log",
+    "task_type": "data-processing",
+    "difficulty": "medium"
+  },
+  {
+    "id": "reshard-c4-data",
+    "task_type": "data-science",
+    "difficulty": "medium"
+  },
+  {
+    "id": "rstan-to-pystan",
+    "task_type": "data-science",
+    "difficulty": "medium"
+  },
+  {
+    "id": "sam-cell-seg",
+    "task_type": "data-science",
+    "difficulty": "hard"
+  },
+  {
+    "id": "sanitize-git-repo",
+    "task_type": "security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "schemelike-metacircular-eval",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "sparql-university",
+    "task_type": "data-querying",
+    "difficulty": "hard"
+  },
+  {
+    "id": "sqlite-db-truncate",
+    "task_type": "debugging",
+    "difficulty": "medium"
+  },
+  {
+    "id": "sqlite-with-gcov",
+    "task_type": "system-administration",
+    "difficulty": "medium"
+  },
+  {
+    "id": "torch-pipeline-parallelism",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "torch-tensor-parallelism",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  },
+  {
+    "id": "train-fasttext",
+    "task_type": "model-training",
+    "difficulty": "hard"
+  },
+  {
+    "id": "tune-mjcf",
+    "task_type": "scientific-computing",
+    "difficulty": "medium"
+  },
+  {
+    "id": "video-processing",
+    "task_type": "video-processing",
+    "difficulty": "hard"
+  },
+  {
+    "id": "vulnerable-secret",
+    "task_type": "security",
+    "difficulty": "medium"
+  },
+  {
+    "id": "winning-avg-corewars",
+    "task_type": "software-engineering",
+    "difficulty": "medium"
+  },
+  {
+    "id": "write-compressor",
+    "task_type": "software-engineering",
+    "difficulty": "hard"
+  }
+]

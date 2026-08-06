@@ -1,0 +1,35 @@
+# Track G config -- GEPA (Pareto reflective evolution) on Terminal-Bench 2.0.
+#
+# Same frozen harness as SkillOpt (terminus-2 + skill injection) and the SAME
+# 27/9/53 task partition (reuse SkillOpt's materialized split), so GEPA vs.
+# SkillOpt is a clean optimizer-vs-optimizer comparison. Each rollout is a real
+# harbor/Docker trial (minutes + API $) -- confirm budget before running.
+#
+# Offline wiring check (no docker / no API spend):
+#   python scripts/gepa_train_tb2.py --config configs/gepa/terminal_bench.yaml --dry-run
+
+# --- data / split (reuse SkillOpt's exact partition for a fair head-to-head) ---
+split_dir: data/skillopt_runs/tb2_89/_generated_splits/terminal_bench_3-1-6_seed42
+data_path: data/skillopt/terminal_bench_tasks.json   # fallback if split_dir missing
+split_ratio: "3:1:6"
+split_seed: 42
+skill_init: scripts/skills/skillopt-tb2-init/SKILL.md
+out_root: data/gepa_runs/tb2_89
+
+# --- harness (identical to Track S / Track M) ---
+harbor_model: openai/gpt-5.4-mini
+harbor_agent: terminus-2
+harbor_env: docker
+harbor_max_retries: 0
+workers: 4
+inject_skill: true
+
+# --- GEPA optimizer ---
+reflection_lm: openai/gpt-5.4-mini
+candidate_selection_strategy: pareto
+reflection_minibatch_size: 3
+max_metric_calls: 60      # search budget (~= harbor rollouts during optimization)
+seed: 0
+
+# --- held-out test (seed vs. GEPA-best), matches SkillOpt's test_env_num=15 ---
+test_size: 15
