@@ -38,6 +38,16 @@ llm = ["openai>=1.30.0", "python-dotenv>=1.0.0"]
 # Evaluation harness (htir.eval): the Hugging Face `datasets` loader is only
 # needed to pull the Terminal-Bench corpus; local JSON/JSONL samples need none.
 eval = ["datasets>=2.14.0"]
+# Track M live capture only (scripts/live_meta_harness_tb2.py -> `harbor run`
+# against Terminal-Bench 2.0). Deliberately NOT a dependency of htir core --
+# see that script's module docstring. Pinned to what this repo's capture was
+# actually run and validated against (2026-07-17, macOS arm64, Python 3.12);
+# `pip install --only-binary=:all: "htir[live]"` avoids a Rust-toolchain
+# build failure some of harbor's own transitive deps can hit otherwise.
+live = ["harbor==0.19.0", "litellm==1.91.3", "anthropic==0.117.0", "tenacity==9.1.4", "python-dotenv>=1.0.0"]
+# Track S: SkillOpt training loop (scripts/skillopt_train_tb2.py). Rollouts
+# still need the live extra (harbor); this extra is only the optimizer package.
+skillopt = ["skillopt>=0.2.0"]
 dev = ["pytest>=7.0", "openai>=1.30.0", "python-dotenv>=1.0.0", "datasets>=2.14.0"]
 
 [project.scripts]

@@ -6,3 +6,26 @@ pyyaml>=6.0
 # Optional LLM-backed semantic checks/analysis (also: pip install "htir[llm]")
 # openai>=1.30.0
 # python-dotenv>=1.0.0
+
+# Optional Track M live capture -- Meta-Harness / base-agent on Terminal-Bench
+# 2.0 via `harbor run` (also: pip install "htir[live]"; see
+# scripts/live_meta_harness_tb2.py and docs/live-baselines-plan.md).
+# Versions below are pinned to what this repo's Track M capture was actually
+# run and validated against (2026-07-17, macOS arm64, Python 3.12) -- exact
+# reproducibility for a research artifact matters more here than staying on
+# the newest release.
+#
+# harbor>=0.19.0 depends on litellm>=1.83, which on some machines needs a
+# working Rust toolchain to build one of its transitive deps from source (a
+# maturin/rustc ABI mismatch was hit in this environment with Homebrew's
+# rust+llvm). Prefer a binary-only resolve to sidestep it entirely:
+#   pip install --only-binary=:all: -r requirements.txt
+# harbor==0.19.0
+# litellm==1.91.3
+# anthropic==0.117.0
+# tenacity==9.1.4
+
+# Optional Track S (SkillOpt) training loop -- text-space skill optimizer
+# against Terminal-Bench 2.0 via scripts/skillopt_train_tb2.py. Uses harbor
+# for rollouts (same live extra as Track M) plus the skillopt package itself.
+# skillopt>=0.2.0
